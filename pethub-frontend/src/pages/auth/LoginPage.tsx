@@ -46,19 +46,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = (role: UserRole) => {
-    // Generate dummy user since we are bypassing the API
-    let dummyUser: any;
-    if (role === 'tutor') dummyUser = { id: 'tutor-1', name: 'Tutor Demo', email: 'demo@tutor.com', role: 'TUTOR' };
-    else if (role === 'estabelecimento') dummyUser = { id: 'est-1', name: 'Estabelecimento Demo', email: 'demo@est.com', role: 'ESTABLISHMENT' };
-    else if (role === 'profissional') dummyUser = { id: 'prof-1', name: 'Profissional Demo', email: 'demo@prof.com', role: 'PROFESSIONAL' };
-    else dummyUser = { id: 'admin-1', name: 'Admin Demo', email: 'demo@admin.com', role: 'ADMIN' };
-    
-    login('dummy-token-123', dummyUser, role);
-    toast.success(`Entrando como ${role} (Modo Demo)`);
-    navigate(`/${role}`);
-  };
-
   return (
     <div className="min-h-screen bg-neutral-50 flex">
       {/* Left panel - branding */}
@@ -139,34 +126,6 @@ export default function LoginPage() {
               <ArrowRight size={18} />
             </Button>
           </form>
-
-          <div className="mt-8">
-            <div className="relative flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-neutral-200" />
-              <span className="text-xs text-neutral-400 shrink-0">OU ACESSO RÁPIDO (DEMO)</span>
-              <div className="flex-1 h-px bg-neutral-200" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { role: 'tutor' as UserRole, label: '🐾 Tutor', color: 'border-orange-200 hover:bg-orange-50 hover:border-orange-300' },
-                { role: 'estabelecimento' as UserRole, label: '🏪 Estabelecimento', color: 'border-blue-200 hover:bg-blue-50 hover:border-blue-300' },
-                { role: 'profissional' as UserRole, label: '👨‍⚕️ Profissional', color: 'border-green-200 hover:bg-green-50 hover:border-green-300' },
-                { role: 'admin' as UserRole, label: '⚙️ Admin', color: 'border-purple-200 hover:bg-purple-50 hover:border-purple-300' },
-              ].map((item) => (
-                <button
-                  key={item.role}
-                  onClick={() => handleDemoLogin(item.role)}
-                  className={`px-4 py-3 border-2 ${item.color} rounded-xl text-sm font-medium text-neutral-700 transition-all duration-200`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-neutral-400 text-center mt-3">
-              Acesso de demonstração — clique para entrar diretamente
-            </p>
-          </div>
 
           <p className="text-center mt-8 text-sm text-neutral-500">
             Não tem conta?{' '}

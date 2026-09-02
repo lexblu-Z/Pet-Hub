@@ -1,9 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { PrismaClient, Role, ApprovalStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Role, ApprovalStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 const registerSchema = z.object({
   name: z.string().min(2),

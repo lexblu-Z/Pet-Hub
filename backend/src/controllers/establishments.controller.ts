@@ -1,8 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { PrismaClient, ApprovalStatus, Role } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { ApprovalStatus, Role } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export const establishmentsController = {
   // Public route for users to see approved establishments

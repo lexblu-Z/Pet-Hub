@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+
 import { authRoutes } from './routes/auth.routes';
 import { petsRoutes } from './routes/pets.routes';
 import { establishmentsRoutes } from './routes/establishments.routes';
@@ -13,7 +13,7 @@ import { googleRoutes } from './routes/google.routes';
 dotenv.config();
 
 const fastify = Fastify({ logger: true });
-const prisma = new PrismaClient();
+
 
 // Register plugins
 fastify.register(cors, {

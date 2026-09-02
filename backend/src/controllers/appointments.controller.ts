@@ -1,8 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { PrismaClient, Role, AppointmentStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Role, AppointmentStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 const createAppointmentSchema = z.object({
   petId: z.string(),

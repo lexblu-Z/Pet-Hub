@@ -53,6 +53,12 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode,
 }
 
 export default function App() {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  React.useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
   return (
     <BrowserRouter>
       <Routes>
