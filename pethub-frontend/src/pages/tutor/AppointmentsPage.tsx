@@ -1,26 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronRight, XCircle } from 'lucide-react';
-import { appointments } from '@/data/appointments';
+import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState } from '@/components/ui';
 
 const statusConfig = {
-  confirmed: { label: 'Confirmado', variant: 'success' as const },
-  pending: { label: 'Pendente', variant: 'warning' as const },
-  'in-progress': { label: 'Em andamento', variant: 'info' as const },
-  completed: { label: 'Concluído', variant: 'success' as const },
-  cancelled: { label: 'Cancelado', variant: 'error' as const },
+  CONFIRMED: { label: 'Confirmado', variant: 'success' as const },
+  PENDING: { label: 'Pendente', variant: 'warning' as const },
+  IN_PROGRESS: { label: 'Em andamento', variant: 'info' as const },
+  COMPLETED: { label: 'Concluído', variant: 'success' as const },
+  CANCELLED: { label: 'Cancelado', variant: 'error' as const },
 };
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const myAppointments = appointments.filter((a) => a.tutorId === 'tutor-1').sort((a, b) => b.date.localeCompare(a.date));
+  useEffect(() => {
+    const loadAppointments = async () => {
+      try {
+        const response = await api.get('/appointments/me');
+        setAppointments(response.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadAppointments();
+  }, []);
 
-  const upcomingApts = myAppointments.filter(a => ['confirmed', 'pending', 'in-progress'].includes(a.status));
-  const pastApts = myAppointments.filter(a => ['completed', 'cancelled'].includes(a.status));
+  const myAppointments = appointments.sort((a, b) => b.date.localeCompare(a.date));
+
+  const upcomingApts = myAppointments.filter(a => ['CONFIRMED', 'PENDING', 'IN_PROGRESS'].includes(a.status));
+  const pastApts = myAppointments.filter(a => ['COMPLETED', 'CANCELLED'].includes(a.status));
 
   const tabs = [
     { id: 'upcoming', label: 'Próximos', badge: upcomingApts.length },

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ArrowLeft, Calendar as CalendarIcon, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { useToast } from '@/store/toastStore';
+import { api } from '@/services/api';
 import { pets } from '@/data/pets';
 import { establishments } from '@/data/users';
 import { services } from '@/data/services';
@@ -40,10 +41,32 @@ export default function BookingPage() {
 
   const handleConfirm = async () => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    toast.success('Agendamento confirmado com sucesso!');
-    reset();
-    navigate('/tutor/appointments');
+    try {
+      if (!store.selectedPet || !store.selectedService || !store.selectedEstablishment || !store.selectedDate) {
+        toast.error('Dados incompletos para agendamento.');
+        return;
+      }
+      
+      const payload = {
+        petId: store.selectedPet.id,
+        serviceId: store.selectedService.id,
+        establishmentId: store.selectedEstablishment.userId,
+        professionalId: store.selectedProfessional?.userId,
+        date: `${store.selectedDate}T${store.selectedTime || '00:00'}:00Z`,
+        // Note: Transport logic needs to be handled if added to schema
+      };
+
+      await api.post('/appointments', payload);
+      
+      toast.success('Agendamento confirmado com sucesso!');
+      reset();
+      navigate('/tutor/appointments');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Erro ao criar agendamento.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Selectors
