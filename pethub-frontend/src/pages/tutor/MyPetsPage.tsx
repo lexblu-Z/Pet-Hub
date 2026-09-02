@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, MoreVertical, Calendar, Syringe, Edit, Trash2 } from 'lucide-react';
-import { pets } from '@/data/pets';
+import { Plus, MoreVertical, Calendar, Edit, Trash2 } from 'lucide-react';
+import { usePetStore } from '@/store/petStore';
 import { vaccines } from '@/data/vaccines';
 import { appointments } from '@/data/appointments';
 import { EmptyState, SkeletonCard, Badge, ConfirmModal } from '@/components/ui';
@@ -15,11 +15,13 @@ const speciesEmoji: Record<string, string> = {
 export default function MyPetsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const [isLoading] = useState(false);
+  const { pets: myPets, isLoading, fetchPets, deletePet } = usePetStore();
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; petId: string | null }>({ open: false, petId: null });
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  const myPets = pets.filter((p) => p.tutorId === 'tutor-1');
+  useEffect(() => {
+    fetchPets();
+  }, [fetchPets]);
 
   const getPetVaccineStatus = (petId: string) => {
     const petVaccines = vaccines.filter((v) => v.petId === petId);
@@ -50,8 +52,15 @@ export default function MyPetsPage() {
     overdue: { label: 'Vacina atrasada', variant: 'error' as const, icon: '!' },
   };
 
-  const handleDelete = () => {
-    toast.success('Pet removido com sucesso');
+  const handleDelete = async () => {
+    if (deleteModal.petId) {
+      try {
+        await deletePet(deleteModal.petId);
+        toast.success('Pet removido com sucesso');
+      } catch (err) {
+        toast.error('Erro ao remover pet');
+      }
+    }
     setDeleteModal({ open: false, petId: null });
   };
 

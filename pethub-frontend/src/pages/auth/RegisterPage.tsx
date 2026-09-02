@@ -5,6 +5,7 @@ import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, CheckCircle2 
 import { Input, Button, Progress } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
+import { api } from '@/services/api';
 import type { UserRole } from '@/types';
 
 const roleOptions = [
@@ -43,14 +44,31 @@ export default function RegisterPage() {
 
   const handleFinish = async () => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    login(selectedRole);
-    toast.success('Conta criada com sucesso! Bem-vindo ao PetHub! 🐾');
-    
-    if (selectedRole === 'tutor') {
-      navigate('/auth/onboarding');
-    } else {
-      navigate(`/${selectedRole}`);
+    try {
+      const response = await api.post('/auth/register', {
+        name,
+        email,
+        phone,
+        password,
+        role: selectedRole.toUpperCase()
+      });
+
+      const { token, user } = response.data;
+      login(token, user, user.role.toLowerCase() as UserRole);
+
+      toast.success('Conta criada com sucesso! Bem-vindo ao PetHub! 🐶');
+      
+      if (selectedRole === 'tutor') {
+        navigate('/auth/onboarding');
+      } else {
+        navigate(`/${selectedRole}`);
+      }
+    } catch (error: any) {
+      console.error(error);
+      const message = error.response?.data?.error || 'Erro ao criar conta. O back-end está rodando?';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 

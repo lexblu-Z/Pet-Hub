@@ -4,6 +4,11 @@ import fastifyJwt from '@fastify/jwt';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { authRoutes } from './routes/auth.routes';
+import { petsRoutes } from './routes/pets.routes';
+import { establishmentsRoutes } from './routes/establishments.routes';
+import { servicesRoutes } from './routes/services.routes';
+import { appointmentsRoutes } from './routes/appointments.routes';
+import { googleRoutes } from './routes/google.routes';
 
 dotenv.config();
 
@@ -21,6 +26,11 @@ fastify.register(fastifyJwt, {
 
 // Register routes
 fastify.register(authRoutes, { prefix: '/api/auth' });
+fastify.register(petsRoutes, { prefix: '/api/pets' });
+fastify.register(establishmentsRoutes, { prefix: '/api/establishments' });
+fastify.register(servicesRoutes, { prefix: '/api/services' });
+fastify.register(appointmentsRoutes, { prefix: '/api/appointments' });
+fastify.register(googleRoutes, { prefix: '/api/google' });
 
 // Basic route
 fastify.get('/', async (request, reply) => {

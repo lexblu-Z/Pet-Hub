@@ -35,6 +35,12 @@ model User {
   establishmentProfile EstablishmentProfile?
   professionalProfile  ProfessionalProfile?
   adminProfile         AdminProfile?
+
+  servicesAsEstablishment Service[] @relation("EstablishmentServices")
+  servicesAsProfessional  Service[] @relation("ProfessionalServices")
+  appointmentsAsTutor     Appointment[] @relation("TutorAppointments")
+  appointmentsAsEstablishment Appointment[] @relation("EstablishmentAppointments")
+  appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
 }
 
 model Pet {
@@ -47,7 +53,8 @@ model Pet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tutor     User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  tutor        User          @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
 }
 
 model EstablishmentProfile {
@@ -94,4 +101,47 @@ model OAuthIntegration {
   updatedAt              DateTime @updatedAt
 
   establishmentProfile   EstablishmentProfile @relation(fields: [establishmentProfileId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  price           Float
+  duration        Int      // Duration in minutes
+  establishmentId String?
+  professionalId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  establishment   User?    @relation("EstablishmentServices", fields: [establishmentId], references: [id])
+  professional    User?    @relation("ProfessionalServices", fields: [professionalId], references: [id])
+  appointments    Appointment[]
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  tutorId         String
+  petId           String
+  serviceId       String
+  establishmentId String
+  professionalId  String?
+  date            DateTime
+  status          AppointmentStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  service         Service           @relation(fields: [serviceId], references: [id])
+  tutor           User              @relation("TutorAppointments", fields: [tutorId], references: [id])
+  pet             Pet               @relation(fields: [petId], references: [id])
+  establishment   User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id])
+  professional    User?             @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
 }

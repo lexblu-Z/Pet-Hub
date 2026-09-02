@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { PawPrint, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
+import { api } from '@/services/api';
 import { Input, Button } from '@/components/ui';
 import type { UserRole } from '@/types';
 
@@ -22,20 +23,40 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    login('tutor');
-    toast.success('Bem-vindo de volta! 🐾');
-    navigate('/tutor');
-    setIsLoading(false);
+    
+    try {
+      // API call to the backend
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+        role: 'TUTOR', // Assuming default login form is for Tutor (we can improve this later)
+      });
+      
+      const { token, user } = response.data;
+      login(token, user, user.role.toLowerCase() as UserRole);
+      
+      toast.success('Bem-vindo de volta! 🐶');
+      navigate(`/${user.role.toLowerCase()}`);
+    } catch (error: any) {
+      console.error(error);
+      const message = error.response?.data?.error || 'Erro ao fazer login. O back-end está rodando?';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDemoLogin = (role: UserRole) => {
-    login(role);
-    toast.success(`Entrando como ${role}...`);
-    if (role === 'tutor') navigate('/tutor');
-    else if (role === 'estabelecimento') navigate('/estabelecimento');
-    else if (role === 'profissional') navigate('/profissional');
-    else navigate('/admin');
+    // Generate dummy user since we are bypassing the API
+    let dummyUser: any;
+    if (role === 'tutor') dummyUser = { id: 'tutor-1', name: 'Tutor Demo', email: 'demo@tutor.com', role: 'TUTOR' };
+    else if (role === 'estabelecimento') dummyUser = { id: 'est-1', name: 'Estabelecimento Demo', email: 'demo@est.com', role: 'ESTABLISHMENT' };
+    else if (role === 'profissional') dummyUser = { id: 'prof-1', name: 'Profissional Demo', email: 'demo@prof.com', role: 'PROFESSIONAL' };
+    else dummyUser = { id: 'admin-1', name: 'Admin Demo', email: 'demo@admin.com', role: 'ADMIN' };
+    
+    login('dummy-token-123', dummyUser, role);
+    toast.success(`Entrando como ${role} (Modo Demo)`);
+    navigate(`/${role}`);
   };
 
   return (
