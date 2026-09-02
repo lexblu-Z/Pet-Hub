@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TUTOR
+  ESTABLISHMENT
+  PROFESSIONAL
+  ADMIN
+}
+
+enum ApprovalStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  role      Role     @default(TUTOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  pets                 Pet[]
+  establishmentProfile EstablishmentProfile?
+  professionalProfile  ProfessionalProfile?
+  adminProfile         AdminProfile?
+}
+
+model Pet {
+  id        String   @id @default(uuid())
+  name      String
+  species   String
+  breed     String?
+  photo     String?
+  tutorId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tutor     User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+model EstablishmentProfile {
+  id          String         @id @default(uuid())
+  userId      String         @unique
+  status      ApprovalStatus @default(PENDING_APPROVAL)
+  description String?
+  address     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oauthIntegration OAuthIntegration?
+}
+
+model ProfessionalProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  specialty   String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OAuthIntegration {
+  id                     String   @id @default(uuid())
+  establishmentProfileId String   @unique
+  provider               String   @default("google")
+  accessToken            String
+  refreshToken           String
+  expiryDate             DateTime
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  establishmentProfile   EstablishmentProfile @relation(fields: [establishmentProfileId], references: [id], onDelete: Cascade)
+}

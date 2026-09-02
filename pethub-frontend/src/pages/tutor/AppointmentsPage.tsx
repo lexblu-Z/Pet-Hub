@@ -1,0 +1,102 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Calendar, Clock, MapPin, ChevronRight, XCircle } from 'lucide-react';
+import { appointments } from '@/data/appointments';
+import { Tabs, Badge, EmptyState } from '@/components/ui';
+
+const statusConfig = {
+  confirmed: { label: 'Confirmado', variant: 'success' as const },
+  pending: { label: 'Pendente', variant: 'warning' as const },
+  'in-progress': { label: 'Em andamento', variant: 'info' as const },
+  completed: { label: 'Concluído', variant: 'success' as const },
+  cancelled: { label: 'Cancelado', variant: 'error' as const },
+};
+
+export default function AppointmentsPage() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('upcoming');
+
+  const myAppointments = appointments.filter((a) => a.tutorId === 'tutor-1').sort((a, b) => b.date.localeCompare(a.date));
+
+  const upcomingApts = myAppointments.filter(a => ['confirmed', 'pending', 'in-progress'].includes(a.status));
+  const pastApts = myAppointments.filter(a => ['completed', 'cancelled'].includes(a.status));
+
+  const tabs = [
+    { id: 'upcoming', label: 'Próximos', badge: upcomingApts.length },
+    { id: 'past', label: 'Histórico' },
+  ];
+
+  const displayedApts = activeTab === 'upcoming' ? upcomingApts : pastApts;
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-neutral-900 mb-1">Agendamentos</h1>
+        <p className="text-neutral-500 text-sm">Gerencie seus agendamentos e histórico</p>
+      </div>
+
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-6" />
+
+      {displayedApts.length === 0 ? (
+        <EmptyState
+          imageUrl={activeTab === 'upcoming' ? '/zeca_macaque_1788367569922.jpg' : '/beicinho_pitbull_1788367520420.jpg'}
+          title={activeTab === 'upcoming' ? 'Nenhum agendamento futuro' : 'Nenhum histórico'}
+          description={activeTab === 'upcoming' ? 'Nenhum agendamento por aqui ainda 🐾 Que tal marcar um horário?' : 'Você ainda não realizou nenhum serviço.'}
+          action={activeTab === 'upcoming' ? { label: 'Agendar um serviço', onClick: () => navigate('/tutor/booking') } : undefined}
+        />
+      ) : (
+        <div className="space-y-4">
+          {displayedApts.map((apt, i) => (
+            <motion.div
+              key={apt.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => navigate(`/tutor/appointments/${apt.id}`)}
+              className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${apt.serviceCategory === 'consulta' ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                    {apt.serviceCategory === 'consulta' ? '🩺' : '✂️'}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-neutral-900">{apt.serviceName}</h3>
+                    <p className="text-sm text-neutral-500">{apt.establishmentName}</p>
+                  </div>
+                </div>
+                <Badge variant={statusConfig[apt.status].variant}>
+                  {statusConfig[apt.status].label}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 rounded-xl mb-3">
+                <div>
+                  <p className="text-xs text-neutral-400 mb-1">🐾 Pet</p>
+                  <p className="text-sm font-semibold">{apt.petName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-400 mb-1">📅 Data</p>
+                  <p className="text-sm font-semibold">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-400 mb-1">⏰ Horário</p>
+                  <p className="text-sm font-semibold">{apt.time}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-400 mb-1">💰 Valor</p>
+                  <p className="text-sm font-semibold">R${apt.price.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-orange-500 font-medium">
+                Ver detalhes <ChevronRight size={16} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

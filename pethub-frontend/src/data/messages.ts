@@ -1,0 +1,100 @@
+import type { Conversation, Message } from '@/types';
+
+export const messages: Message[] = [
+  // Conversation 1: tutor-1 <-> PetCare Ourinhos
+  {
+    id: 'msg-1',
+    conversationId: 'conv-1',
+    senderId: 'tutor-1',
+    senderName: 'Leonardo Silva',
+    content: 'Olá! Gostaria de saber se vocês têm aquele shampoo hipoalergênico da marca X para vender na loja.',
+    type: 'text',
+    timestamp: '2026-09-01T14:00:00',
+    isRead: true,
+  },
+  {
+    id: 'msg-2',
+    conversationId: 'conv-1',
+    senderId: 'est-1',
+    senderName: 'PetCare Ourinhos',
+    content: 'Olá Leonardo! Temos sim. Chegou um lote novo ontem. Custa R$45,90.',
+    type: 'text',
+    timestamp: '2026-09-01T14:15:00',
+    isRead: true,
+  },
+  {
+    id: 'msg-3',
+    conversationId: 'conv-1',
+    senderId: 'tutor-1',
+    senderName: 'Leonardo Silva',
+    content: 'Perfeito! Vou passar aí mais tarde para comprar. Obrigado! 😊',
+    type: 'text',
+    timestamp: '2026-09-01T14:20:00',
+    isRead: true,
+  },
+
+  // Conversation 2: tutor-1 <-> VetLife
+  {
+    id: 'msg-6',
+    conversationId: 'conv-2',
+    senderId: 'est-3',
+    senderName: 'VetLife Clínica Veterinária',
+    content: 'Olá Leonardo, tudo bem? Como a Luna está se sentindo após a vacina de ontem?',
+    type: 'text',
+    timestamp: '2026-09-01T09:00:00',
+    isRead: true,
+  },
+  {
+    id: 'msg-7',
+    conversationId: 'conv-2',
+    senderId: 'tutor-1',
+    senderName: 'Leonardo Silva',
+    content: 'Oi! Ela está ótima, brincando bastante. Não teve febre.',
+    type: 'text',
+    timestamp: '2026-09-01T09:30:00',
+    isRead: true,
+  },
+  {
+    id: 'msg-8',
+    conversationId: 'conv-2',
+    senderId: 'est-3',
+    senderName: 'VetLife Clínica Veterinária',
+    content: 'Que excelente notícia! Qualquer mudança no comportamento, pode nos avisar por aqui.',
+    type: 'text',
+    timestamp: '2026-09-01T09:45:00',
+    isRead: true,
+  },
+  {
+    id: 'msg-9',
+    conversationId: 'conv-2',
+    senderId: 'tutor-1',
+    senderName: 'Leonardo Silva',
+    content: 'Aviso sim, muito obrigado pela atenção! 🐾',
+    type: 'text',
+    timestamp: '2026-09-01T10:00:00',
+    isRead: false,
+  },
+];
+
+export const conversations: Conversation[] = [
+  {
+    id: 'conv-1',
+    participantId: 'est-1',
+    participantName: 'PetCare Ourinhos',
+    participantAvatar: 'https://i.pravatar.cc/150?img=12',
+    participantType: 'establishment',
+    lastMessage: messages.find((m) => m.conversationId === 'conv-1' && m.id === 'msg-3')!,
+    unreadCount: 0,
+    updatedAt: '2026-09-01T14:20:00',
+  },
+  {
+    id: 'conv-2',
+    participantId: 'est-3',
+    participantName: 'VetLife Clínica Veterinária',
+    participantAvatar: 'https://i.pravatar.cc/150?img=32',
+    participantType: 'establishment',
+    lastMessage: messages.find((m) => m.conversationId === 'conv-2' && m.id === 'msg-9')!,
+    unreadCount: 1,
+    updatedAt: '2026-09-01T10:00:00',
+  },
+];
