@@ -148,7 +148,7 @@ export default function TutorDashboard() {
               onClick={() => navigate(`/tutor/pets/${pet.id}`)}
             >
               <div className="h-28 overflow-hidden">
-                <img src={pet.photo || '/fallback-dog.png'} alt={pet.name} className="w-full h-full object-cover" />
+                <img src={pet.photo || '/fallback-dog.png'} alt={pet.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/user.jpg'; }} />
               </div>
               <div className="p-3">
                 <p className="font-semibold text-neutral-900 text-sm">

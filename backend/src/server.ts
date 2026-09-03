@@ -22,6 +22,7 @@ import { productsRoutes } from './routes/products.routes';
 import { cashbackRoutes } from './routes/cashback.routes';
 import { establishmentAreaRoutes } from './routes/establishmentArea.routes';
 import { notificationsRoutes } from './routes/notifications.routes';
+import { professionalRoutes } from './routes/professional.routes';
 
 dotenv.config();
 
@@ -81,6 +82,7 @@ fastify.register(productsRoutes, { prefix: '/api' });
 fastify.register(cashbackRoutes, { prefix: '/api' });
 fastify.register(establishmentAreaRoutes, { prefix: '/api/establishment' });
 fastify.register(notificationsRoutes, { prefix: '/api' });
+fastify.register(professionalRoutes, { prefix: '/api/professional' });
 
 // Basic route
 fastify.get('/', async (request, reply) => {

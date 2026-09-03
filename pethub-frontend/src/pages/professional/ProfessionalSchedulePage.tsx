@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Clock, User, PawPrint, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon, Clock, CheckCircle, Search } from 'lucide-react';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
+import { api } from '@/services/api';
+import { useToast } from '@/store/toastStore';
 
 interface Appointment {
   id: string;
@@ -8,16 +10,15 @@ interface Appointment {
   date: string;
   petName: string;
   petSpecies: string;
-  petBreed: string;
-  petPhoto?: string;
+  petBreed: string | null;
+  petPhoto: string | null;
   tutorName: string;
-  tutorPhone: string;
-  tutorPhoto?: string;
+  tutorPhone: string | null;
+  tutorPhoto: string | null;
   service: string;
   price: number;
   duration: number;
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  notes?: string;
 }
 
 const statusConfig: Record<string, { label: string; badge: 'warning' | 'info' | 'brand' | 'success' | 'error' }> = {
@@ -32,72 +33,44 @@ export default function ProfessionalSchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 'apt-1',
-      time: '09:30',
-      date: new Date().toISOString().split('T')[0],
-      petName: 'Thor',
-      petSpecies: 'Cão',
-      petBreed: 'Golden Retriever',
-      petPhoto: '',
-      tutorName: 'Mariana Silva',
-      tutorPhone: '(14) 99881-2233',
-      tutorPhoto: '/user.jpg',
-      service: 'Consulta Veterinária Geral',
-      price: 150.00,
-      duration: 45,
-      status: 'CONFIRMED',
-      notes: 'Avaliação de rotina e checagem de vacinas.',
-    },
-    {
-      id: 'apt-2',
-      time: '11:00',
-      date: new Date().toISOString().split('T')[0],
-      petName: 'Luna',
-      petSpecies: 'Gato',
-      petBreed: 'Siamês',
-      petPhoto: '',
-      tutorName: 'Carlos Eduardo',
-      tutorPhone: '(14) 99772-4455',
-      tutorPhoto: '/user.jpg',
-      service: 'Aplicação de Vacina V4 + Vermífugo',
-      price: 110.00,
-      duration: 30,
-      status: 'CONFIRMED',
-      notes: 'Animal um pouco arredio com seringas.',
-    },
-    {
-      id: 'apt-3',
-      time: '14:00',
-      date: new Date().toISOString().split('T')[0],
-      petName: 'Bob',
-      petSpecies: 'Cão',
-      petBreed: 'Poodle',
-      petPhoto: '',
-      tutorName: 'Ana Beatriz',
-      tutorPhone: '(14) 99663-8899',
-      tutorPhoto: '/user.jpg',
-      service: 'Retorno Ortopédico e Radiografia',
-      price: 220.00,
-      duration: 60,
-      status: 'PENDING',
-      notes: 'Checagem pós-cirúrgica da pata traseira.',
-    },
-  ]);
+  const toast = useToast();
 
-  const handleStatusChange = (id: string, newStatus: Appointment['status']) => {
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/professional/appointments?date=${selectedDate}&status=${statusFilter}`);
+      setAppointments(res.data);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [selectedDate, statusFilter]);
+
+  const handleStatusChange = async (id: string, newStatus: Appointment['status']) => {
+    try {
+      await api.put(`/professional/appointments/${id}/status`, { status: newStatus });
+      toast.success('Status do atendimento atualizado!');
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    } catch (err) {
+      toast.error('Erro ao atualizar status do atendimento.');
+    }
   };
 
   const filtered = appointments.filter(a => {
-    const matchesFilter = statusFilter === 'ALL' || a.status === statusFilter;
     const matchesSearch = !search || 
       a.petName.toLowerCase().includes(search.toLowerCase()) ||
       a.tutorName.toLowerCase().includes(search.toLowerCase()) ||
       a.service.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesSearch;
   });
 
   return (
@@ -106,7 +79,7 @@ export default function ProfessionalSchedulePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Minha Agenda</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">Gerencie consultas, atendimentos clínicos e procedimentos com dados reais</p>
+          <p className="text-neutral-500 text-sm mt-0.5">Gerencie consultas, atendimentos clínicos e procedimentos com dados reais do banco</p>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -154,12 +127,17 @@ export default function ProfessionalSchedulePage() {
 
       {/* Appointments List - Matching Establishment Cards */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="p-12 text-center text-neutral-400">
+            <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm">Carregando seus atendimentos do banco...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
             <CalendarIcon size={40} className="mx-auto text-neutral-300 mb-3" />
             <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum agendamento encontrado</h3>
             <p className="text-xs text-neutral-400 max-w-md mx-auto">
-              Novas consultas agendadas por tutores aparecerão detalhadas aqui.
+              Assim que tutores realizarem agendamentos com você, eles aparecerão aqui com dados reais.
             </p>
           </div>
         ) : (
@@ -206,16 +184,16 @@ export default function ProfessionalSchedulePage() {
                       </div>
                       <div>
                         <p className="font-bold text-neutral-900">{apt.petName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.petSpecies} • {apt.petBreed}</p>
+                        <p className="text-[11px] text-neutral-400">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
                       </div>
                     </div>
 
                     {/* Tutor */}
                     <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
-                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" />
+                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" fallbackSrc="/user.jpg" />
                       <div>
                         <p className="font-bold text-neutral-900">{apt.tutorName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.tutorPhone}</p>
+                        <p className="text-[11px] text-neutral-400">{apt.tutorPhone || 'Tutor'}</p>
                       </div>
                     </div>
                   </div>
@@ -256,12 +234,6 @@ export default function ProfessionalSchedulePage() {
                     )}
                   </div>
                 </div>
-
-                {apt.notes && (
-                  <p className="text-xs text-neutral-500 bg-neutral-50 p-2.5 rounded-xl border border-neutral-100">
-                    <span className="font-bold text-neutral-700">Observações:</span> {apt.notes}
-                  </p>
-                )}
               </div>
             );
           })

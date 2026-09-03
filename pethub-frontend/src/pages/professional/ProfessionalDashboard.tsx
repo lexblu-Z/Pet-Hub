@@ -1,49 +1,52 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
-import { motion } from 'framer-motion';
 import { 
   Calendar, 
-  ClipboardList, 
   Clock, 
-  CheckCircle, 
-  AlertTriangle, 
   PawPrint, 
   Star, 
-  UserCheck, 
   ChevronRight, 
-  Plus, 
+  AlertTriangle, 
   Stethoscope,
-  Users
 } from 'lucide-react';
-import { Button, Badge, Avatar } from '@/components/ui';
+import { Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
 
 interface DashboardData {
-  appointmentsToday: number;
+  todayAppointments: number;
   upcomingAppointments: number;
-  completedAppointments: number;
-  averageRating: number;
-  appointments: Array<{
+  patientsAttended: number;
+  averageRating: number | null;
+  todaySchedule: Array<{
     id: string;
     time: string;
     date: string;
     petName: string;
-    petBreed: string;
-    petPhoto?: string;
+    petSpecies: string;
+    petBreed: string | null;
+    petPhoto: string | null;
     tutorName: string;
-    tutorPhoto?: string;
+    tutorPhoto: string | null;
+    tutorPhone: string | null;
     service: string;
     status: string;
-    price?: number;
+    price: number;
+    duration: number;
   }>;
 }
 
 export default function ProfessionalDashboard() {
   const { currentUser } = useAuthStore();
   const [period, setPeriod] = useState('month');
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DashboardData>({
+    todayAppointments: 0,
+    upcomingAppointments: 0,
+    patientsAttended: 0,
+    averageRating: null,
+    todaySchedule: [],
+  });
+  const [loading, setLoading] = useState(true);
 
   const profProfile = (currentUser as any)?.professionalProfile;
   const isPendingApproval = profProfile?.status === 'PENDING_APPROVAL' || !profProfile?.status;
@@ -52,41 +55,28 @@ export default function ProfessionalDashboard() {
   const specialty = profProfile?.specialty || 'Médico Veterinário';
   const photoSrc = currentUser?.avatar || '/user.jpg';
 
-  // Sample or real data loading
+  // 100% REAL DATA FROM BACKEND API
   useEffect(() => {
-    // Initial sample data for complete professional feel
-    setData({
-      appointmentsToday: 2,
-      upcomingAppointments: 5,
-      completedAppointments: 38,
-      averageRating: 5.0,
-      appointments: [
-        {
-          id: 'apt-1',
-          time: '09:30',
-          date: new Date().toISOString(),
-          petName: 'Thor',
-          petBreed: 'Golden Retriever',
-          tutorName: 'Mariana Silva',
-          tutorPhoto: '/user.jpg',
-          service: 'Consulta Clínica Geral',
-          status: 'CONFIRMED',
-          price: 150.0,
-        },
-        {
-          id: 'apt-2',
-          time: '11:00',
-          date: new Date().toISOString(),
-          petName: 'Luna',
-          petBreed: 'Gato Siamês',
-          tutorName: 'Carlos Eduardo',
-          tutorPhoto: '/user.jpg',
-          service: 'Aplicação de Vacina V4',
-          status: 'PENDING',
-          price: 90.0,
-        },
-      ],
-    });
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/professional/dashboard?period=${period}`);
+        setData(res.data);
+      } catch (err) {
+        console.error('Error fetching professional dashboard:', err);
+        setData({
+          todayAppointments: 0,
+          upcomingAppointments: 0,
+          patientsAttended: 0,
+          averageRating: null,
+          todaySchedule: [],
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, [period]);
 
   return (
@@ -193,7 +183,7 @@ export default function ProfessionalDashboard() {
         </div>
       )}
 
-      {/* Metrics Row - Same Visual Standard as Establishment */}
+      {/* Metrics Row - 100% Real Data */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Atendimentos Hoje */}
         <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
@@ -205,23 +195,23 @@ export default function ProfessionalDashboard() {
           </div>
           <div>
             <span className="text-2xl font-black text-neutral-900">
-              {data?.appointmentsToday ?? 0}
+              {data.todayAppointments}
             </span>
             <span className="text-xs text-neutral-400 font-medium ml-2">consultas hoje</span>
           </div>
         </div>
 
-        {/* Próximos Atendimentos */}
+        {/* Próximos Agendamentos */}
         <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-xs font-bold uppercase tracking-wider">Próximos Agendamentos</span>
-            <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
               <Clock size={18} />
             </div>
           </div>
           <div>
             <span className="text-2xl font-black text-neutral-900">
-              {data?.upcomingAppointments ?? 0}
+              {data.upcomingAppointments}
             </span>
             <span className="text-xs text-neutral-400 font-medium ml-2">na fila de espera</span>
           </div>
@@ -231,15 +221,15 @@ export default function ProfessionalDashboard() {
         <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-neutral-400">
             <span className="text-xs font-bold uppercase tracking-wider">Pacientes Atendidos</span>
-            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-neutral-100 text-neutral-700 rounded-xl flex items-center justify-center">
               <PawPrint size={18} />
             </div>
           </div>
           <div>
             <span className="text-2xl font-black text-neutral-900">
-              {data?.completedAppointments ?? 0}
+              {data.patientsAttended}
             </span>
-            <span className="text-xs text-neutral-400 font-medium ml-2">histórico total</span>
+            <span className="text-xs text-neutral-400 font-medium ml-2">pacientes únicos</span>
           </div>
         </div>
 
@@ -252,15 +242,24 @@ export default function ProfessionalDashboard() {
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
-              {data?.averageRating ? data.averageRating.toFixed(1) : '5.0'}
-            </span>
-            <span className="text-xs text-neutral-400 font-medium ml-2">★★★★★</span>
+            {data.averageRating !== null ? (
+              <>
+                <span className="text-2xl font-black text-neutral-900">
+                  {data.averageRating.toFixed(1)}
+                </span>
+                <span className="text-xs text-neutral-400 font-medium ml-2">★★★★★</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl font-black text-neutral-400">—</span>
+                <span className="text-xs text-neutral-400 font-medium ml-2">Sem avaliações</span>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Daily Appointments / Recent Agenda - Same Visual Pattern as Establishment Appointments */}
+      {/* Daily Appointments / Recent Agenda */}
       <div className="bg-white rounded-2xl border border-neutral-100 shadow-xs p-5 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
           <div className="flex items-center gap-2 font-bold text-neutral-900">
@@ -275,17 +274,23 @@ export default function ProfessionalDashboard() {
           </Link>
         </div>
 
-        {(!data?.appointments || data.appointments.length === 0) ? (
-          <div className="p-12 text-center bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
+        {data.todaySchedule.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
             <Stethoscope size={40} className="mx-auto text-neutral-300 mb-3" />
             <h4 className="font-bold text-neutral-800 text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-              Assim que tutores ou estabelecimentos realizarem agendamentos, eles aparecerão aqui com dados completos.
+            <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-4">
+              Assim que tutores realizarem agendamentos com você, eles aparecerão aqui.
             </p>
+            <Link
+              to="/profissional/agenda"
+              className="inline-flex items-center text-xs text-orange-600 hover:text-orange-700 font-bold"
+            >
+              Ver minha agenda →
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">
-            {data.appointments.map((apt) => (
+            {data.todaySchedule.map((apt) => (
               <div
                 key={apt.id}
                 className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs space-y-3 hover:border-orange-200 transition-colors"
@@ -300,12 +305,16 @@ export default function ProfessionalDashboard() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-neutral-900 text-base">{apt.service}</span>
-                        <Badge variant={apt.status === 'CONFIRMED' ? 'success' : 'warning'}>
-                          {apt.status === 'CONFIRMED' ? 'Confirmado' : 'Pendente'}
+                        <Badge variant={apt.status === 'CONFIRMED' ? 'success' : apt.status === 'IN_PROGRESS' ? 'brand' : 'warning'}>
+                          {apt.status === 'CONFIRMED' ? 'Confirmado' : apt.status === 'IN_PROGRESS' ? 'Em Andamento' : 'Agendado'}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                        <span className="font-bold text-green-700">R$ {(apt.price || 120).toFixed(2).replace('.', ',')}</span>
+                        <span className="font-semibold text-neutral-800 flex items-center gap-1">
+                          <Clock size={12} className="text-orange-500" /> {apt.duration} min
+                        </span>
+                        <span>•</span>
+                        <span className="font-bold text-green-700">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </div>
                   </div>
@@ -323,16 +332,16 @@ export default function ProfessionalDashboard() {
                       </div>
                       <div>
                         <p className="font-bold text-neutral-900">{apt.petName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.petBreed}</p>
+                        <p className="text-[11px] text-neutral-400">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
                       </div>
                     </div>
 
                     {/* Tutor */}
                     <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
-                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" />
+                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" fallbackSrc="/user.jpg" />
                       <div>
                         <p className="font-bold text-neutral-900">{apt.tutorName}</p>
-                        <p className="text-[11px] text-neutral-400">Tutor</p>
+                        <p className="text-[11px] text-neutral-400">{apt.tutorPhone || 'Tutor'}</p>
                       </div>
                     </div>
                   </div>
