@@ -9,18 +9,19 @@ export interface ModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   children: React.ReactNode;
   footer?: React.ReactNode;
   hideClose?: boolean;
 }
 
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-2xl',
-  full: 'max-w-full m-4',
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-2xl',
+  '2xl': 'sm:max-w-4xl',
+  full: 'sm:max-w-[95vw] m-2',
 };
 
 export const Modal: React.FC<ModalProps> = ({
@@ -74,7 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
             transition={{ duration: 0.25, ease: [0.34, 1.56, 0.64, 1] }}
             className={[
               'relative z-10 bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden',
-              'w-full sm:w-auto',
+              'w-full',
               sizeClasses[size],
               'max-h-[90vh] flex flex-col',
             ].join(' ')}
@@ -116,9 +117,10 @@ export const Modal: React.FC<ModalProps> = ({
 export interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
-  description: string;
+  description?: string;
+  message?: string;
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
@@ -131,6 +133,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   title,
   description,
+  message,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   variant = 'danger',
@@ -147,7 +150,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <div className="text-center py-2">
         <div className="text-4xl mb-4">{icons[variant]}</div>
         <h3 className="text-lg font-semibold text-neutral-900 mb-2">{title}</h3>
-        <p className="text-sm text-neutral-500 mb-6">{description}</p>
+        <p className="text-sm text-neutral-500 mb-6">{description || message}</p>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} fullWidth>
             {cancelText}

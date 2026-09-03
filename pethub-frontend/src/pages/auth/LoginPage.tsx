@@ -29,14 +29,22 @@ export default function LoginPage() {
       const response = await api.post('/auth/login', {
         email,
         password,
-        role: 'TUTOR', // Assuming default login form is for Tutor (we can improve this later)
       });
       
       const { token, user } = response.data;
-      login(token, user, user.role.toLowerCase() as UserRole);
+      
+      const roleRouteMap: Record<string, string> = {
+        TUTOR: 'tutor',
+        ESTABLISHMENT: 'estabelecimento',
+        PROFESSIONAL: 'profissional',
+        ADMIN: 'admin',
+      };
+      
+      const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
+      login(token, user, frontRole);
       
       toast.success('Bem-vindo de volta! 🐶');
-      navigate(`/${user.role.toLowerCase()}`);
+      navigate(`/${frontRole}`);
     } catch (error: any) {
       console.error(error);
       const message = error.response?.data?.error || 'Erro ao fazer login. O back-end está rodando?';
@@ -60,20 +68,59 @@ export default function LoginPage() {
           </div>
           <span className="text-2xl font-bold text-white">Pet<span className="text-orange-400">Hub</span></span>
         </div>
-        <div className="relative">
-          <p className="text-5xl font-bold text-white mb-6 leading-tight">
+        <div className="relative z-10 space-y-6">
+          <p className="text-4xl xl:text-5xl font-bold text-white leading-tight">
             Cuide do seu pet com{' '}
-            <span className="text-orange-400">amor e tecnologia</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">
+              amor e tecnologia
+            </span>
           </p>
-          <p className="text-white/50 text-lg">
-            Acesse agendamentos, histórico de saúde, vacinas, cashback e muito mais.
+          <p className="text-white/60 text-base max-w-md">
+            Agendamentos inteligentes, saúde, vacinas, produtos e cashback em um só lugar.
           </p>
-          <div className="mt-10 flex gap-4">
-            {['🐕 Thor', '🐈 Luna', '🐕 Mel', '🐕 Bob'].map((pet) => (
-              <span key={pet} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/60 text-sm">
-                {pet}
-              </span>
-            ))}
+
+          {/* Real Animals Composition Card */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 flex items-center gap-3 transition-transform hover:scale-[1.02]">
+              <img
+                src="/premium-golden.jpg"
+                alt="Golden Retriever"
+                className="w-12 h-12 rounded-xl object-cover border border-white/20 shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-white text-sm font-semibold truncate">Thor & Luna</p>
+                <span className="inline-flex items-center gap-1 text-[11px] text-green-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  Vacinas em dia
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 flex items-center gap-3 transition-transform hover:scale-[1.02]">
+              <img
+                src="/romeu_e_julieta_1788367558045.jpg"
+                alt="Cão e Gato"
+                className="w-12 h-12 rounded-xl object-cover border border-white/20 shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-white text-sm font-semibold truncate">Mel & Bob</p>
+                <span className="inline-flex items-center gap-1 text-[11px] text-orange-300 font-medium">
+                  ⭐ 4.9 Tutor VIP
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 pt-2">
+            <div className="flex -space-x-2 overflow-hidden">
+              <img src="/jorginho_derpy_shepherd_1788367498390.jpg" alt="" className="inline-block h-8 w-8 rounded-full ring-2 ring-neutral-900 object-cover" />
+              <img src="/beicinho_pitbull_1788367520420.jpg" alt="" className="inline-block h-8 w-8 rounded-full ring-2 ring-neutral-900 object-cover" />
+              <img src="/brutus_buff_bulldog_1788367509463.jpg" alt="" className="inline-block h-8 w-8 rounded-full ring-2 ring-neutral-900 object-cover" />
+              <img src="/salsicha_borzoi_1788367580508.jpg" alt="" className="inline-block h-8 w-8 rounded-full ring-2 ring-neutral-900 object-cover" />
+            </div>
+            <p className="text-xs text-white/50">
+              Mais de <span className="text-orange-400 font-bold">+2.500 pets</span> cadastrados e felizes
+            </p>
           </div>
         </div>
         <p className="relative text-white/20 text-sm">© 2026 PetHub</p>
@@ -100,9 +147,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
-              label="E-mail"
-              type="email"
-              placeholder="seu@email.com"
+              label="E-mail / Usuário (Admin)"
+              type="text"
+              placeholder="seu@email.com ou admin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               leftIcon={<Mail size={16} />}

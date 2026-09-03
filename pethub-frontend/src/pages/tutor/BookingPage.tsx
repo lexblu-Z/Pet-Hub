@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ArrowLeft, Calendar as CalendarIcon, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
-import { pets } from '@/data/pets';
-import { establishments } from '@/data/users';
-import { services } from '@/data/services';
 import { Button, Stepper } from '@/components/ui';
 import type { Pet, EstablishmentProfile, Service } from '@/types';
 
@@ -21,14 +18,60 @@ const steps = [
 
 export default function BookingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { currentStep, setCurrentStep, reset, ...store } = useBookingStore();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Derived data
-  const myPets = pets.filter((p) => p.tutorId === 'tutor-1');
-  const availableEsts = establishments.filter((e) => e.isApproved);
-  const estServices = store.selectedEstablishment ? services.filter((s) => s.establishmentId === store.selectedEstablishment?.id) : [];
+  // Real data state
+  const [myPets, setMyPets] = useState<any[]>([]);
+  const [availableEsts, setAvailableEsts] = useState<any[]>([]);
+  const [allServices, setAllServices] = useState<any[]>([]);
+  const [isFetchingData, setIsFetchingData] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [petsRes, estsRes, srvsRes] = await Promise.all([
+          api.get('/pets'),
+          api.get('/establishments'),
+          api.get('/services')
+        ]);
+        
+        setMyPets(petsRes.data);
+        
+        const mappedEsts = estsRes.data.map((e: any) => ({
+          id: e.id,
+          userId: e.id,
+          businessName: e.name,
+          category: ['banho', 'tosa'],
+          logo: e.logo || '/salsicha_borzoi_1788367580508.jpg',
+          cover: e.cover || '/jorginho_derpy_shepherd_1788367498390.jpg',
+          address: e.address || { neighborhood: 'Endereço não informado' },
+          rating: e.rating || 4.5,
+          reviewCount: e.reviewCount || 10,
+          isApproved: true,
+        }));
+        setAvailableEsts(mappedEsts);
+        
+        setAllServices(srvsRes.data);
+
+        // Check if prefill was passed
+        if (location.state?.prefillEstablishment) {
+          store.setSelectedEstablishment(location.state.prefillEstablishment);
+        }
+      } catch (error) {
+        toast.error('Erro ao buscar dados para agendamento.');
+      } finally {
+        setIsFetchingData(false);
+      }
+    };
+    fetchData();
+  }, [toast, location.state]);
+
+  const availableServices = store.selectedEstablishment 
+    ? allServices.filter((s) => s.establishmentId === store.selectedEstablishment?.id) 
+    : [];
 
   const handleNext = () => {
     if (currentStep < 5) setCurrentStep(currentStep + 1);
@@ -50,8 +93,8 @@ export default function BookingPage() {
       const payload = {
         petId: store.selectedPet.id,
         serviceId: store.selectedService.id,
-        establishmentId: store.selectedEstablishment.userId,
-        professionalId: store.selectedProfessional?.userId,
+        establishmentId: (store.selectedEstablishment as any).userId,
+        professionalId: (store.selectedProfessional as any)?.userId,
         date: `${store.selectedDate}T${store.selectedTime || '00:00'}:00Z`,
         // Note: Transport logic needs to be handled if added to schema
       };
@@ -134,7 +177,7 @@ export default function BookingPage() {
                       store.selectedEstablishment?.id === est.id ? 'border-orange-500 bg-orange-50' : 'border-neutral-100 bg-white hover:border-orange-200'
                     }`}
                   >
-                    <img src={est.coverPhoto} alt={est.businessName} className="w-14 h-14 rounded-xl object-cover" />
+                    <img src={est.cover} alt={est.businessName} className="w-14 h-14 rounded-xl object-cover" />
                     <div className="flex-1 text-left">
                       <p className="font-bold text-neutral-900">{est.businessName}</p>
                       <p className="text-sm text-neutral-500 truncate">{est.address.neighborhood}</p>
@@ -150,11 +193,13 @@ export default function BookingPage() {
           {currentStep === 3 && (
             <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h2 className="text-xl font-bold mb-4">Escolha o serviço</h2>
-              {estServices.length === 0 ? (
-                <p className="text-neutral-500">Nenhum serviço disponível neste local.</p>
+              {availableServices.length === 0 ? (
+                <div className="bg-neutral-50 rounded-2xl p-6 text-center">
+                  <p className="text-neutral-500 font-medium">Este estabelecimento ainda não possui serviços cadastrados.</p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {estServices.map((svc) => (
+                  {availableServices.map((svc) => (
                     <button
                       key={svc.id}
                       onClick={() => selectSvc(svc)}

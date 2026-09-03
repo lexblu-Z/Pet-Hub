@@ -19,24 +19,45 @@ import OnboardingPage from '@/pages/auth/OnboardingPage';
 import TutorDashboard from '@/pages/tutor/TutorDashboard';
 import MyPetsPage from '@/pages/tutor/MyPetsPage';
 import PetProfilePage from '@/pages/tutor/PetProfilePage';
+import PetFormPage from '@/pages/tutor/PetFormPage';
+import FavoritesPage from '@/pages/tutor/FavoritesPage';
 import AppointmentsPage from '@/pages/tutor/AppointmentsPage';
 import BookingPage from '@/pages/tutor/BookingPage';
-import { ExplorePage, EstablishmentProfilePage } from '@/pages/tutor/ExplorePage';
+import { ExplorePage, EstablishmentProfilePage as TutorEstablishmentViewPage } from '@/pages/tutor/ExplorePage';
 import ShopPage from '@/pages/tutor/ShopPage';
 import CashbackPage from '@/pages/tutor/CashbackPage';
 import ProfilePage from '@/pages/tutor/ProfilePage';
 import ChatPage from '@/pages/tutor/ChatPage';
 import PlansPage from '@/pages/tutor/PlansPage';
 import NotificationsPage from '@/pages/tutor/NotificationsPage';
+import MyPurchasesPage from '@/pages/tutor/MyPurchasesPage';
+import PaymentMethodsPage from '@/pages/tutor/PaymentMethodsPage';
+import SecurityPage from '@/pages/tutor/SecurityPage';
+import PreferencesPage from '@/pages/tutor/PreferencesPage';
+import NotificationSettingsPage from '@/pages/tutor/NotificationSettingsPage';
 
 // Establishment Pages
 import EstablishmentDashboard from '@/pages/establishment/EstablishmentDashboard';
+import EstablishmentProfilePage from '@/pages/establishment/EstablishmentProfilePage';
+import EstablishmentServicesPage from '@/pages/establishment/EstablishmentServicesPage';
+import EstablishmentProductsPage from '@/pages/establishment/EstablishmentProductsPage';
+import EstablishmentOrdersPage from '@/pages/establishment/EstablishmentOrdersPage';
+import EstablishmentAppointmentsPage from '@/pages/establishment/EstablishmentAppointmentsPage';
+import EstablishmentEmployeesPage from '@/pages/establishment/EstablishmentEmployeesPage';
+import EstablishmentSettingsPage from '@/pages/establishment/EstablishmentSettingsPage';
 
 // Professional Pages
 import ProfessionalDashboard from '@/pages/professional/ProfessionalDashboard';
+import ProfessionalSchedulePage from '@/pages/professional/ProfessionalSchedulePage';
+import ProfessionalWorkOrdersPage from '@/pages/professional/ProfessionalWorkOrdersPage';
+import ProfessionalReviewsPage from '@/pages/professional/ProfessionalReviewsPage';
+import ProfessionalProfilePage from '@/pages/professional/ProfessionalProfilePage';
 
 // Admin Pages
 import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminEstablishmentsPage from '@/pages/admin/AdminEstablishmentsPage';
+import AdminProfessionalsPage from '@/pages/admin/AdminProfessionalsPage';
+import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
   const { isAuthenticated, currentRole } = useAuthStore();
@@ -64,7 +85,7 @@ export default function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/auth/welcome" element={<WelcomePage />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
@@ -79,20 +100,30 @@ export default function App() {
         }>
           <Route index element={<TutorDashboard />} />
           <Route path="pets" element={<MyPetsPage />} />
-          <Route path="pets/novo" element={<div className="p-8">Formulário de novo pet</div>} />
+          <Route path="pets/novo" element={<PetFormPage />} />
           <Route path="pets/:id" element={<PetProfilePage />} />
-          <Route path="pets/:id/editar" element={<div className="p-8">Formulário de edição</div>} />
+          <Route path="pets/:id/editar" element={<PetFormPage isEditing />} />
           <Route path="appointments" element={<AppointmentsPage />} />
-          <Route path="appointments/:id" element={<div className="p-8">Detalhes do agendamento</div>} />
-          <Route path="booking" element={<BookingPage />} />
+          <Route path="agendamentos" element={<AppointmentsPage />} />
+          <Route path="booking/:id" element={<BookingPage />} />
           <Route path="explore" element={<ExplorePage />} />
-          <Route path="estabelecimentos/:id" element={<EstablishmentProfilePage />} />
+          <Route path="explorar" element={<ExplorePage />} />
+          <Route path="establishment/:id" element={<TutorEstablishmentViewPage />} />
+          <Route path="estabelecimentos/:id" element={<TutorEstablishmentViewPage />} />
           <Route path="shop" element={<ShopPage />} />
+          <Route path="loja" element={<ShopPage />} />
           <Route path="cashback" element={<CashbackPage />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="favorites" element={<FavoritesPage />} />
+          <Route path="favoritos" element={<FavoritesPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="plans" element={<PlansPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="compras" element={<MyPurchasesPage />} />
+          <Route path="pagamento" element={<PaymentMethodsPage />} />
+          <Route path="seguranca" element={<SecurityPage />} />
+          <Route path="preferencias" element={<PreferencesPage />} />
+          <Route path="notificacoes-config" element={<NotificationSettingsPage />} />
         </Route>
 
         {/* Establishment Routes */}
@@ -102,7 +133,14 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route index element={<EstablishmentDashboard />} />
-          <Route path="*" element={<div className="p-6 text-neutral-500">Página em construção...</div>} />
+          <Route path="perfil" element={<EstablishmentProfilePage />} />
+          <Route path="servicos" element={<EstablishmentServicesPage />} />
+          <Route path="produtos" element={<EstablishmentProductsPage />} />
+          <Route path="pedidos" element={<EstablishmentOrdersPage />} />
+          <Route path="agendamentos" element={<EstablishmentAppointmentsPage />} />
+          <Route path="funcionarios" element={<EstablishmentEmployeesPage />} />
+          <Route path="configuracoes" element={<EstablishmentSettingsPage />} />
+          <Route path="*" element={<Navigate to="/estabelecimento" replace />} />
         </Route>
 
         {/* Professional Routes */}
@@ -112,7 +150,11 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route index element={<ProfessionalDashboard />} />
-          <Route path="*" element={<div className="p-6 text-neutral-500">Página em construção...</div>} />
+          <Route path="agenda" element={<ProfessionalSchedulePage />} />
+          <Route path="ordens" element={<ProfessionalWorkOrdersPage />} />
+          <Route path="avaliacoes" element={<ProfessionalReviewsPage />} />
+          <Route path="perfil" element={<ProfessionalProfilePage />} />
+          <Route path="*" element={<Navigate to="/profissional" replace />} />
         </Route>
 
         {/* Admin Routes */}
@@ -122,7 +164,10 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route index element={<AdminDashboard />} />
-          <Route path="*" element={<div className="p-6 text-neutral-500">Página em construção...</div>} />
+          <Route path="estabelecimentos" element={<AdminEstablishmentsPage />} />
+          <Route path="profissionais" element={<AdminProfessionalsPage />} />
+          <Route path="usuarios" element={<AdminUsersPage />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
 
         {/* Fallback */}

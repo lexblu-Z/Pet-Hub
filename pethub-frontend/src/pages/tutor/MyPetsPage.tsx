@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Plus, MoreVertical, Calendar, Edit, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MoreVertical, Calendar, Edit, Trash2, HelpCircle, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react';
 import { usePetStore } from '@/store/petStore';
-import { vaccines } from '@/data/vaccines';
-import { appointments } from '@/data/appointments';
-import { EmptyState, SkeletonCard, Badge, ConfirmModal } from '@/components/ui';
+import { EmptyState, SkeletonCard, Badge, ConfirmModal, Button } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 
 const speciesEmoji: Record<string, string> = {
-  dog: '🐕', cat: '🐈', bird: '🦜', rabbit: '🐇', other: '🐾',
+  dog: '🐕', cat: '🐱', bird: '🦜', rabbit: '🐰', rodent: '🐹', fish: '🐠', reptile: '🦎', other: '🐾',
 };
 
 export default function MyPetsPage() {
@@ -23,33 +21,30 @@ export default function MyPetsPage() {
     fetchPets();
   }, [fetchPets]);
 
-  const getPetVaccineStatus = (petId: string) => {
-    const petVaccines = vaccines.filter((v) => v.petId === petId);
-    if (petVaccines.some((v) => v.status === 'overdue')) return 'overdue';
-    if (petVaccines.some((v) => v.status === 'upcoming')) return 'upcoming';
-    return 'up-to-date';
+  const getVaccineInfo = (pet: any) => {
+    const status = pet.vaccinationStatus || 'UNKNOWN';
+    if (status === 'UP_TO_DATE') {
+      return { label: 'Vacinas em dia', variant: 'success' as const, icon: '✓' };
+    }
+    if (status === 'PENDING') {
+      return { label: 'Vacinas pendentes', variant: 'warning' as const, icon: '⚠️' };
+    }
+    return { label: 'Vacinas: não informado', variant: 'info' as const, icon: '❓' };
   };
 
-  const getPetNextAppointment = (petId: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return appointments.find(
-      (a) => a.petId === petId && a.date >= today && (a.status === 'confirmed' || a.status === 'pending')
-    );
-  };
-
-  const getAge = (birthDate: string) => {
-    const birth = new Date(birthDate);
-    const now = new Date();
-    const years = now.getFullYear() - birth.getFullYear();
-    const months = now.getMonth() - birth.getMonth();
-    if (years === 0) return `${Math.max(1, months)} ${months <= 1 ? 'mês' : 'meses'}`;
-    return `${years} ${years === 1 ? 'ano' : 'anos'}`;
-  };
-
-  const vaccineStatusConfig = {
-    'up-to-date': { label: 'Vacinas em dia', variant: 'success' as const, icon: '✓' },
-    upcoming: { label: 'Vacina próxima', variant: 'warning' as const, icon: '⚠' },
-    overdue: { label: 'Vacina atrasada', variant: 'error' as const, icon: '!' },
+  const formatAge = (pet: any) => {
+    if (pet.birthDate) {
+      const birth = new Date(pet.birthDate);
+      const now = new Date();
+      const years = now.getFullYear() - birth.getFullYear();
+      const months = now.getMonth() - birth.getMonth();
+      if (years === 0) return `${Math.max(1, months)} ${months <= 1 ? 'mês' : 'meses'}`;
+      return `${years} ${years === 1 ? 'ano' : 'anos'}`;
+    }
+    if (pet.approximateAge) {
+      return pet.approximateAge;
+    }
+    return 'Idade não informada';
   };
 
   const handleDelete = async () => {
@@ -64,6 +59,8 @@ export default function MyPetsPage() {
     setDeleteModal({ open: false, petId: null });
   };
 
+  const hasUnknownVaccines = myPets.some((p: any) => p.vaccinationStatus === 'UNKNOWN' || !p.vaccinationStatus);
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -75,8 +72,8 @@ export default function MyPetsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Meus Pets</h1>
           <p className="text-neutral-400 text-sm mt-0.5">{myPets.length} pet{myPets.length !== 1 ? 's' : ''} cadastrado{myPets.length !== 1 ? 's' : ''}</p>
@@ -89,6 +86,34 @@ export default function MyPetsPage() {
           Adicionar pet
         </button>
       </div>
+
+      {/* Helpful Vaccine Recommendation Banner if any pet has unknown status */}
+      {myPets.length > 0 && hasUnknownVaccines && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-blue-50 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0 mt-0.5">
+              <HelpCircle size={22} />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-blue-950">Não sabe se as vacinas do seu pet estão em dia?</p>
+              <p className="text-xs text-blue-800 mt-0.5 leading-relaxed">
+                Recomendamos agendar uma avaliação com um médico veterinário para checar a caderneta de vacinação e manter seu amigão 100% protegido.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 self-end sm:self-auto text-xs"
+            onClick={() => navigate('/tutor/explore')}
+          >
+            Encontrar um veterinário
+          </Button>
+        </motion.div>
+      )}
 
       {myPets.length === 0 ? (
         <EmptyState
@@ -105,9 +130,7 @@ export default function MyPetsPage() {
           className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
           {myPets.map((pet) => {
-            const vaccineStatus = getPetVaccineStatus(pet.id);
-            const nextApt = getPetNextAppointment(pet.id);
-            const vStatus = vaccineStatusConfig[vaccineStatus];
+            const vInfo = getVaccineInfo(pet);
             const isMenuOpen = openMenu === pet.id;
 
             return (
@@ -117,115 +140,97 @@ export default function MyPetsPage() {
                 className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden hover:shadow-md hover:border-orange-100 transition-all duration-300 group"
               >
                 {/* Photo */}
-                <div className="relative h-48 overflow-hidden cursor-pointer" onClick={() => navigate(`/tutor/pets/${pet.id}`)}>
+                <div className="relative h-48 overflow-hidden cursor-pointer bg-neutral-100" onClick={() => navigate(`/tutor/pets/${pet.id}`)}>
                   <img
                     src={pet.photo || '/fallback-dog.png'}
                     alt={pet.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  
+                  <div className="absolute top-3 left-3">
+                    <Badge variant={vInfo.variant} size="sm">
+                      {vInfo.icon} {vInfo.label}
+                    </Badge>
+                  </div>
+
                   <div className="absolute bottom-0 left-0 p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={vStatus.variant} size="sm">
-                        {vStatus.icon} {vStatus.label}
-                      </Badge>
-                    </div>
-                    <h3 className="text-xl font-bold text-white">
-                      {speciesEmoji[pet.species]} {pet.name}
+                    <h3 className="text-xl font-bold text-white flex items-center gap-1.5">
+                      <span>{speciesEmoji[pet.species] || '🐾'}</span> {pet.name}
                     </h3>
-                    <p className="text-white/70 text-sm">{pet.breed} · {getAge(pet.birthDate)}</p>
+                    <p className="text-white/80 text-xs mt-0.5">{pet.breed || 'Raça não informada'} · {formatAge(pet)}</p>
                   </div>
 
                   {/* Menu button */}
-                  <div className="absolute top-3 right-3">
-                    <div className="relative">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOpenMenu(isMenuOpen ? null : pet.id); }}
-                        className="p-2 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-xl text-white transition-colors"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
+                  <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setOpenMenu(isMenuOpen ? null : pet.id)}
+                      className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                      title="Opções"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+
+                    <AnimatePresence>
                       {isMenuOpen && (
-                        <div className="absolute right-0 top-10 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden z-10 w-36">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="absolute right-0 top-10 w-36 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-10"
+                        >
                           <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/tutor/pets/${pet.id}/editar`); setOpenMenu(null); }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                            onClick={() => {
+                              setOpenMenu(null);
+                              navigate(`/tutor/pets/${pet.id}/editar`);
+                            }}
+                            className="w-full px-3 py-2 text-left text-xs font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
                           >
-                            <Edit size={14} /> Editar
+                            <Edit size={14} />
+                            Editar dados
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteModal({ open: true, petId: pet.id }); setOpenMenu(null); }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                            onClick={() => {
+                              setOpenMenu(null);
+                              setDeleteModal({ open: true, petId: pet.id });
+                            }}
+                            className="w-full px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
                           >
-                            <Trash2 size={14} /> Excluir
+                            <Trash2 size={14} />
+                            Remover pet
                           </button>
-                        </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </AnimatePresence>
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="p-4">
-                  {nextApt ? (
-                    <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl mb-3">
-                      <Calendar size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-orange-600 font-medium truncate">{nextApt.serviceName}</p>
-                        <p className="text-xs text-neutral-400">
-                          {new Date(nextApt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {nextApt.time}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 p-3 bg-neutral-50 rounded-xl mb-3 text-neutral-400 text-xs">
-                      <Calendar size={14} />
-                      Nenhum agendamento
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate(`/tutor/pets/${pet.id}`)}
-                      className="flex-1 py-2 text-sm font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors"
-                    >
-                      Ver perfil
-                    </button>
-                    <button
-                      onClick={() => navigate('/tutor/booking')}
-                      className="flex-1 py-2 text-sm font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-xl transition-colors"
-                    >
-                      Agendar
-                    </button>
-                  </div>
+                {/* Footer action */}
+                <div className="p-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 font-medium">
+                    {pet.gender === 'FEMALE' ? '♀️ Fêmea' : '♂️ Macho'} {pet.weight ? `· ${pet.weight} kg` : ''}
+                  </span>
+                  <button
+                    onClick={() => navigate(`/tutor/pets/${pet.id}`)}
+                    className="text-orange-600 font-bold hover:underline flex items-center gap-1"
+                  >
+                    Ver perfil →
+                  </button>
                 </div>
               </motion.div>
             );
           })}
-
-          {/* Add pet card */}
-          <motion.button
-            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-            whileHover={{ y: -4 }}
-            onClick={() => navigate('/tutor/pets/novo')}
-            className="border-2 border-dashed border-neutral-200 hover:border-orange-300 rounded-2xl flex flex-col items-center justify-center gap-3 py-16 text-neutral-400 hover:text-orange-500 hover:bg-orange-50 transition-all duration-300"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-neutral-100 hover:bg-orange-100 flex items-center justify-center text-3xl">
-              +
-            </div>
-            <p className="text-sm font-medium">Adicionar pet</p>
-          </motion.button>
         </motion.div>
       )}
 
+      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, petId: null })}
         onConfirm={handleDelete}
-        title="Excluir pet?"
-        description="Esta ação não pode ser desfeita. Todo o histórico e dados do pet serão removidos permanentemente."
-        confirmText="Sim, excluir"
-        cancelText="Cancelar"
+        title="Remover pet"
+        description="Tem certeza que deseja remover este pet? Esta ação não pode ser desfeita."
+        confirmText="Sim, remover"
         variant="danger"
       />
     </div>

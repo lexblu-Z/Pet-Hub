@@ -5,10 +5,10 @@ import { Check, ChevronRight, Camera, Dog, Cat, ArrowRight, ArrowLeft, X } from 
 import { Button, Input, Select } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
+import { api } from '@/services/api';
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
   const toast = useToast();
   
   const [step, setStep] = useState(1);
@@ -19,10 +19,19 @@ export default function OnboardingPage() {
     breed: '',
   });
 
-  const handleFinish = () => {
-    // Fake login after onboarding
-    login('tutor-1', 'tutor');
-    toast.success('Bem-vindo ao PetHub!', 'Sua conta foi configurada com sucesso.');
+  const handleFinish = async () => {
+    if (hasPet && petData.name) {
+      try {
+        await api.post('/pets', {
+          name: petData.name,
+          species: petData.species,
+          breed: petData.breed || undefined,
+        });
+      } catch (err) {
+        console.error('Failed to create initial pet:', err);
+      }
+    }
+    toast.success('Bem-vindo ao PetHub!');
     navigate('/tutor');
   };
 

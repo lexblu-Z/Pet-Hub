@@ -39,6 +39,19 @@ export const servicesController = {
       return reply.status(403).send({ error: 'Acesso negado.' });
     }
     
+    // Check approval status
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.sub },
+      include: { establishmentProfile: true, professionalProfile: true }
+    });
+    
+    if (user.role === Role.ESTABLISHMENT && dbUser?.establishmentProfile?.status !== 'ACTIVE') {
+      return reply.status(403).send({ error: 'Estabelecimento aguardando aprovação.' });
+    }
+    if (user.role === Role.PROFESSIONAL && dbUser?.professionalProfile?.status !== 'ACTIVE') {
+      return reply.status(403).send({ error: 'Cadastro profissional em análise.' });
+    }
+
     const data = createServiceSchema.parse(request.body);
     
     const service = await prisma.service.create({

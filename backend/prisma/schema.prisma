@@ -7,6 +7,209 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                          String                @id @default(uuid())
+  name                        String
+  email                       String                @unique
+  password                    String
+  phone                       String?
+  role                        Role                  @default(TUTOR)
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
+  avatar                      String?
+  preferences                  Json?
+  paymentMethods              PaymentMethod[]
+  cashbackTransactions        CashbackTransaction[]
+  adminProfile                AdminProfile?
+  appointmentsAsEstablishment Appointment[]         @relation("EstablishmentAppointments")
+  appointmentsAsProfessional  Appointment[]         @relation("ProfessionalAppointments")
+  appointmentsAsTutor         Appointment[]         @relation("TutorAppointments")
+  cartItemsAsTutor            CartItem[]            @relation("TutorCartItems")
+  establishmentProfile        EstablishmentProfile?
+  ordersAsTutor               Order[]               @relation("TutorOrders")
+  orderItemsAsEstablishment   OrderItem[]           @relation("EstablishmentOrderItems")
+  pets                        Pet[]
+  productsAsEstablishment     Product[]             @relation("EstablishmentProducts")
+  professionalProfile         ProfessionalProfile?
+  servicesAsEstablishment     Service[]             @relation("EstablishmentServices")
+  servicesAsProfessional      Service[]             @relation("ProfessionalServices")
+  employeesAsEstablishment    Employee[]            @relation("EstablishmentEmployees")
+  notifications               Notification[]
+}
+
+model Pet {
+  id           String        @id @default(uuid())
+  name         String
+  species      String
+  breed        String?
+  gender       String?
+  birthDate    DateTime?
+  weight       Float?
+  approximateAge String?
+  vaccinationStatus String? @default("UNKNOWN")
+  notes        String?
+  photo        String?
+  tutorId      String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  tutor        User          @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+model EstablishmentProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  status           ApprovalStatus    @default(PENDING_APPROVAL)
+  description      String?
+  address          String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  document         String?
+  businessName     String?
+  type             String?
+  city             String?
+  state            String?
+  zipCode          String?
+  phone            String?
+  email            String?
+  workingHours     Json?
+  photos           String[]
+  rejectionReason  String?
+  suspendedUntil   DateTime?
+  suspensionReason String?
+  suspendedAt      DateTime?
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oauthIntegration OAuthIntegration?
+}
+
+model ProfessionalProfile {
+  id               String         @id @default(uuid())
+  userId           String         @unique
+  specialty        String?
+  bio              String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  document         String?
+  rejectionReason  String?
+  suspendedUntil   DateTime?
+  suspensionReason String?
+  suspendedAt      DateTime?
+  status           ApprovalStatus @default(PENDING_APPROVAL)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OAuthIntegration {
+  id                     String               @id @default(uuid())
+  establishmentProfileId String               @unique
+  provider               String               @default("google")
+  accessToken            String
+  refreshToken           String
+  expiryDate             DateTime
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  establishmentProfile   EstablishmentProfile @relation(fields: [establishmentProfileId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id              String        @id @default(uuid())
+  name            String
+  description     String?
+  price           Float
+  duration        Int
+  image           String?
+  category        String?
+  animalType      String?
+  establishmentId String?
+  professionalId  String?
+  employeeId      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  appointments    Appointment[]
+  employees       EmployeeService[]
+  establishment   User?         @relation("EstablishmentServices", fields: [establishmentId], references: [id])
+  professional    User?         @relation("ProfessionalServices", fields: [professionalId], references: [id])
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  tutorId         String
+  petId           String
+  serviceId       String
+  establishmentId String
+  professionalId  String?
+  employeeId      String?
+  date            DateTime
+  status          AppointmentStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  establishment   User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id])
+  pet             Pet               @relation(fields: [petId], references: [id])
+  professional    User?             @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
+  employee        Employee?         @relation(fields: [employeeId], references: [id])
+  service         Service           @relation(fields: [serviceId], references: [id])
+  tutor           User              @relation("TutorAppointments", fields: [tutorId], references: [id])
+}
+
+model Product {
+  id              String      @id @default(uuid())
+  name            String
+  description     String?
+  category        String?
+  price           Float
+  stock           Int         @default(0)
+  photo           String?
+  establishmentId String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  establishment   User        @relation("EstablishmentProducts", fields: [establishmentId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  tutorId       String
+  totalAmount   Float
+  status        OrderStatus @default(PENDING)
+  paymentMethod String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  tutor         User        @relation("TutorOrders", fields: [tutorId], references: [id], onDelete: Cascade)
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  productId       String
+  quantity        Int
+  priceAtTime     Float
+  establishmentId String
+  createdAt       DateTime @default(now())
+  establishment   User     @relation("EstablishmentOrderItems", fields: [establishmentId], references: [id])
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  tutorId   String
+  productId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tutor     User     @relation("TutorCartItems", fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
 enum Role {
   TUTOR
   ESTABLISHMENT
@@ -18,105 +221,7 @@ enum ApprovalStatus {
   PENDING_APPROVAL
   ACTIVE
   REJECTED
-}
-
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  phone     String?
-  role      Role     @default(TUTOR)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  pets                 Pet[]
-  establishmentProfile EstablishmentProfile?
-  professionalProfile  ProfessionalProfile?
-  adminProfile         AdminProfile?
-
-  servicesAsEstablishment Service[] @relation("EstablishmentServices")
-  servicesAsProfessional  Service[] @relation("ProfessionalServices")
-  appointmentsAsTutor     Appointment[] @relation("TutorAppointments")
-  appointmentsAsEstablishment Appointment[] @relation("EstablishmentAppointments")
-  appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
-}
-
-model Pet {
-  id        String   @id @default(uuid())
-  name      String
-  species   String
-  breed     String?
-  photo     String?
-  tutorId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tutor        User          @relation(fields: [tutorId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
-}
-
-model EstablishmentProfile {
-  id          String         @id @default(uuid())
-  userId      String         @unique
-  status      ApprovalStatus @default(PENDING_APPROVAL)
-  description String?
-  address     String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  oauthIntegration OAuthIntegration?
-}
-
-model ProfessionalProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  specialty   String?
-  bio         String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model AdminProfile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model OAuthIntegration {
-  id                     String   @id @default(uuid())
-  establishmentProfileId String   @unique
-  provider               String   @default("google")
-  accessToken            String
-  refreshToken           String
-  expiryDate             DateTime
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-
-  establishmentProfile   EstablishmentProfile @relation(fields: [establishmentProfileId], references: [id], onDelete: Cascade)
-}
-
-model Service {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  price           Float
-  duration        Int      // Duration in minutes
-  establishmentId String?
-  professionalId  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  establishment   User?    @relation("EstablishmentServices", fields: [establishmentId], references: [id])
-  professional    User?    @relation("ProfessionalServices", fields: [professionalId], references: [id])
-  appointments    Appointment[]
+  SUSPENDED
 }
 
 enum AppointmentStatus {
@@ -127,21 +232,71 @@ enum AppointmentStatus {
   CANCELLED
 }
 
-model Appointment {
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  userId    String
+  brand     String
+  lastFour  String
+  holder    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CashbackTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Float
+  type        String   // 'EARNED' | 'REDEEMED'
+  description String
+  code        String?  // Unique single-use code for redemption
+  status      String   @default("COMPLETED")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Employee {
   id              String            @id @default(uuid())
-  tutorId         String
-  petId           String
-  serviceId       String
   establishmentId String
-  professionalId  String?
-  date            DateTime
-  status          AppointmentStatus @default(PENDING)
+  name            String
+  role            String
+  phone           String?
+  description     String?
+  avatar          String?
+  active          Boolean           @default(true)
+  workingDays     Json?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  establishment   User              @relation("EstablishmentEmployees", fields: [establishmentId], references: [id], onDelete: Cascade)
+  services        EmployeeService[]
+  appointments    Appointment[]
+}
 
-  service         Service           @relation(fields: [serviceId], references: [id])
-  tutor           User              @relation("TutorAppointments", fields: [tutorId], references: [id])
-  pet             Pet               @relation(fields: [petId], references: [id])
-  establishment   User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id])
-  professional    User?             @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
+model EmployeeService {
+  id         String   @id @default(uuid())
+  employeeId String
+  serviceId  String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, serviceId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // 'APPOINTMENT' | 'ORDER' | 'SYSTEM'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

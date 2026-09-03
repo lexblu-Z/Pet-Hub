@@ -52,7 +52,18 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await api.get('/auth/me');
-          set({ currentUser: response.data, isAuthenticated: true });
+          const roleMap: Record<string, UserRole> = {
+            TUTOR: 'tutor',
+            ESTABLISHMENT: 'estabelecimento',
+            PROFESSIONAL: 'profissional',
+            ADMIN: 'admin',
+          };
+          const mappedRole = roleMap[response.data.role] || (response.data.role?.toLowerCase() as UserRole) || get().currentRole;
+          set({
+            currentUser: { ...get().currentUser, ...response.data },
+            currentRole: mappedRole,
+            isAuthenticated: true,
+          });
         } catch (error) {
           get().logout();
         }

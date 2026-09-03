@@ -128,12 +128,16 @@ export const Badge: React.FC<BadgeProps> = ({
 
 // Avatar component
 export interface AvatarProps {
-  src?: string;
+  src?: string | null;
+  fallbackSrc?: string;
   name?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   status?: 'online' | 'offline' | 'busy';
   className?: string;
   square?: boolean;
+  role?: string;
+  isEstablishment?: boolean;
+  entityType?: 'establishment' | 'tutor' | 'professional' | 'admin' | 'user';
 }
 
 const avatarSizes = {
@@ -173,6 +177,13 @@ function getColorFromName(name: string): string {
   return colors[idx];
 }
 
+const getFullImageUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads')) return `http://localhost:3000${url}`;
+  return url;
+};
+
 export const Avatar: React.FC<AvatarProps> = ({
   src,
   name = '',
@@ -180,8 +191,30 @@ export const Avatar: React.FC<AvatarProps> = ({
   status,
   className = '',
   square = false,
+  fallbackSrc,
+  role,
+  isEstablishment,
+  entityType,
 }) => {
   const [imgError, setImgError] = React.useState(false);
+  const [fallbackFailed, setFallbackFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+    setFallbackFailed(false);
+  }, [src, fallbackSrc]);
+
+  const isEstab = Boolean(
+    isEstablishment ||
+    entityType === 'establishment' ||
+    role === 'ESTABLISHMENT' ||
+    role === 'estabelecimento' ||
+    fallbackSrc === '/user_estabelecimento.mp4' ||
+    fallbackSrc?.includes('user_estabelecimento.mp4')
+  );
+
+  const resolvedSrc = getFullImageUrl(src);
+  const hasRealPhoto = Boolean(resolvedSrc && !imgError);
 
   return (
     <div className={`relative inline-flex shrink-0 ${className}`}>
@@ -189,18 +222,34 @@ export const Avatar: React.FC<AvatarProps> = ({
         className={[
           avatarSizes[size],
           square ? 'rounded-xl' : 'rounded-full',
-          'overflow-hidden flex items-center justify-center',
-          !src || imgError ? `${getColorFromName(name)} text-white font-semibold` : '',
+          'overflow-hidden flex items-center justify-center bg-neutral-100 relative',
+          (!hasRealPhoto && fallbackFailed) ? `${getColorFromName(name)} text-white font-semibold` : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        {src && !imgError ? (
+        {hasRealPhoto ? (
           <img
-            src={src}
+            src={resolvedSrc}
             alt={name}
             className="w-full h-full object-cover"
             onError={() => setImgError(true)}
+          />
+        ) : isEstab ? (
+          <video
+            src="/user_estabelecimento.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover pointer-events-none"
+          />
+        ) : !fallbackFailed ? (
+          <img
+            src={fallbackSrc || '/user.jpg'}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={() => setFallbackFailed(true)}
           />
         ) : (
           <span>{getInitials(name) || '?'}</span>

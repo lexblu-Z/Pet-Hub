@@ -4,6 +4,7 @@
 
 // User types
 export type UserRole = 'tutor' | 'estabelecimento' | 'profissional' | 'admin';
+export type ApprovalStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED';
 
 export interface Address {
   street: string;
@@ -94,17 +95,20 @@ export interface Pet {
   id: string;
   tutorId: string;
   name: string;
-  species: PetSpecies;
-  breed: string;
-  sex: PetSex;
-  birthDate: string;
-  weight: number;
+  species: string;
+  breed?: string;
+  gender?: string;
+  sex?: PetSex;
+  birthDate?: string;
+  approximateAge?: string;
+  vaccinationStatus?: 'UP_TO_DATE' | 'PENDING' | 'UNKNOWN' | string;
+  weight?: number;
   photo?: string;
   microchip?: string;
   notes?: string;
-  allergies: string[];
-  medications: string[];
-  isNeutered: boolean;
+  allergies?: string[];
+  medications?: string[];
+  isNeutered?: boolean;
 }
 
 // Vaccine types

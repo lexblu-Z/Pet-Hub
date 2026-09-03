@@ -7,14 +7,9 @@ import type { UserRole } from '@/types';
 
 export default function WelcomePage() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
 
   const handleRoleSelect = (role: UserRole) => {
-    login(role);
-    if (role === 'tutor') navigate('/tutor');
-    else if (role === 'estabelecimento') navigate('/estabelecimento');
-    else if (role === 'profissional') navigate('/profissional');
-    else navigate('/admin');
+    navigate('/auth/login', { state: { role } });
   };
 
   return (

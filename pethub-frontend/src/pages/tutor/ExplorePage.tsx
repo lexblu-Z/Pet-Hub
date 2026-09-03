@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from '@/services/api';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe } from 'lucide-react';
@@ -45,7 +46,38 @@ export function ExplorePage() {
     { id: 'produtos', label: 'Produtos', emoji: '🛍️' },
   ];
 
-  const filteredEstablishments = establishments.filter((est) => {
+  const [realEstablishments, setRealEstablishments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    const fetchEstabs = async () => {
+      try {
+        const response = await api.get('/establishments');
+        // Map backend to frontend format
+        const mapped = response.data.map((e: any) => ({
+          id: e.id,
+          userId: e.id,
+          businessName: e.name,
+          category: ['banho', 'tosa', 'veterinario'], // Dummy categories for now, derived from services later
+          logo: e.logo || '/salsicha_borzoi_1788367580508.jpg',
+          cover: e.cover || '/jorginho_derpy_shepherd_1788367498390.jpg',
+          address: e.address || 'Endereço não informado',
+          rating: e.rating || 4.5,
+          reviewCount: e.reviewCount || Math.floor(Math.random() * 50) + 1,
+          isApproved: true,
+        }));
+        setRealEstablishments(mapped);
+      } catch (error) {
+        toast.error('Erro ao buscar estabelecimentos reais.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEstabs();
+  }, []);
+
+  const filteredEstablishments = realEstablishments.filter((est) => {
     if (!est.isApproved) return false;
     const matchesSearch = search === '' || est.businessName.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = activeCategory === 'all' || est.category.includes(activeCategory);
@@ -115,13 +147,24 @@ export function ExplorePage() {
               onClick={() => navigate(`/tutor/estabelecimentos/${est.id}`)}
               className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-100 transition-all duration-300 group"
             >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={est.coverPhoto}
-                  alt={est.businessName}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              <div className="relative h-48 overflow-hidden bg-neutral-900">
+                {est.coverPhoto ? (
+                  <img
+                    src={est.coverPhoto}
+                    alt={est.businessName}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <video
+                    src="/user_estabelecimento.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                 <div className="absolute top-3 left-3 flex gap-2">
                   {est.category.slice(0, 2).map((cat) => (
                     <span key={cat} className="px-2.5 py-1 bg-black/60 text-white text-xs rounded-lg backdrop-blur-sm font-medium capitalize">
@@ -150,13 +193,22 @@ export function ExplorePage() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs text-neutral-400">A partir de</p>
-                    <p className="text-sm font-bold text-orange-600">
-                      R${Math.min(...services.filter((s) => s.establishmentId === est.id).map((s) => s.price)).toFixed(0)}
-                    </p>
+                      <p className="text-xs text-neutral-400">A partir de</p>
+                      <p className="text-sm font-bold text-orange-600">
+                        R$30
+                      </p>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/tutor/booking', { state: { prefillEstablishment: est } });
+                        }}
+                        className="mt-1 px-3 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-lg hover:bg-orange-200 transition-colors"
+                      >
+                        Agendar
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1.5 mt-2 text-sm text-neutral-400">
+                  <div className="flex items-center gap-1.5 mt-2 text-sm text-neutral-400">
                   <MapPin size={14} />
                   <span className="truncate">{est.address.neighborhood}, {est.address.city} · 1,2 km</span>
                 </div>
@@ -200,9 +252,13 @@ export function EstablishmentProfilePage() {
   return (
     <div>
       {/* Cover + back */}
-      <div className="relative h-64 overflow-hidden">
-        <img src={est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <div className="relative h-64 overflow-hidden bg-neutral-900">
+        {est.coverPhoto ? (
+          <img src={est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
+        ) : (
+          <video src="/user_estabelecimento.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover pointer-events-none" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         <button
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 p-2.5 bg-black/40 backdrop-blur-sm rounded-xl text-white hover:bg-black/60 transition-colors"
@@ -220,8 +276,12 @@ export function EstablishmentProfilePage() {
       {/* Logo + Info */}
       <div className="bg-white px-4 pb-0">
         <div className="flex items-end gap-4 -mt-8 mb-4">
-          <div className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden shadow-xl shrink-0 bg-neutral-100">
-            <img src={est.logo || est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
+          <div className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden shadow-xl shrink-0 bg-neutral-900 relative">
+            {est.logo || est.coverPhoto ? (
+              <img src={est.logo || est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
+            ) : (
+              <video src="/user_estabelecimento.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover pointer-events-none" />
+            )}
           </div>
           <div className="pb-2 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-neutral-900 leading-tight truncate">{est.businessName}</h1>

@@ -98,9 +98,9 @@ export default function PetProfilePage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">
-                {speciesEmoji[pet.species]} {pet.name}
+                {(speciesEmoji as any)[pet.species || "dog"]} {pet.name}
               </h1>
-              <p className="text-white/70">{pet.breed} · {sexLabel[pet.sex]} · {getAge(pet.birthDate)}</p>
+              <p className="text-white/70">{pet.breed || "Raça não informada"} · {pet.gender === "FEMALE" ? "Fêmea" : "Macho"} · {pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || "Idade não informada")}</p>
               <div className="flex gap-2 mt-2">
                 {pet.isNeutered && (
                   <span className="px-2 py-0.5 bg-blue-500/80 backdrop-blur-sm text-white text-xs rounded-full font-medium">
@@ -156,13 +156,13 @@ export default function PetProfilePage() {
                 <p className="text-xs text-neutral-400">Peso</p>
               </div>
               <div className="bg-white rounded-2xl border border-neutral-100 p-4 text-center">
-                <span className="block text-2xl mb-2">{speciesEmoji[pet.species]}</span>
-                <p className="text-sm font-bold text-neutral-900">{speciesLabel[pet.species]}</p>
+                <span className="block text-2xl mb-2">{(speciesEmoji as any)[pet.species || "dog"] || "🐾"}</span>
+                <p className="text-sm font-bold text-neutral-900">{(speciesLabel as any)[pet.species || "dog"] || pet.species}</p>
                 <p className="text-xs text-neutral-400">Espécie</p>
               </div>
               <div className="bg-white rounded-2xl border border-neutral-100 p-4 text-center">
                 <Calendar size={20} className="mx-auto mb-2 text-blue-400" />
-                <p className="text-sm font-bold text-neutral-900">{getAge(pet.birthDate)}</p>
+                <p className="text-sm font-bold text-neutral-900">{pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || "—")}</p>
                 <p className="text-xs text-neutral-400">Idade</p>
               </div>
             </div>
@@ -171,10 +171,10 @@ export default function PetProfilePage() {
             <div className="bg-white rounded-2xl border border-neutral-100 p-5 space-y-4">
               <h3 className="font-semibold text-neutral-900">Informações gerais</h3>
               {[
-                { label: 'Espécie', value: speciesLabel[pet.species] },
+                { label: 'Espécie', value: (speciesLabel as any)[pet.species || "dog"] || pet.species },
                 { label: 'Raça', value: pet.breed },
-                { label: 'Sexo', value: sexLabel[pet.sex] },
-                { label: 'Nascimento', value: new Date(pet.birthDate + 'T00:00:00').toLocaleDateString('pt-BR') },
+                { label: 'Sexo', value: pet.gender === "FEMALE" ? "Fêmea" : "Macho" },
+                { label: 'Nascimento', value: pet.birthDate ? new Date(pet.birthDate).toLocaleDateString('pt-BR') : (pet.approximateAge || "Não informado") },
                 { label: 'Peso', value: `${pet.weight} kg` },
                 { label: 'Microchip', value: pet.microchip || 'Não registrado' },
                 { label: 'Castrado/a', value: pet.isNeutered ? 'Sim' : 'Não' },
@@ -187,26 +187,26 @@ export default function PetProfilePage() {
             </div>
 
             {/* Alerts */}
-            {(pet.allergies.length > 0 || pet.medications.length > 0) && (
+            {((pet.allergies && pet.allergies.length > 0) || (pet.medications && pet.medications.length > 0)) && (
               <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
                 <h3 className="font-semibold text-red-700 flex items-center gap-2 mb-3">
                   <AlertCircle size={18} /> Alertas importantes
                 </h3>
-                {pet.allergies.length > 0 && (
+                {(pet.allergies && pet.allergies.length > 0) && (
                   <div className="mb-3">
                     <p className="text-xs text-red-500 font-medium uppercase mb-2">Alergias</p>
                     <div className="flex flex-wrap gap-2">
-                      {pet.allergies.map((a) => (
+                      {(pet.allergies || []).map((a) => (
                         <span key={a} className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">{a}</span>
                       ))}
                     </div>
                   </div>
                 )}
-                {pet.medications.length > 0 && (
+                {(pet.medications && pet.medications.length > 0) && (
                   <div>
                     <p className="text-xs text-red-500 font-medium uppercase mb-2">Medicamentos</p>
                     <div className="space-y-1">
-                      {pet.medications.map((m) => (
+                      {(pet.medications || []).map((m) => (
                         <p key={m} className="text-sm text-red-700">• {m}</p>
                       ))}
                     </div>
