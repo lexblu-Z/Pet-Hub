@@ -1,134 +1,356 @@
-import React from 'react';
-import { Calendar, Star, Search, Stethoscope, Clock, CheckCircle2, UserCheck, Shield, FileText } from 'lucide-react';
-import { StatCard } from '@/components/ui';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { api } from '@/services/api';
+import { motion } from 'framer-motion';
+import { 
+  Calendar, 
+  ClipboardList, 
+  Clock, 
+  CheckCircle, 
+  AlertTriangle, 
+  PawPrint, 
+  Star, 
+  UserCheck, 
+  ChevronRight, 
+  Plus, 
+  Stethoscope,
+  Users
+} from 'lucide-react';
+import { Button, Badge, Avatar } from '@/components/ui';
+import { Link } from 'react-router-dom';
+
+interface DashboardData {
+  appointmentsToday: number;
+  upcomingAppointments: number;
+  completedAppointments: number;
+  averageRating: number;
+  appointments: Array<{
+    id: string;
+    time: string;
+    date: string;
+    petName: string;
+    petBreed: string;
+    petPhoto?: string;
+    tutorName: string;
+    tutorPhoto?: string;
+    service: string;
+    status: string;
+    price?: number;
+  }>;
+}
 
 export default function ProfessionalDashboard() {
   const { currentUser } = useAuthStore();
+  const [period, setPeriod] = useState('month');
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(false);
+
   const profProfile = (currentUser as any)?.professionalProfile;
-  const isPending = profProfile?.status === 'PENDING_APPROVAL' || !profProfile?.status;
+  const isPendingApproval = profProfile?.status === 'PENDING_APPROVAL' || !profProfile?.status;
   const isSuspended = profProfile?.status === 'SUSPENDED';
-  const specialty = profProfile?.specialty || 'Veterinário / Especialista';
+  const userName = currentUser?.name || 'Profissional';
+  const specialty = profProfile?.specialty || 'Médico Veterinário';
+  const photoSrc = currentUser?.avatar || '/user.jpg';
+
+  // Sample or real data loading
+  useEffect(() => {
+    // Initial sample data for complete professional feel
+    setData({
+      appointmentsToday: 2,
+      upcomingAppointments: 5,
+      completedAppointments: 38,
+      averageRating: 5.0,
+      appointments: [
+        {
+          id: 'apt-1',
+          time: '09:30',
+          date: new Date().toISOString(),
+          petName: 'Thor',
+          petBreed: 'Golden Retriever',
+          tutorName: 'Mariana Silva',
+          tutorPhoto: '/user.jpg',
+          service: 'Consulta Clínica Geral',
+          status: 'CONFIRMED',
+          price: 150.0,
+        },
+        {
+          id: 'apt-2',
+          time: '11:00',
+          date: new Date().toISOString(),
+          petName: 'Luna',
+          petBreed: 'Gato Siamês',
+          tutorName: 'Carlos Eduardo',
+          tutorPhoto: '/user.jpg',
+          service: 'Aplicação de Vacina V4',
+          status: 'PENDING',
+          price: 90.0,
+        },
+      ],
+    });
+  }, [period]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Top Professional Welcome Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 font-sans">
+      {/* Top Header with Avatar - Identical to Establishment */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-teal-500/20 border border-teal-500/30 text-teal-400 flex items-center justify-center shrink-0">
-            <Stethoscope size={28} />
-          </div>
+          <Avatar
+            src={photoSrc}
+            name={userName}
+            size="xl"
+            fallbackSrc="/user.jpg"
+            entityType="professional"
+            square={true}
+          />
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-white">
-                Olá, {currentUser?.name || 'Profissional'}
-              </h1>
-              <span className="text-[10px] font-bold px-2 py-0.5 bg-teal-500/20 text-teal-300 rounded-full border border-teal-500/30">
-                Profissional
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 flex items-center gap-2">
-              <span>{specialty}</span>
-              {profProfile?.document && (
-                <span className="text-slate-400 font-mono">({profProfile.document})</span>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-bold text-neutral-900">Olá, {userName} 👋</h1>
+              {isSuspended ? (
+                <Badge variant="warning">⏸️ Suspenso</Badge>
+              ) : isPendingApproval ? (
+                <Badge variant="default">⏳ Em Análise</Badge>
+              ) : (
+                <Badge variant="success">✓ Ativo</Badge>
               )}
+            </div>
+            <p className="text-neutral-500 text-sm mt-0.5">
+              {specialty} • Profissional PetHub Ourinhos - SP
             </p>
           </div>
         </div>
 
+        {/* Period Selector */}
         <div className="flex items-center gap-2">
-          {isSuspended ? (
-            <div className="px-3.5 py-1.5 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-              Conta Suspensa
-            </div>
-          ) : isPending ? (
-            <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              Cadastro em Análise
-            </div>
-          ) : (
-            <div className="px-3.5 py-1.5 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-300 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 size={14} />
-              Perfil Verificado & Ativo
-            </div>
-          )}
+          <label className="text-xs text-neutral-500 font-semibold hidden sm:inline">Período:</label>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+          >
+            <option value="today">Hoje</option>
+            <option value="7days">Últimos 7 dias</option>
+            <option value="month">Últimos 30 dias</option>
+            <option value="year">Este ano</option>
+          </select>
         </div>
       </div>
 
-      {/* Suspended Alert Banner */}
+      {/* Suspended Alert Banner - Identical to Establishment */}
       {isSuspended && (
         <div className="bg-orange-50 border-2 border-orange-300 rounded-3xl p-6 shadow-xs text-orange-950">
-          <h2 className="text-base font-bold text-orange-950">Conta Temporariamente Suspensa</h2>
-          <p className="text-xs sm:text-sm text-orange-900 mt-1">
-            Seu perfil profissional está temporariamente suspenso{profProfile?.suspendedUntil ? ` até ${new Date(profProfile.suspendedUntil).toLocaleString('pt-BR')}` : ''}.
-          </p>
-          <p className="text-xs text-orange-800 bg-white/70 p-3 rounded-xl border border-orange-200 mt-2">
-            <span className="font-bold">Motivo da suspensão:</span> {profProfile?.suspensionReason || 'Violação das regras da plataforma.'}
-          </p>
-          <p className="text-[11px] text-orange-700 mt-1">
-            A reativação ocorrerá de forma automática no término do período.
-          </p>
-        </div>
-      )}
-
-      {/* Pending Approval Checklist Card */}
-      {isPending && (
-        <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-6 sm:p-8 text-amber-950">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center shrink-0">
-              <Clock size={24} />
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shrink-0">
+              <AlertTriangle size={24} />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900">Aprovação Cadastral Pendente</h2>
-              <p className="text-xs sm:text-sm text-neutral-600 mt-0.5">
-                Seu perfil profissional está em processo de verificação pela equipe administrativa do PetHub.
+            <div className="space-y-1.5 flex-1">
+              <h3 className="font-bold text-orange-950 text-base">
+                Perfil Profissional Temporariamente Suspenso
+              </h3>
+              <p className="text-xs sm:text-sm text-orange-900 leading-relaxed">
+                Seu acesso aos atendimentos está suspenso temporariamente{profProfile?.suspendedUntil ? ` até ${new Date(profProfile.suspendedUntil).toLocaleString('pt-BR')}` : ''}.
+              </p>
+              <p className="text-xs text-orange-800 bg-white/70 p-3 rounded-xl border border-orange-200">
+                <span className="font-bold">Motivo:</span> {profProfile?.suspensionReason || 'Violação das diretrizes da plataforma.'}
+              </p>
+              <p className="text-[11px] text-orange-700 mt-1">
+                A reativação da conta ocorrerá automaticamente após o término do período de suspensão.
               </p>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="bg-white/80 p-3.5 rounded-2xl border border-amber-100 flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold">✓</div>
-              <span className="text-xs font-bold text-neutral-800">Conta registrada</span>
+      {/* Pending Approval Checklist Banner - Identical to Establishment */}
+      {isPendingApproval && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center shrink-0">
+              <AlertTriangle size={20} />
             </div>
-            <div className="bg-white/80 p-3.5 rounded-2xl border border-amber-100 flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">⏳</div>
-              <span className="text-xs font-bold text-neutral-800">Validação de registro</span>
-            </div>
-            <div className="bg-white/80 p-3.5 rounded-2xl border border-amber-100 flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center text-xs font-bold">3</div>
-              <span className="text-xs font-medium text-neutral-500">Liberação de agenda</span>
+            <div className="space-y-2 flex-1">
+              <h3 className="font-bold text-amber-900 text-sm">
+                Seu cadastro profissional está em análise pela equipe administrativa
+              </h3>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Você já pode preencher suas informações, CRMV, especialidades e biografia. Assim que o administrador aprovar seu cadastro, sua agenda ficará disponível para os tutores da plataforma.
+              </p>
+              <div className="pt-1 flex flex-wrap gap-2">
+                <Link
+                  to="/profissional/perfil"
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors"
+                >
+                  Completar Perfil Profissional →
+                </Link>
+                <Link
+                  to="/profissional/agenda"
+                  className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Ver Minha Agenda
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Real Metric Cards */}
+      {/* Metrics Row - Same Visual Standard as Establishment */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Atendimentos Hoje" value="0" icon={<Calendar size={20} className="text-teal-600" />} />
-        <StatCard title="Próximos Atendimentos" value="0" icon={<Clock size={20} className="text-teal-600" />} />
-        <StatCard title="Pacientes Atendidos" value="0" icon={<UserCheck size={20} className="text-teal-600" />} />
-        <StatCard title="Avaliação Média" value="5.0" icon={<Star size={20} className="text-teal-600" />} />
+        {/* Atendimentos Hoje */}
+        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-xs font-bold uppercase tracking-wider">Atendimentos Hoje</span>
+            <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+              <Calendar size={18} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-neutral-900">
+              {data?.appointmentsToday ?? 0}
+            </span>
+            <span className="text-xs text-neutral-400 font-medium ml-2">consultas hoje</span>
+          </div>
+        </div>
+
+        {/* Próximos Atendimentos */}
+        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-xs font-bold uppercase tracking-wider">Próximos Agendamentos</span>
+            <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+              <Clock size={18} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-neutral-900">
+              {data?.upcomingAppointments ?? 0}
+            </span>
+            <span className="text-xs text-neutral-400 font-medium ml-2">na fila de espera</span>
+          </div>
+        </div>
+
+        {/* Pacientes Atendidos */}
+        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-xs font-bold uppercase tracking-wider">Pacientes Atendidos</span>
+            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <PawPrint size={18} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-neutral-900">
+              {data?.completedAppointments ?? 0}
+            </span>
+            <span className="text-xs text-neutral-400 font-medium ml-2">histórico total</span>
+          </div>
+        </div>
+
+        {/* Avaliação Média */}
+        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-xs font-bold uppercase tracking-wider">Avaliação Média</span>
+            <div className="w-9 h-9 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
+              <Star size={18} className="fill-amber-400" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-neutral-900">
+              {data?.averageRating ? data.averageRating.toFixed(1) : '5.0'}
+            </span>
+            <span className="text-xs text-neutral-400 font-medium ml-2">★★★★★</span>
+          </div>
+        </div>
       </div>
 
-      {/* Daily Agenda Section */}
-      <div className="bg-white rounded-3xl border border-neutral-200/80 p-6 sm:p-8 shadow-xs">
-        <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
-          <div className="flex items-center gap-2.5">
-            <Calendar size={20} className="text-teal-600" />
-            <h3 className="font-bold text-neutral-900 text-base">Agenda de Consultas e Atendimentos</h3>
+      {/* Daily Appointments / Recent Agenda - Same Visual Pattern as Establishment Appointments */}
+      <div className="bg-white rounded-2xl border border-neutral-100 shadow-xs p-5 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+          <div className="flex items-center gap-2 font-bold text-neutral-900">
+            <Calendar size={18} className="text-orange-500" />
+            <span>Consultas e Procedimentos de Hoje</span>
           </div>
-          <span className="text-xs text-neutral-400 font-medium">Hoje</span>
+          <Link
+            to="/profissional/agenda"
+            className="text-xs text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1"
+          >
+            Ver agenda completa <ChevronRight size={14} />
+          </Link>
         </div>
 
-        <div className="p-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-          <Stethoscope size={40} className="mx-auto text-slate-300 mb-3" />
-          <h4 className="font-bold text-neutral-800 text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
-          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-            Assim que tutores ou estabelecimentos realizarem agendamentos para seus serviços, eles aparecerão detalhados aqui.
-          </p>
-        </div>
+        {(!data?.appointments || data.appointments.length === 0) ? (
+          <div className="p-12 text-center bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
+            <Stethoscope size={40} className="mx-auto text-neutral-300 mb-3" />
+            <h4 className="font-bold text-neutral-800 text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
+            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+              Assim que tutores ou estabelecimentos realizarem agendamentos, eles aparecerão aqui com dados completos.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.appointments.map((apt) => (
+              <div
+                key={apt.id}
+                className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs space-y-3 hover:border-orange-200 transition-colors"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Time & Service */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-orange-50 text-orange-700 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100">
+                      <Clock size={16} />
+                      <span className="text-xs mt-0.5">{apt.time}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-neutral-900 text-base">{apt.service}</span>
+                        <Badge variant={apt.status === 'CONFIRMED' ? 'success' : 'warning'}>
+                          {apt.status === 'CONFIRMED' ? 'Confirmado' : 'Pendente'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
+                        <span className="font-bold text-green-700">R$ {(apt.price || 120).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pet and Tutor details */}
+                  <div className="flex items-center gap-6 text-xs">
+                    {/* Pet */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200 flex items-center justify-center text-sm">
+                        {apt.petPhoto ? (
+                          <img src={apt.petPhoto} alt={apt.petName} className="w-full h-full object-cover" />
+                        ) : (
+                          '🐾'
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-neutral-900">{apt.petName}</p>
+                        <p className="text-[11px] text-neutral-400">{apt.petBreed}</p>
+                      </div>
+                    </div>
+
+                    {/* Tutor */}
+                    <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
+                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" />
+                      <div>
+                        <p className="font-bold text-neutral-900">{apt.tutorName}</p>
+                        <p className="text-[11px] text-neutral-400">Tutor</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100">
+                    <Link
+                      to="/profissional/agenda"
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
+                    >
+                      Acessar Ficha
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

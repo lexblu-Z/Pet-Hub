@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { User, Mail, Phone, Stethoscope, FileText, Camera, Check, ShieldCheck, Clock } from 'lucide-react';
+import { User, Mail, Phone, Camera, Check, Clock } from 'lucide-react';
 import { Button, Input, Card, Avatar } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
@@ -24,7 +24,6 @@ export default function ProfessionalProfilePage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // Update basic profile info
       await api.put('/users/me/profile', {
         name,
         phone,
@@ -88,11 +87,11 @@ export default function ProfessionalProfilePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 font-sans">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Meu Perfil Profissional</h1>
-        <p className="text-neutral-500 text-sm mt-0.5">Mantenha seus dados clínicos, especialidades e registro de conselho atualizados</p>
+        <p className="text-neutral-500 text-sm mt-0.5">Mantenha seus dados cadastrais, conselho de classe e especialidades sempre atualizados</p>
       </div>
 
       {/* Profile Photo Card */}
@@ -102,13 +101,14 @@ export default function ProfessionalProfilePage() {
             src={currentUser?.avatar}
             name={currentUser?.name || ''}
             size="2xl"
+            fallbackSrc="/user.jpg"
             entityType="professional"
           />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploadingPhoto}
-            className="absolute bottom-0 right-0 p-2 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-md transition-all cursor-pointer"
+            className="absolute bottom-0 right-0 p-2 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-md transition-all cursor-pointer"
             title="Alterar foto"
           >
             <Camera size={16} />
@@ -124,9 +124,9 @@ export default function ProfessionalProfilePage() {
 
         <div className="text-center sm:text-left space-y-1">
           <h2 className="font-bold text-lg text-neutral-900">{currentUser?.name}</h2>
-          <p className="text-xs font-semibold text-teal-700">{specialty}</p>
-          <p className="text-xs text-neutral-400 font-mono">Registro: {document || 'Pendente'}</p>
-          <p className="text-[11px] text-neutral-500 pt-1">Formatos aceitos: JPG, PNG até 5MB</p>
+          <p className="text-xs font-semibold text-orange-600">{specialty}</p>
+          <p className="text-xs text-neutral-400 font-mono">Registro: {document || 'Pendente de validação'}</p>
+          <p className="text-[11px] text-neutral-500 pt-1">Formatos suportados: JPG, PNG até 5MB</p>
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export default function ProfessionalProfilePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Documento / CRMV</label>
+            <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Registro / CRMV</label>
             <Input
               value={document}
               onChange={(e) => setDocument(e.target.value)}
@@ -172,11 +172,11 @@ export default function ProfessionalProfilePage() {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Especialidade / Foco de Atuação</label>
+          <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Especialidade Principal</label>
           <Input
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            placeholder="Ex: Cirurgia Veterinária, Dermatologia, Ortopedia..."
+            placeholder="Ex: Cirurgia Veterinária, Oftalmologia, Acupuntura..."
           />
         </div>
 
@@ -186,15 +186,15 @@ export default function ProfessionalProfilePage() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            placeholder="Descreva sua formação, anos de experiência clínica e metodologia de atendimento com pets..."
-            className="w-full border border-neutral-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            placeholder="Descreva sua formação, anos de prática clínica e abordagem no cuidado animal..."
+            className="w-full border border-neutral-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
           />
         </div>
 
         <div className="flex justify-end pt-3 border-t border-neutral-100">
           <Button
             type="submit"
-            className="bg-teal-600 hover:bg-teal-700 text-white font-bold"
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
             isLoading={isSaving}
           >
             Salvar Alterações

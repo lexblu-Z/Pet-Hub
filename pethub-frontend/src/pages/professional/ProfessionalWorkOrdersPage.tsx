@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ClipboardList, Plus, FileText, CheckCircle, Clock, AlertCircle, Search } from 'lucide-react';
-import { Button, Badge, Input, Modal } from '@/components/ui';
+import { ClipboardList, Plus, FileText, CheckCircle, Clock, Search } from 'lucide-react';
+import { Button, Badge, Input, Modal, Avatar } from '@/components/ui';
 
 interface WorkOrder {
   id: string;
   code: string;
   date: string;
-  patient: string;
-  tutor: string;
+  petName: string;
+  petSpecies: string;
+  tutorName: string;
+  tutorPhoto?: string;
   service: string;
   value: number;
   status: 'OPEN' | 'IN_PROGRESS' | 'DONE';
@@ -20,34 +22,40 @@ export default function ProfessionalWorkOrdersPage() {
       id: '1',
       code: 'OS-2026-089',
       date: '03/09/2026',
-      patient: 'Thor (Golden Retriever)',
-      tutor: 'Mariana Silva',
+      petName: 'Thor',
+      petSpecies: 'Canina (Golden Retriever)',
+      tutorName: 'Mariana Silva',
+      tutorPhoto: '/user.jpg',
       service: 'Exame de Sangue + Hemograma Completo',
       value: 160.00,
       status: 'IN_PROGRESS',
-      notes: 'Aguardando liberação do laboratório.',
+      notes: 'Amostra coletada e encaminhada ao laboratório parceiro.',
     },
     {
       id: '2',
       code: 'OS-2026-088',
       date: '02/09/2026',
-      patient: 'Mel (Yorkshire)',
-      tutor: 'Roberto Lima',
-      service: 'Limpeza de Tártaro e Avaliação Bucal',
+      petName: 'Mel',
+      petSpecies: 'Canina (Yorkshire)',
+      tutorName: 'Roberto Lima',
+      tutorPhoto: '/user.jpg',
+      service: 'Profilaxia e Limpeza Bucal Odontológica',
       value: 280.00,
       status: 'DONE',
-      notes: 'Procedimento finalizado sem intercorrências.',
+      notes: 'Procedimento finalizado sem intercorrências anestésicas.',
     },
     {
       id: '3',
       code: 'OS-2026-087',
       date: '01/09/2026',
-      patient: 'Mia (Gato SRD)',
-      tutor: 'Juliana Costa',
-      service: 'Aplicação Antirrábica + Vermífugo',
+      petName: 'Mia',
+      petSpecies: 'Felina (SRD)',
+      tutorName: 'Juliana Costa',
+      tutorPhoto: '/user.jpg',
+      service: 'Vacina Quíntupla Felina + Avaliação',
       value: 95.00,
       status: 'DONE',
-      notes: 'Próxima dose prevista em 12 meses.',
+      notes: 'Carteira de vacinação carimbada e assinada com CRMV.',
     }
   ]);
 
@@ -57,13 +65,13 @@ export default function ProfessionalWorkOrdersPage() {
   const filtered = orders.filter(o =>
     !search ||
     o.code.toLowerCase().includes(search.toLowerCase()) ||
-    o.patient.toLowerCase().includes(search.toLowerCase()) ||
-    o.tutor.toLowerCase().includes(search.toLowerCase())
+    o.petName.toLowerCase().includes(search.toLowerCase()) ||
+    o.tutorName.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 font-sans">
+      {/* Header - Matching Establishment */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Ordens de Serviço</h1>
@@ -73,7 +81,7 @@ export default function ProfessionalWorkOrdersPage() {
           <span className="px-3 py-1.5 bg-neutral-100 rounded-xl text-neutral-700">
             Total: {orders.length} OS
           </span>
-          <span className="px-3 py-1.5 bg-teal-50 text-teal-800 rounded-xl border border-teal-200">
+          <span className="px-3 py-1.5 bg-orange-50 text-orange-800 rounded-xl border border-orange-200">
             Concluídas: {orders.filter(o => o.status === 'DONE').length}
           </span>
         </div>
@@ -106,12 +114,17 @@ export default function ProfessionalWorkOrdersPage() {
             <tbody className="divide-y divide-neutral-100">
               {filtered.map((o) => (
                 <tr key={o.id} className="hover:bg-neutral-50/60 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-teal-700 text-xs">
+                  <td className="py-3.5 px-4 font-mono font-bold text-orange-600 text-xs">
                     {o.code}
                   </td>
                   <td className="py-3.5 px-4">
-                    <div className="font-bold text-neutral-900">{o.patient}</div>
-                    <div className="text-xs text-neutral-400">Tutor: {o.tutor}</div>
+                    <div className="flex items-center gap-3">
+                      <Avatar src={o.tutorPhoto || '/user.jpg'} name={o.tutorName} size="xs" />
+                      <div>
+                        <div className="font-bold text-neutral-900">{o.petName} <span className="font-normal text-xs text-neutral-400">({o.petSpecies})</span></div>
+                        <div className="text-xs text-neutral-500">Tutor: {o.tutorName}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-3.5 px-4 text-neutral-700 text-xs font-medium">
                     {o.service}
@@ -149,27 +162,27 @@ export default function ProfessionalWorkOrdersPage() {
           size="md"
         >
           <div className="space-y-4 text-sm">
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+            <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs text-neutral-400">Data de emissão: {selectedOrder.date}</span>
                 {selectedOrder.status === 'DONE' ? <Badge variant="success">Concluída</Badge> : <Badge variant="warning">Em aberto</Badge>}
               </div>
-              <p className="font-bold text-base text-neutral-900">{selectedOrder.patient}</p>
-              <p className="text-xs text-neutral-500">Responsável: {selectedOrder.tutor}</p>
+              <p className="font-bold text-base text-neutral-900">{selectedOrder.petName}</p>
+              <p className="text-xs text-neutral-500">Espécie: {selectedOrder.petSpecies} • Tutor: {selectedOrder.tutorName}</p>
             </div>
 
             <div className="space-y-2 border border-neutral-100 rounded-xl p-3 text-xs">
               <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500">Serviço:</span>
+                <span className="text-neutral-500">Serviço / Procedimento:</span>
                 <span className="font-semibold text-neutral-900">{selectedOrder.service}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-neutral-50">
                 <span className="text-neutral-500">Valor cobrado:</span>
-                <span className="font-bold text-teal-700">R$ {selectedOrder.value.toFixed(2).replace('.', ',')}</span>
+                <span className="font-bold text-green-700">R$ {selectedOrder.value.toFixed(2).replace('.', ',')}</span>
               </div>
               <div className="pt-2">
-                <span className="text-neutral-500 block mb-1 font-semibold">Observações Clínicas:</span>
-                <p className="text-neutral-700 bg-neutral-50 p-2.5 rounded-lg">
+                <span className="text-neutral-500 block mb-1 font-semibold">Observações Clínicas e Laudo:</span>
+                <p className="text-neutral-700 bg-neutral-50 p-3 rounded-xl border border-neutral-100 leading-relaxed">
                   {selectedOrder.notes || 'Sem observações registradas.'}
                 </p>
               </div>
