@@ -5,6 +5,7 @@ import { useToast } from '@/store/toastStore';
 import { Settings, Bell, Lock, Building2, Clock, ShieldCheck, Check } from 'lucide-react';
 import { Input, Button } from '@/components/ui';
 import { Link } from 'react-router-dom';
+import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 
 export default function EstablishmentSettingsPage() {
   const { currentUser } = useAuthStore();
@@ -105,6 +106,12 @@ export default function EstablishmentSettingsPage() {
           </div>
         </Link>
       </div>
+
+      {/* Google Calendar Integration */}
+      <GoogleCalendarCard
+        returnTo="/estabelecimento/configuracoes"
+        roleTitle="os atendimentos do seu estabelecimento"
+      />
 
       {/* Notifications */}
       <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-4">

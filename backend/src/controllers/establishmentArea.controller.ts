@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { Role, AppointmentStatus, OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { googleCalendarService } from '../services/googleCalendar.service';
 
 // Helper to check establishment access
 async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply) {
@@ -811,6 +812,9 @@ export const establishmentAreaController = {
         employee: true,
       }
     });
+
+    const action = status === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';
+    googleCalendarService.syncAppointment(id, action).catch(() => {});
 
     return reply.send(updated);
   },

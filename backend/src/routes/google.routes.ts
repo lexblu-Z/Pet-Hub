@@ -2,17 +2,26 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { googleController } from '../controllers/google.controller';
 
 export const googleRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  // Callback is public (Google redirects here)
+  // Public callback from Google OAuth redirect
   fastify.get('/callback', googleController.callback);
 
-  // Auth URL requires authentication
-  fastify.get(
-    '/auth-url',
-    {
-      onRequest: [async (request, reply) => {
-        try { await request.jwtVerify(); } catch (err) { reply.send(err); }
-      }],
-    },
-    googleController.getAuthUrl
-  );
+  // Authenticated routes
+  fastify.register(async (authGroup) => {
+    authGroup.addHook('onRequest', async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.send(err);
+      }
+    });
+
+    authGroup.get('/auth-url', googleController.getAuthUrl);
+    authGroup.get('/status', googleController.getStatus);
+    authGroup.get('/calendars', googleController.getCalendars);
+    authGroup.post('/select-calendar', googleController.selectCalendar);
+    authGroup.post('/create-pethub-calendar', googleController.createPetHubCalendar);
+    authGroup.post('/sync-now', googleController.syncNow);
+    authGroup.get('/logs', googleController.getLogs);
+    authGroup.post('/disconnect', googleController.disconnect);
+  });
 };

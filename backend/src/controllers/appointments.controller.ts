@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { Role, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { googleCalendarService } from '../services/googleCalendar.service';
 
 const createAppointmentSchema = z.object({
   petId: z.string(),
@@ -129,6 +130,11 @@ export const appointmentsController = {
         request.log.error(notifErr);
       }
 
+      // Synchronize with Google Calendar (idempotent, asynchronous, non-blocking)
+      googleCalendarService.syncAppointment(appointment.id, 'CREATE').catch((syncErr) => {
+        request.log.error('Google Calendar initial sync error:', syncErr.message);
+      });
+
       return reply.status(201).send(appointment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -158,6 +164,12 @@ export const appointmentsController = {
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status: data.status },
+    });
+
+    // Synchronize status change with Google Calendar (idempotent, asynchronous)
+    const syncAction = data.status === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';
+    googleCalendarService.syncAppointment(appointment.id, syncAction).catch((syncErr) => {
+      request.log.error('Google Calendar status sync error:', syncErr.message);
     });
 
     return reply.send(appointment);

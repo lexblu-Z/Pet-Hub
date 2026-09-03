@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, ChevronRight, XCircle } from 'lucide-react';
 import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState } from '@/components/ui';
+import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 
 const statusConfig = {
   CONFIRMED: { label: 'Confirmado', variant: 'success' as const },
@@ -41,20 +42,26 @@ export default function AppointmentsPage() {
   const tabs = [
     { id: 'upcoming', label: 'Próximos', badge: upcomingApts.length },
     { id: 'past', label: 'Histórico' },
+    { id: 'google', label: '🗓️ Google Calendar' },
   ];
 
   const displayedApts = activeTab === 'upcoming' ? upcomingApts : pastApts;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <div className="mb-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 font-sans">
+      <div>
         <h1 className="text-2xl font-bold text-neutral-900 mb-1">Agendamentos</h1>
-        <p className="text-neutral-500 text-sm">Gerencie seus agendamentos e histórico</p>
+        <p className="text-neutral-500 text-sm">Gerencie seus agendamentos, histórico e integração com Google Calendar</p>
       </div>
 
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-6" />
+      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      {displayedApts.length === 0 ? (
+      {activeTab === 'google' ? (
+        <GoogleCalendarCard
+          returnTo="/tutor/appointments?tab=google"
+          roleTitle="as consultas e procedimentos dos seus pets"
+        />
+      ) : displayedApts.length === 0 ? (
         <EmptyState
           imageUrl={activeTab === 'upcoming' ? '/zeca_macaque_1788367569922.jpg' : '/beicinho_pitbull_1788367520420.jpg'}
           title={activeTab === 'upcoming' ? 'Nenhum agendamento futuro' : 'Nenhum histórico'}

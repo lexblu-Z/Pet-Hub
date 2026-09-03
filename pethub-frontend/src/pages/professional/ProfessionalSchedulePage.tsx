@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, CheckCircle, Search } from 'lucide-rea
 import { Button, Badge, Input, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
+import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 
 interface Appointment {
   id: string;
@@ -73,6 +74,8 @@ export default function ProfessionalSchedulePage() {
     return matchesSearch;
   });
 
+  const [showGoogleCard, setShowGoogleCard] = useState(false);
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 font-sans">
       {/* Header - Identical to Establishment */}
@@ -82,6 +85,14 @@ export default function ProfessionalSchedulePage() {
           <p className="text-neutral-500 text-sm mt-0.5">Gerencie consultas, atendimentos clínicos e procedimentos com dados reais do banco</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            size="xs"
+            variant={showGoogleCard ? 'primary' : 'outline'}
+            onClick={() => setShowGoogleCard(!showGoogleCard)}
+            className="flex items-center gap-1.5 text-xs font-bold"
+          >
+            🗓️ Google Calendar
+          </Button>
           <input
             type="date"
             value={selectedDate}
@@ -90,6 +101,13 @@ export default function ProfessionalSchedulePage() {
           />
         </div>
       </div>
+
+      {showGoogleCard && (
+        <GoogleCalendarCard
+          returnTo="/profissional/agenda"
+          roleTitle="suas consultas e procedimentos veterinários"
+        />
+      )}
 
       {/* Search & Filter bar - Identical to Establishment */}
       <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">

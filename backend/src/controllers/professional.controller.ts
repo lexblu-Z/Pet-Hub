@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { Role, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { googleCalendarService } from '../services/googleCalendar.service';
 
 // Helper to check professional access
 async function ensureProfessional(request: FastifyRequest, reply: FastifyReply) {
@@ -217,6 +218,9 @@ export const professionalController = {
         status: status as AppointmentStatus,
       },
     });
+
+    const action = (status as AppointmentStatus) === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';
+    googleCalendarService.syncAppointment(id, action).catch(() => {});
 
     return reply.send(updated);
   },

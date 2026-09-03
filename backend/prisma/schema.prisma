@@ -35,6 +35,7 @@ model User {
   servicesAsProfessional      Service[]             @relation("ProfessionalServices")
   employeesAsEstablishment    Employee[]            @relation("EstablishmentEmployees")
   notifications               Notification[]
+  googleCalendarConnection    GoogleCalendarConnection?
 }
 
 model Pet {
@@ -79,7 +80,6 @@ model EstablishmentProfile {
   suspensionReason String?
   suspendedAt      DateTime?
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  oauthIntegration OAuthIntegration?
 }
 
 model ProfessionalProfile {
@@ -106,16 +106,52 @@ model AdminProfile {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model OAuthIntegration {
-  id                     String               @id @default(uuid())
-  establishmentProfileId String               @unique
-  provider               String               @default("google")
-  accessToken            String
-  refreshToken           String
-  expiryDate             DateTime
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  establishmentProfile   EstablishmentProfile @relation(fields: [establishmentProfileId], references: [id], onDelete: Cascade)
+model GoogleCalendarConnection {
+  id             String              @id @default(uuid())
+  userId         String              @unique
+  provider       String              @default("GOOGLE")
+  googleEmail    String?
+  calendarId     String              @default("primary")
+  calendarName   String?             @default("Agenda Principal")
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  syncEnabled    Boolean             @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventSyncs     CalendarEventSync[]
+  logs           CalendarSyncLog[]
+}
+
+model CalendarEventSync {
+  id            String                   @id @default(uuid())
+  appointmentId String
+  connectionId  String
+  googleEventId String
+  calendarId    String                   @default("primary")
+  syncStatus    String                   @default("SYNCED") // "SYNCED" | "PENDING" | "FAILED" | "CANCELLED"
+  lastSyncedAt  DateTime?                @default(now())
+  lastError     String?
+  retryCount    Int                      @default(0)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  appointment   Appointment              @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  connection    GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, connectionId])
+}
+
+model CalendarSyncLog {
+  id           String                   @id @default(uuid())
+  connectionId String
+  action       String                   // "EVENT_CREATED" | "EVENT_UPDATED" | "EVENT_CANCELLED" | "MANUAL_SYNC" | "ERROR"
+  status       String                   // "SUCCESS" | "FAILED"
+  title        String
+  details      String?
+  createdAt    DateTime                 @default(now())
+  connection   GoogleCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 }
 
 model Service {
@@ -156,6 +192,7 @@ model Appointment {
   employee        Employee?         @relation(fields: [employeeId], references: [id])
   service         Service           @relation(fields: [serviceId], references: [id])
   tutor           User              @relation("TutorAppointments", fields: [tutorId], references: [id])
+  calendarEventSyncs CalendarEventSync[]
 }
 
 model Product {
