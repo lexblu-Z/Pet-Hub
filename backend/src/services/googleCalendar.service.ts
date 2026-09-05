@@ -2,10 +2,10 @@ import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import { AppointmentStatus } from '@prisma/client';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'dummy_client_id';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'dummy_client_secret';
-const sanitizeRedirectUri = (uri?: string) => (uri ? uri.replace(/[\[\]"']/g, '').trim() : 'http://localhost:3000/api/google/callback');
-const REDIRECT_URI = sanitizeRedirectUri(process.env.GOOGLE_REDIRECT_URI);
+const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').trim() : '');
+const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || 'dummy_client_id';
+const GOOGLE_CLIENT_SECRET = cleanEnv(process.env.GOOGLE_CLIENT_SECRET) || 'dummy_client_secret';
+const REDIRECT_URI = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || 'http://localhost:3000/api/google/callback';
 
 export interface CalendarInfo {
   id: string;

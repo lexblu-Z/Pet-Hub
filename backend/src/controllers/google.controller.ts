@@ -3,11 +3,11 @@ import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'dummy_client_id';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'dummy_client_secret';
-const sanitizeRedirectUri = (uri?: string) => (uri ? uri.replace(/[\[\]"']/g, '').trim() : 'http://localhost:3000/api/google/callback');
-const REDIRECT_URI = sanitizeRedirectUri(process.env.GOOGLE_REDIRECT_URI);
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').trim() : '');
+const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || 'dummy_client_id';
+const GOOGLE_CLIENT_SECRET = cleanEnv(process.env.GOOGLE_CLIENT_SECRET) || 'dummy_client_secret';
+const REDIRECT_URI = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || 'http://localhost:3000/api/google/callback';
+const FRONTEND_URL = cleanEnv(process.env.FRONTEND_URL) || 'http://localhost:5173';
 
 export const googleController = {
   // =========================================================================
@@ -34,10 +34,13 @@ export const googleController = {
       'https://www.googleapis.com/auth/userinfo.profile',
     ].join(' ');
 
+    const activeClientId = cleanEnv(process.env.GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID;
+    const activeRedirectUri = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || REDIRECT_URI;
+
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      `client_id=${encodeURIComponent(activeClientId)}&` +
+      `redirect_uri=${encodeURIComponent(activeRedirectUri)}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent(scopes)}&` +
       `access_type=offline&` +

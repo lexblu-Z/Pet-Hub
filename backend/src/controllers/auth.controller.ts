@@ -364,9 +364,16 @@ export const authController = {
       const token = request.user as any;
       const data = request.body as any;
 
+      const existing = await prisma.user.findUnique({
+        where: { id: token.sub },
+        select: { preferences: true },
+      });
+      const currentPrefs = (existing?.preferences as any) || {};
+      const merged = { ...currentPrefs, ...data };
+
       const user = await prisma.user.update({
         where: { id: token.sub },
-        data: { preferences: data },
+        data: { preferences: merged },
         select: { preferences: true },
       });
 
