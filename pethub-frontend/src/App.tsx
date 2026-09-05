@@ -14,6 +14,8 @@ import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
 import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import OnboardingPage from '@/pages/auth/OnboardingPage';
+import GoogleAuthCallbackPage from '@/pages/auth/GoogleAuthCallbackPage';
+import SelectRolePage from '@/pages/auth/SelectRolePage';
 
 // Tutor Pages
 import TutorDashboard from '@/pages/tutor/TutorDashboard';
@@ -91,6 +93,8 @@ export default function App() {
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth/onboarding" element={<OnboardingPage />} />
+        <Route path="/auth/callback" element={<GoogleAuthCallbackPage />} />
+        <Route path="/auth/select-role" element={<SelectRolePage />} />
 
         {/* Tutor Routes */}
         <Route path="/tutor" element={

@@ -186,8 +186,8 @@ export default function EstablishmentProductsPage() {
             Gerencie o estoque, preços e fotos dos produtos comercializados na plataforma
           </p>
         </div>
-        <Button onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs">
-          <Plus size={16} className="mr-1.5" /> Novo Produto
+        <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs whitespace-nowrap">
+          Cadastrar produto
         </Button>
       </div>
 
@@ -229,8 +229,8 @@ export default function EstablishmentProductsPage() {
           <p className="text-xs text-neutral-400 max-w-md mx-auto mb-4">
             Cadastre rações, petiscos e acessórios para que os tutores possam comprar diretamente pela loja online.
           </p>
-          <Button onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white">
-            <Plus size={16} className="mr-1" /> Cadastrar Primeiro Produto
+          <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
+            Cadastrar produto
           </Button>
         </div>
       ) : (

@@ -4,6 +4,10 @@ import bcrypt from 'bcrypt';
 import { Role, ApprovalStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 
+const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').trim() : '');
+const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || '';
+const REDIRECT_URI = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || 'http://localhost:3000/api/google/callback';
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('E-mail inválido'),
@@ -408,6 +412,136 @@ export const authController = {
         return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
       }
       return reply.status(500).send({ error: 'Erro interno no servidor.' });
+    }
+  },
+
+  async getGoogleLoginUrl(request: FastifyRequest<{ Querystring: { returnTo?: string } }>, reply: FastifyReply) {
+    const returnTo = request.query.returnTo || '/';
+    const statePayload = {
+      mode: 'login',
+      returnTo,
+    };
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+    const scopes = [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ].join(' ');
+
+    const activeClientId = cleanEnv(process.env.GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID;
+    const activeRedirectUri = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || REDIRECT_URI;
+
+    const authUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(activeClientId)}&` +
+      `redirect_uri=${encodeURIComponent(activeRedirectUri)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent(scopes)}&` +
+      `access_type=offline&` +
+      `prompt=select_account&` +
+      `state=${encodeURIComponent(state)}`;
+
+    return reply.send({ url: authUrl });
+  },
+
+  async completeGoogleRegistration(
+    request: FastifyRequest<{ Body: { regToken: string; role: Role; phone?: string } }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { regToken, role, phone } = request.body || {};
+      if (!regToken || !role) {
+        return reply.status(400).send({ error: 'Token de registro e perfil são obrigatórios.' });
+      }
+
+      if (!([Role.TUTOR, Role.ESTABLISHMENT, Role.PROFESSIONAL] as Role[]).includes(role)) {
+        return reply.status(400).send({ error: 'Perfil inválido selecionado.' });
+      }
+
+      let decoded: any;
+      try {
+        decoded = (request.server as any).jwt.verify(regToken);
+      } catch {
+        return reply.status(401).send({ error: 'Sessão de registro expirada. Faça login novamente.' });
+      }
+
+      if (!decoded.isGoogleRegistration || !decoded.googleEmail) {
+        return reply.status(400).send({ error: 'Token de registro inválido.' });
+      }
+
+      const { googleEmail, googleName, googleAvatar } = decoded;
+
+      // Check if user already exists
+      let user = await prisma.user.findUnique({
+        where: { email: googleEmail },
+        include: {
+          establishmentProfile: true,
+          professionalProfile: true,
+        },
+      });
+
+      if (!user) {
+        const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
+
+        user = await prisma.$transaction(async (tx) => {
+          const newUser = await tx.user.create({
+            data: {
+              name: googleName || 'Usuário PetHub',
+              email: googleEmail,
+              password: randomPassword,
+              avatar: googleAvatar || null,
+              phone: phone || null,
+              role,
+              establishmentProfile:
+                role === Role.ESTABLISHMENT
+                  ? {
+                      create: {
+                        businessName: googleName || 'Meu Estabelecimento',
+                        status: ApprovalStatus.PENDING_APPROVAL,
+                        city: 'Ourinhos',
+                        state: 'SP',
+                      },
+                    }
+                  : undefined,
+              professionalProfile:
+                role === Role.PROFESSIONAL
+                  ? {
+                      create: {
+                        status: ApprovalStatus.PENDING_APPROVAL,
+                      },
+                    }
+                  : undefined,
+            },
+            include: {
+              establishmentProfile: true,
+              professionalProfile: true,
+            },
+          });
+          return newUser;
+        });
+      }
+
+      const token = await reply.jwtSign({
+        sub: user.id,
+        role: user.role,
+      });
+
+      return reply.send({
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          establishmentProfile: user.establishmentProfile,
+          professionalProfile: user.professionalProfile,
+        },
+      });
+    } catch (err: any) {
+      request.log.error(err);
+      return reply.status(500).send({ error: 'Erro ao concluir cadastro com Google.' });
     }
   },
 };

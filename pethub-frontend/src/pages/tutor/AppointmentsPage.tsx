@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronRight, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, X, ExternalLink } from 'lucide-react';
 import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState } from '@/components/ui';
 import { GoogleCalendarPromptModal } from '@/components/shared/GoogleCalendarPromptModal';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
+import { GoogleCalendarViewModal } from '@/components/shared/GoogleCalendarViewModal';
 import { useToast } from '@/store/toastStore';
 
 const statusConfig = {
@@ -25,6 +26,8 @@ export default function AppointmentsPage() {
 
   // Google Calendar Integration states
   const [googleStatus, setGoogleStatus] = useState<{ isConnected: boolean; googleEmail?: string } | null>(null);
+  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
+  const [showFullCalendarModal, setShowFullCalendarModal] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -46,8 +49,11 @@ export default function AppointmentsPage() {
         const statusRes = await api.get('/google/status');
         setGoogleStatus(statusRes.data);
 
-        // Only offer to connect if NOT already connected
-        if (!statusRes.data.isConnected) {
+        if (statusRes.data.isConnected) {
+          api.get('/google/events')
+            .then(res => setGoogleEvents(res.data?.events || []))
+            .catch(err => console.error('Failed to load Google events:', err));
+        } else {
           const prefsRes = await api.get('/users/me/preferences').catch(() => ({ data: {} }));
           const promptEnabled = prefsRes.data?.googleCalendarPrompt !== false;
           const dismissedInSession = sessionStorage.getItem('@PetHub:dismissedGoogleModal') === 'true';
@@ -97,6 +103,11 @@ export default function AppointmentsPage() {
   const upcomingApts = myAppointments.filter(a => ['CONFIRMED', 'PENDING', 'IN_PROGRESS'].includes(a.status));
   const pastApts = myAppointments.filter(a => ['COMPLETED', 'CANCELLED'].includes(a.status));
 
+  const externalGoogleEvents = googleEvents
+    .filter(ev => !ev.isPetHub && ev.start)
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+    .slice(0, 5);
+
   // Only the official PetHub Schedule Tabs (NO Google Calendar tab here)
   const tabs = [
     { id: 'upcoming', label: 'Próximos', badge: upcomingApts.length },
@@ -116,7 +127,14 @@ export default function AppointmentsPage() {
 
         {/* Discreet Google Calendar Action/Badge */}
         {googleStatus?.isConnected ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowFullCalendarModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-xs transition-colors cursor-pointer"
+            >
+              <Calendar size={14} />
+              <span>Ver agenda completa</span>
+            </button>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Google Calendar conectado</span>
@@ -198,8 +216,74 @@ export default function AppointmentsPage() {
               </div>
             </motion.div>
           ))}
+
+          {/* External Google Calendar Events */}
+          {activeTab === 'upcoming' && googleStatus?.isConnected && externalGoogleEvents.length > 0 && (
+            <div className="pt-6 space-y-3 border-t border-neutral-200/60">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📅</span>
+                  <h3 className="font-bold text-sm text-neutral-800">
+                    Outros compromissos da sua agenda Google
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowFullCalendarModal(true)}
+                  className="text-xs text-orange-600 hover:text-orange-700 font-bold hover:underline cursor-pointer"
+                >
+                  Ver todos na agenda completa →
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {externalGoogleEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    className="p-3.5 bg-neutral-50 hover:bg-neutral-100/70 rounded-2xl border border-neutral-200/70 flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                        <Calendar size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-neutral-900 truncate">{ev.summary}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
+                            Google Calendar
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 mt-0.5">
+                          {ev.start ? new Date(ev.start).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Horário a definir'}
+                          {ev.location ? ` • ${ev.location}` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    {ev.htmlLink && (
+                      <a
+                        href={ev.htmlLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-neutral-400 hover:text-blue-600 font-medium shrink-0 flex items-center gap-1 p-1"
+                        title="Abrir no Google Calendar"
+                      >
+                        Abrir <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Google Calendar Full View Modal */}
+      <GoogleCalendarViewModal
+        isOpen={showFullCalendarModal}
+        onClose={() => setShowFullCalendarModal(false)}
+        pethubAppointments={appointments}
+      />
 
       {/* Google Calendar Optional Invitation Modal */}
       <GoogleCalendarPromptModal

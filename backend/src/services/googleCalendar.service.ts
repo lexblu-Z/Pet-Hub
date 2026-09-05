@@ -464,4 +464,69 @@ export const googleCalendarService = {
 
     return { synced, failed };
   },
+
+  // =========================================================================
+  // 6. LIST GOOGLE CALENDAR EVENTS FOR REAL CALENDAR VIEW
+  // =========================================================================
+  async listEvents(userId: string, timeMin?: string, timeMax?: string): Promise<any[]> {
+    const connection = await prisma.googleCalendarConnection.findUnique({
+      where: { userId },
+    });
+
+    if (!connection || !connection.syncEnabled) {
+      return [];
+    }
+
+    try {
+      const token = await this.ensureAccessToken(connection);
+      const calendarId = connection.calendarId || 'primary';
+
+      const params: any = {
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: 150,
+      };
+
+      if (timeMin) {
+        params.timeMin = timeMin;
+      } else {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        params.timeMin = startOfMonth.toISOString();
+      }
+
+      if (timeMax) {
+        params.timeMax = timeMax;
+      } else {
+        const endPeriod = new Date();
+        endPeriod.setMonth(endPeriod.getMonth() + 2);
+        params.timeMax = endPeriod.toISOString();
+      }
+
+      const response = await axios.get(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        }
+      );
+
+      const items = response.data.items || [];
+      return items.map((item: any) => ({
+        id: item.id,
+        summary: item.summary || '(Sem título)',
+        description: item.description || '',
+        location: item.location || '',
+        start: item.start?.dateTime || item.start?.date,
+        end: item.end?.dateTime || item.end?.date,
+        htmlLink: item.htmlLink,
+        status: item.status,
+        isPetHub: Boolean(item.extendedProperties?.private?.petHubAppointmentId || item.summary?.includes('🐾 PetHub')),
+      }));
+    } catch (err: any) {
+      console.error('Failed to list Google Calendar events:', err.response?.data || err.message);
+      return [];
+    }
+  },
 };

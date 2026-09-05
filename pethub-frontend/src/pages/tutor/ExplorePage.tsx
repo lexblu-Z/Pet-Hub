@@ -58,14 +58,16 @@ export function ExplorePage() {
         const mapped = response.data.map((e: any) => ({
           id: e.id,
           userId: e.id,
-          businessName: e.name,
-          category: ['banho', 'tosa', 'veterinario'], // Dummy categories for now, derived from services later
+          businessName: e.name || e.businessName || 'Estabelecimento PetHub',
+          category: Array.isArray(e.category) && e.category.length > 0 ? e.category : ['banho', 'tosa', 'veterinario'],
           logo: e.logo || '/salsicha_borzoi_1788367580508.jpg',
-          cover: e.cover || '/jorginho_derpy_shepherd_1788367498390.jpg',
-          address: e.address || 'Endereço não informado',
-          rating: e.rating || 4.5,
-          reviewCount: e.reviewCount || Math.floor(Math.random() * 50) + 1,
+          cover: e.cover || e.coverPhoto || '/jorginho_derpy_shepherd_1788367498390.jpg',
+          coverPhoto: e.coverPhoto || e.cover || null,
+          address: e.address || 'Ourinhos, SP',
+          rating: e.rating || 4.8,
+          reviewCount: e.reviewCount || 15,
           isApproved: true,
+          workingHours: e.workingHours || { saturday: { isOpen: true } },
         }));
         setRealEstablishments(mapped);
       } catch (error) {
@@ -179,7 +181,7 @@ export function ExplorePage() {
                   {favorites.includes(est.id) ? '❤️' : '🤍'}
                 </button>
                 <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 text-white text-xs rounded-lg backdrop-blur-sm">
-                  {est.workingHours.saturday?.isOpen ? '🟢 Aberto' : '🔴 Fechado'}
+                  {est.workingHours?.saturday?.isOpen !== false ? '🟢 Aberto' : '🔴 Fechado'}
                 </div>
               </div>
               <div className="p-4">
@@ -202,7 +204,7 @@ export function ExplorePage() {
                           e.stopPropagation();
                           navigate('/tutor/booking', { state: { prefillEstablishment: est } });
                         }}
-                        className="mt-1 px-3 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-lg hover:bg-orange-200 transition-colors"
+                        className="mt-1 px-3 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-lg hover:bg-orange-200 transition-colors cursor-pointer"
                       >
                         Agendar
                       </button>
@@ -210,7 +212,11 @@ export function ExplorePage() {
                   </div>
                   <div className="flex items-center gap-1.5 mt-2 text-sm text-neutral-400">
                   <MapPin size={14} />
-                  <span className="truncate">{est.address.neighborhood}, {est.address.city} · 1,2 km</span>
+                  <span className="truncate">
+                    {typeof est.address === 'object' && est.address !== null
+                      ? `${est.address.neighborhood || ''}, ${est.address.city || 'Ourinhos'}`
+                      : (est.address || 'Ourinhos, SP')} · 1,2 km
+                  </span>
                 </div>
               </div>
             </motion.div>

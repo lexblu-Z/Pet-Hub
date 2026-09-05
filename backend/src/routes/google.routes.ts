@@ -22,6 +22,7 @@ export const googleRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
     authGroup.post('/create-pethub-calendar', googleController.createPetHubCalendar);
     authGroup.post('/sync-now', googleController.syncNow);
     authGroup.get('/logs', googleController.getLogs);
+    authGroup.get('/events', googleController.getEvents);
     authGroup.post('/disconnect', googleController.disconnect);
   });
 };

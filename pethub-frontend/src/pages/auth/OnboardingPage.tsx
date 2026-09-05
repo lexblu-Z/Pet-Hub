@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Camera, Dog, Cat, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { Check, ChevronRight, Camera, Dog, Cat, ArrowRight, ArrowLeft, X, Plus, Loader2 } from 'lucide-react';
 import { Button, Input, Select } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
@@ -10,22 +10,62 @@ import { api } from '@/services/api';
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [step, setStep] = useState(1);
   const [hasPet, setHasPet] = useState<boolean | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [petData, setPetData] = useState({
     name: '',
     species: 'dog',
     breed: '',
   });
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      toast.error('Formato inválido. Use JPG, PNG ou WEBP.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
   const handleFinish = async () => {
+    setIsSubmitting(true);
     if (hasPet && petData.name) {
       try {
+        let photoUrl: string | undefined = undefined;
+
+        if (photoFile) {
+          try {
+            const formData = new FormData();
+            formData.append('file', photoFile);
+            const uploadRes = await api.post('/upload/pet', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            photoUrl = uploadRes.data?.url;
+          } catch (uploadErr) {
+            console.warn('Falha no upload da imagem do pet:', uploadErr);
+          }
+        }
+
         await api.post('/pets', {
           name: petData.name,
           species: petData.species,
           breed: petData.breed || undefined,
+          photo: photoUrl,
         });
       } catch (err) {
         console.error('Failed to create initial pet:', err);
@@ -129,16 +169,53 @@ export default function OnboardingPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-center mb-8">
-                    <div className="relative group cursor-pointer">
-                      <div className="w-28 h-28 rounded-full bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-orange-500 group-hover:bg-white/20">
-                        <Camera className="text-white/50 mb-1 group-hover:text-white" size={24} />
-                        <span className="text-xs text-white/50 font-medium group-hover:text-white">Foto</span>
+                  <div className="flex flex-col items-center justify-center mb-8">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      onChange={handlePhotoSelect}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="relative group cursor-pointer"
+                      title="Clique para escolher uma foto do seu pet"
+                    >
+                      <div className="w-28 h-28 rounded-full bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-orange-500 group-hover:bg-white/20 relative shadow-inner">
+                        {photoPreview ? (
+                          <img
+                            src={photoPreview}
+                            alt="Preview do pet"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <>
+                            <Camera className="text-white/50 mb-1 group-hover:text-white transition-colors" size={24} />
+                            <span className="text-xs text-white/50 font-medium group-hover:text-white transition-colors">Foto</span>
+                          </>
+                        )}
                       </div>
-                      <div className="absolute -bottom-2 -right-2 bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg pointer-events-none">
-                        +
+                      <div className="absolute -bottom-1 -right-1 bg-orange-500 hover:bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
+                        <Plus size={16} />
                       </div>
                     </div>
+                    {photoPreview ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPhotoFile(null);
+                          setPhotoPreview(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="mt-2 text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
+                      >
+                        Remover foto
+                      </button>
+                    ) : (
+                      <p className="text-[11px] text-white/40 mt-2">Formatos: JPG, PNG ou WEBP (até 5MB)</p>
+                    )}
                   </div>
 
                   <div className="space-y-4 mb-8">
@@ -221,11 +298,20 @@ export default function OnboardingPage() {
 
                   <button 
                     onClick={handleFinish}
-                    disabled={!petData.name}
-                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                    disabled={!petData.name || isSubmitting}
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Concluir e entrar
-                    <ArrowRight size={18} />
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin" size={18} />
+                        Cadastrando seu pet...
+                      </>
+                    ) : (
+                      <>
+                        Concluir e entrar
+                        <ArrowRight size={18} />
+                      </>
+                    )}
                   </button>
                 </motion.div>
               )}

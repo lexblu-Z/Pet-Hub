@@ -288,10 +288,41 @@ export default function EstablishmentDashboard() {
               Carregando dados reais do PostgreSQL...
             </div>
           ) : !data?.hasData || data.revenue === 0 ? (
-            <div className="h-56 flex flex-col items-center justify-center text-center p-6 bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
-              <TrendingUp size={36} className="text-neutral-300 mb-2" />
-              <p className="font-bold text-neutral-700 text-sm">Ainda não há dados suficientes para este período.</p>
-              <p className="text-xs text-neutral-400 mt-1">Conforme você concluir agendamentos e pedidos, a curva de faturamento aparecerá aqui.</p>
+            <div className="relative h-56 w-full flex flex-col justify-between pt-2 pb-2">
+              {/* Subtle watermark notice */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-4 text-center">
+                <span className="text-xs font-semibold text-neutral-500 bg-white/90 px-3 py-1.5 rounded-full border border-neutral-200/80 shadow-xs">
+                  📊 Ainda não há dados suficientes para exibir tendências
+                </span>
+                <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
+                  Conforme seus agendamentos e vendas forem concluídos, a curva de faturamento real aparecerá aqui.
+                </p>
+              </div>
+
+              {/* Grid Lines & Y-Axis */}
+              <div className="relative flex-1 flex flex-col justify-between border-l border-b border-neutral-200 pl-2">
+                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
+                  <span className="text-[10px] text-neutral-300 font-mono">R$ 500</span>
+                </div>
+                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
+                  <span className="text-[10px] text-neutral-300 font-mono">R$ 250</span>
+                </div>
+                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
+                  <span className="text-[10px] text-neutral-300 font-mono">R$ 0</span>
+                </div>
+
+                {/* Empty Baseline Bars */}
+                <div className="absolute bottom-0 inset-x-0 flex items-end justify-between px-2 gap-2">
+                  {(data?.revenueChart?.length ? data.revenueChart : [
+                    { date: 'Seg' }, { date: 'Ter' }, { date: 'Qua' }, { date: 'Qui' }, { date: 'Sex' }, { date: 'Sáb' }, { date: 'Dom' }
+                  ]).map((pt, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5">
+                      <div className="w-full max-w-[20px] h-[3px] bg-neutral-200 rounded-t" />
+                      <span className="text-[10px] text-neutral-300">{pt.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="h-56 flex items-end gap-1.5 sm:gap-2 pt-6 pb-2 px-2 overflow-x-auto">

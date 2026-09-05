@@ -122,22 +122,26 @@ export default function EstablishmentAppointmentsPage() {
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-2 bg-neutral-200/60 p-1 rounded-xl">
+        <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-xl border border-neutral-200">
           <button
             onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'list' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'list'
+                ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/80'
+                : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
-            Visão em Lista
+            <span>📋</span> Visão em lista
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'calendar' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'calendar'
+                ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/80'
+                : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
-            Visão Calendário
+            <span>📅</span> Visão em agenda
           </button>
         </div>
       </div>

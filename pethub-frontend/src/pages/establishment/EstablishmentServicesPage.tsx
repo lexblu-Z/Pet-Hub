@@ -162,8 +162,8 @@ export default function EstablishmentServicesPage() {
             Cadastre e gerencie os serviços disponíveis para agendamento pelos tutores
           </p>
         </div>
-        <Button onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs">
-          <Plus size={16} className="mr-1.5" /> Novo Serviço
+        <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs whitespace-nowrap">
+          Cadastrar serviço
         </Button>
       </div>
 
@@ -180,8 +180,8 @@ export default function EstablishmentServicesPage() {
           <p className="text-xs text-neutral-400 max-w-md mx-auto mb-4">
             Cadastre banhos, tosas, consultas e outros serviços para que os tutores de Ourinhos possam agendar online.
           </p>
-          <Button onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white">
-            <Plus size={16} className="mr-1" /> Cadastrar Primeiro Serviço
+          <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
+            Cadastrar serviço
           </Button>
         </div>
       ) : (

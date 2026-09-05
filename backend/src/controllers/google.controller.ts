@@ -59,7 +59,7 @@ export const googleController = {
   ) {
     const { code, state, error } = request.query;
 
-    let parsedState: { userId: string; role?: string; returnTo?: string } = { userId: '', returnTo: '/' };
+    let parsedState: { userId?: string; role?: string; returnTo?: string; mode?: string } = { userId: '', returnTo: '/' };
     if (state) {
       try {
         parsedState = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
@@ -70,6 +70,78 @@ export const googleController = {
 
     const fallbackUrl = parsedState.returnTo || '/';
 
+    // Handle Google Login / Registration flow
+    if (parsedState.mode === 'login') {
+      if (error || !code) {
+        request.log.error({ error, code, state }, 'Google Login OAuth error or rejected:');
+        return reply.redirect(`${FRONTEND_URL}/auth/login?error=oauth_denied`);
+      }
+
+      try {
+        const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          code,
+          redirect_uri: REDIRECT_URI,
+          grant_type: 'authorization_code',
+        });
+
+        const { access_token } = tokenRes.data;
+
+        const userInfo = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+
+        const googleEmail = userInfo.data.email;
+        const googleName = userInfo.data.name || '';
+        const googleAvatar = userInfo.data.picture || '';
+
+        if (!googleEmail) {
+          return reply.redirect(`${FRONTEND_URL}/auth/login?error=no_email`);
+        }
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email: googleEmail },
+        });
+
+        if (existingUser) {
+          if (!existingUser.avatar && googleAvatar) {
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { avatar: googleAvatar },
+            });
+          }
+
+          const token = await reply.jwtSign({
+            sub: existingUser.id,
+            role: existingUser.role,
+          });
+
+          return reply.redirect(`${FRONTEND_URL}/auth/callback?token=${encodeURIComponent(token)}`);
+        } else {
+          const regToken = await reply.jwtSign(
+            {
+              googleEmail,
+              googleName,
+              googleAvatar,
+              isGoogleRegistration: true,
+            },
+            { expiresIn: '15m' }
+          );
+
+          return reply.redirect(
+            `${FRONTEND_URL}/auth/select-role?regToken=${encodeURIComponent(regToken)}&name=${encodeURIComponent(
+              googleName
+            )}&email=${encodeURIComponent(googleEmail)}&avatar=${encodeURIComponent(googleAvatar)}`
+          );
+        }
+      } catch (loginErr: any) {
+        request.log.error({ err: loginErr.message }, 'Failed Google Login OAuth exchange:');
+        return reply.redirect(`${FRONTEND_URL}/auth/login?error=google_auth_failed`);
+      }
+    }
+
+    // Otherwise, handle Google Calendar Sync flow
     if (error || !code || !parsedState.userId) {
       request.log.error({ error, code, state }, 'Google OAuth callback error or rejected:');
       const target = fallbackUrl.includes('?')
@@ -354,5 +426,22 @@ export const googleController = {
       success: true,
       message: 'Google Calendar desconectado com sucesso.',
     });
+  },
+
+  // =========================================================================
+  // 10. GET CALENDAR EVENTS
+  // =========================================================================
+  async getEvents(
+    request: FastifyRequest<{ Querystring: { timeMin?: string; timeMax?: string } }>,
+    reply: FastifyReply
+  ) {
+    const user = request.user as any;
+    if (!user || !user.sub) {
+      return reply.status(401).send({ error: 'Não autenticado.' });
+    }
+
+    const { timeMin, timeMax } = request.query;
+    const events = await googleCalendarService.listEvents(user.sub, timeMin, timeMax);
+    return reply.send({ events });
   },
 };
