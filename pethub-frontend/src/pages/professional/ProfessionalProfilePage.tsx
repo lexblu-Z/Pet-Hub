@@ -96,6 +96,8 @@ export default function ProfessionalProfilePage() {
             avatar: fullUrl,
           });
         }
+        // Limpar o blob URL local — a fonte de verdade agora é o authStore
+        setPreviewUrl(null);
         toast.success('Foto de perfil profissional atualizada!');
       }
     } catch (err: any) {

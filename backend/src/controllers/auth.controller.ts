@@ -103,6 +103,10 @@ const registerSchema = z.object({
   businessPhone: z.string().optional(),
   businessEmail: z.string().optional(),
   photos: z.array(z.string()).optional(),
+  workplacePhoto: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -218,6 +222,46 @@ export const authController = {
         }
       }
 
+      // Strict validation for professionals: workplace photo and full address are mandatory
+      if (data.role === Role.PROFESSIONAL) {
+        if (!data.workplacePhoto || !data.workplacePhoto.trim()) {
+          return reply.status(400).send({
+            error: 'A foto do local de atendimento é obrigatória para o cadastro de profissionais.',
+          });
+        }
+        if (!data.zipCode || !data.address || !data.number || !data.neighborhood || !data.city || !data.state) {
+          return reply.status(400).send({
+            error: 'O endereço completo de atendimento (CEP, rua, número, bairro, cidade e estado) é obrigatório para profissionais.',
+          });
+        }
+      }
+
+      // Strict validation for tutors: full address in Ourinhos - SP is mandatory
+      if (data.role === Role.TUTOR) {
+        if (!data.zipCode || !data.address || !data.number || !data.neighborhood || !data.city || !data.state) {
+          return reply.status(400).send({
+            error: 'O endereço completo (CEP, rua, número, bairro, cidade e estado) é obrigatório para o cadastro de tutores.',
+          });
+        }
+        if (data.city.trim().toLowerCase() !== 'ourinhos' || data.state.trim().toUpperCase() !== 'SP') {
+          return reply.status(400).send({
+            error: 'No momento, o PetHub está disponível apenas para tutores residentes em Ourinhos - SP.',
+          });
+        }
+        const cleanCep = data.zipCode.replace(/\D/g, '');
+        if (cleanCep.length !== 8) {
+          return reply.status(400).send({
+            error: 'CEP inválido. O CEP deve conter 8 dígitos.',
+          });
+        }
+        const cepPrefix = parseInt(cleanCep.slice(0, 5), 10);
+        if (cepPrefix < 19900 || cepPrefix > 19919) {
+          return reply.status(400).send({
+            error: 'O CEP informado não pertence a Ourinhos - SP. O PetHub está disponível apenas para Ourinhos - SP.',
+          });
+        }
+      }
+
       const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
       if (existingUser) {
         return reply.status(409).send({ error: 'Este e-mail já está cadastrado.' });
@@ -254,6 +298,13 @@ export const authController = {
             phone: normalizedPhone,
             role: data.role,
             defaultAvatar: getRandomDefaultAvatar(),
+            address: data.address?.trim() || null,
+            number: data.number?.trim() || null,
+            complement: data.complement?.trim() || null,
+            neighborhood: data.neighborhood?.trim() || null,
+            city: data.city?.trim() || (data.role === Role.TUTOR ? 'Ourinhos' : null),
+            state: data.state?.trim() || (data.role === Role.TUTOR ? 'SP' : null),
+            zipCode: data.zipCode?.trim() || null,
           },
         });
 
@@ -282,6 +333,14 @@ export const authController = {
               specialty: data.specialty || null,
               bio: data.bio || null,
               document: data.document || null,
+              workplacePhoto: data.workplacePhoto?.trim() || null,
+              address: data.address?.trim() || null,
+              number: data.number?.trim() || null,
+              complement: data.complement?.trim() || null,
+              neighborhood: data.neighborhood?.trim() || null,
+              city: data.city?.trim() || 'Ourinhos',
+              state: data.state?.trim() || 'SP',
+              zipCode: data.zipCode?.trim() || null,
               status: ApprovalStatus.PENDING_APPROVAL,
             },
           });
@@ -317,6 +376,16 @@ export const authController = {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          phone: newUser.phone,
+          avatar: newUser.avatar,
+          defaultAvatar: newUser.defaultAvatar,
+          address: newUser.address,
+          number: newUser.number,
+          complement: newUser.complement,
+          neighborhood: newUser.neighborhood,
+          city: newUser.city,
+          state: newUser.state,
+          zipCode: newUser.zipCode,
         },
       });
     } catch (error) {
@@ -449,6 +518,13 @@ export const authController = {
         defaultAvatar: user.defaultAvatar || getStableAvatar(user.id),
         hasPassword: user.hasPassword,
         createdAt: user.createdAt,
+        address: user.address,
+        number: user.number,
+        complement: user.complement,
+        neighborhood: user.neighborhood,
+        city: user.city,
+        state: user.state,
+        zipCode: user.zipCode,
       };
 
       if (user.establishmentProfile) {
@@ -499,6 +575,13 @@ export const authController = {
           hasPassword: true,
           createdAt: true,
           preferences: true,
+          address: true,
+          number: true,
+          complement: true,
+          neighborhood: true,
+          city: true,
+          state: true,
+          zipCode: true,
           establishmentProfile: true,
           professionalProfile: true,
         },

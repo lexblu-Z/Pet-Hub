@@ -7,6 +7,7 @@ import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button, Stepper } from '@/components/ui';
 import type { Pet, EstablishmentProfile, Service } from '@/types';
+import { getBrasiliaToday, addDaysToDate, formatBrasiliaDate } from '@/utils/date';
 
 const steps = [
   { id: 1, label: 'Pet' },
@@ -35,14 +36,12 @@ export default function BookingPage() {
 
   // Generate 14 upcoming dates (YYYY-MM-DD)
   const upcomingDates = React.useMemo(() => {
+    const todayStr = getBrasiliaToday();
     return Array.from({ length: 14 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const iso = `${year}-${month}-${day}`;
-      const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+      const iso = addDaysToDate(todayStr, i);
+      const [year, month, day] = iso.split('-');
+      const d = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12, 0, 0));
+      const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
       const dayMonth = `${day}/${month}`;
       return { iso, dayName, dayMonth };
     });
@@ -101,9 +100,11 @@ export default function BookingPage() {
         const mappedEsts = estsRes.data.map((e: any) => ({
           id: e.id,
           userId: e.id,
-          businessName: e.name,
+          businessName: e.businessName || e.name,
+          role: e.role,
+          type: e.type,
           category: ['banho', 'tosa'],
-          logo: e.logo || '/salsicha_borzoi_1788367580508.jpg',
+          logo: e.logo || e.avatar || '/salsicha_borzoi_1788367580508.jpg',
           cover: e.cover || '/jorginho_derpy_shepherd_1788367498390.jpg',
           address: e.address || { neighborhood: 'Endereço não informado' },
           rating: e.rating || 4.5,
@@ -127,8 +128,9 @@ export default function BookingPage() {
     fetchData();
   }, [toast, location.state]);
 
+  const selectedId = (store.selectedEstablishment as any)?.userId || store.selectedEstablishment?.id;
   const availableServices = store.selectedEstablishment 
-    ? allServices.filter((s) => s.establishmentId === store.selectedEstablishment?.id) 
+    ? allServices.filter((s) => s.establishmentId === selectedId || s.professionalId === selectedId) 
     : [];
 
   const handleNext = () => {
@@ -141,18 +143,23 @@ export default function BookingPage() {
   };
 
   const handleConfirm = async () => {
+    if (isLoading) return;
     setIsLoading(true);
     try {
-      if (!store.selectedPet || !store.selectedService || !store.selectedEstablishment || !store.selectedDate) {
-        toast.error('Dados incompletos para agendamento.');
+      if (!store.selectedPet || !store.selectedService || !store.selectedEstablishment || !store.selectedDate || !store.selectedTime) {
+        toast.error('Dados incompletos para agendamento. Verifique pet, serviço, data e horário.');
         return;
       }
       
+      const provider = store.selectedEstablishment as any;
+      const isProf = provider?.role === 'PROFESSIONAL' || !!store.selectedProfessional;
+      const profId = (store.selectedProfessional as any)?.userId || store.selectedProfessional?.id || (isProf ? (provider?.userId || provider?.id) : undefined);
+
       const payload = {
         petId: store.selectedPet.id,
         serviceId: store.selectedService.id,
-        establishmentId: (store.selectedEstablishment as any)?.userId || store.selectedEstablishment?.id,
-        professionalId: (store.selectedProfessional as any)?.userId || store.selectedProfessional?.id,
+        establishmentId: provider?.userId || provider?.id,
+        professionalId: profId,
         date: `${store.selectedDate}T${store.selectedTime || '09:00'}:00.000Z`,
       };
 
@@ -162,8 +169,17 @@ export default function BookingPage() {
       reset();
       navigate('/tutor/appointments');
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Erro ao criar agendamento.');
+      console.error('Erro ao confirmar agendamento:', error);
+      const status = error.response?.status;
+      const backendError = error.response?.data?.error;
+
+      if (status === 409) {
+        toast.error(backendError || 'Este horário acabou de ser ocupado. Por favor, selecione outro horário.');
+      } else if (status === 403) {
+        toast.error(backendError || 'Prestador indisponível para agendamentos no momento.');
+      } else {
+        toast.error(backendError || 'Não foi possível confirmar o agendamento. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -379,7 +395,7 @@ export default function BookingPage() {
                     <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
                       <CalendarIcon size={16} className="text-neutral-400 dark:text-[#8E918F]" />
                       <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">
-                        {store.selectedDate ? new Date(store.selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                        {formatBrasiliaDate(store.selectedDate)}
                       </span>
                     </div>
                     <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
@@ -396,8 +412,8 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              <Button fullWidth size="lg" isLoading={isLoading} onClick={handleConfirm}>
-                Confirmar Agendamento
+              <Button fullWidth size="lg" isLoading={isLoading} disabled={isLoading} onClick={handleConfirm}>
+                {isLoading ? 'Confirmando Agendamento...' : 'Confirmar Agendamento'}
               </Button>
             </motion.div>
           )}

@@ -29,16 +29,28 @@ export const professionalController = {
     const user = await ensureProfessional(request, reply);
     if (!user) return;
 
+    // Use official Brasília timezone (America/Sao_Paulo) for dates
     const now = new Date();
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now);
+    const todayStart = new Date(`${todayStr}T00:00:00.000Z`);
+    const todayEnd = new Date(`${todayStr}T23:59:59.999Z`);
+
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(tomorrowDate);
+
+    // OR clause: autonomous professionals have appointments where professionalId = user.id OR establishmentId = user.id
+    const providerFilter = {
+      OR: [
+        { professionalId: user.id },
+        { establishmentId: user.id },
+      ],
+    };
 
     // 1. Today appointments count (real data)
     const todayAppointmentsCount = await prisma.appointment.count({
       where: {
-        professionalId: user.id,
+        ...providerFilter,
         date: {
           gte: todayStart,
           lte: todayEnd,
@@ -49,15 +61,15 @@ export const professionalController = {
       },
     });
 
-    // 2. Upcoming appointments count (future dates, pending or confirmed)
+    // 2. Upcoming appointments count (from now onwards, pending or confirmed)
     const upcomingAppointmentsCount = await prisma.appointment.count({
       where: {
-        professionalId: user.id,
+        ...providerFilter,
         date: {
-          gt: now,
+          gte: todayStart,
         },
         status: {
-          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
         },
       },
     });
@@ -65,7 +77,7 @@ export const professionalController = {
     // 3. Patients attended: unique pets with COMPLETED appointments
     const completedAppointments = await prisma.appointment.findMany({
       where: {
-        professionalId: user.id,
+        ...providerFilter,
         status: AppointmentStatus.COMPLETED,
       },
       select: {
@@ -82,7 +94,7 @@ export const professionalController = {
     // 5. Today's schedule (real records for today)
     const todayAppointments = await prisma.appointment.findMany({
       where: {
-        professionalId: user.id,
+        ...providerFilter,
         date: {
           gte: todayStart,
           lte: todayEnd,
@@ -95,33 +107,83 @@ export const professionalController = {
         pet: true,
         tutor: true,
         service: true,
+        establishment: {
+          include: {
+            establishmentProfile: true,
+          },
+        },
       },
       orderBy: {
         date: 'asc',
       },
     });
 
-    const todaySchedule = todayAppointments.map(a => {
+    const formatApt = (a: any) => {
       const dateObj = new Date(a.date);
-      const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+      const itemDateStr = dateObj.toISOString().split('T')[0];
+      const isToday = itemDateStr === todayStr;
+      const isTomorrow = itemDateStr === tomorrowStr;
+      const estName = a.establishment?.establishmentProfile?.businessName || a.establishment?.name || null;
 
       return {
         id: a.id,
         time: timeStr,
-        date: a.date.toISOString(),
-        petName: a.pet.name,
-        petSpecies: a.pet.species,
-        petBreed: a.pet.breed || null,
-        petPhoto: a.pet.photo || null,
-        tutorName: a.tutor.name,
-        tutorPhoto: a.tutor.avatar || null,
-        tutorPhone: a.tutor.phone || a.tutor.email,
-        service: a.service.name,
+        date: itemDateStr,
+        dateISO: a.date.toISOString(),
+        isToday,
+        isTomorrow,
+        petId: a.petId,
+        petName: a.pet?.name || 'Pet',
+        petSpecies: a.pet?.species || 'Animal',
+        petBreed: a.pet?.breed || null,
+        petPhoto: a.pet?.photo || null,
+        tutorId: a.tutorId,
+        tutorName: a.tutor?.name || 'Tutor',
+        tutorPhoto: a.tutor?.avatar || null,
+        tutorPhone: a.tutor?.phone || null,
+        serviceId: a.serviceId,
+        service: a.service?.name || 'Serviço',
+        serviceCategory: a.service?.category || null,
         status: a.status,
-        price: a.service.price,
-        duration: a.service.duration,
+        price: Number(a.service?.price ?? 0),
+        duration: a.service?.duration || 60,
+        professionalId: a.professionalId || null,
+        establishmentId: a.establishmentId,
+        establishmentName: a.establishmentId !== user.id ? estName : null,
       };
+    };
+
+    const todaySchedule = todayAppointments.map(formatApt);
+
+    // 6. Upcoming schedule (real list for upcoming appointments card)
+    const upcomingAppointmentsList = await prisma.appointment.findMany({
+      where: {
+        ...providerFilter,
+        date: {
+          gte: todayStart,
+        },
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+        },
+      },
+      include: {
+        pet: true,
+        tutor: true,
+        service: true,
+        establishment: {
+          include: {
+            establishmentProfile: true,
+          },
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+      take: 8,
     });
+
+    const upcomingSchedule = upcomingAppointmentsList.map(formatApt);
 
     return reply.send({
       todayAppointments: todayAppointmentsCount,
@@ -129,19 +191,23 @@ export const professionalController = {
       patientsAttended: patientsAttendedCount,
       averageRating,
       todaySchedule,
+      upcomingSchedule,
     });
   },
 
   // =========================================================================
-  // 2. APPOINTMENTS LIST
+  // 2. APPOINTMENTS LIST (AGENDA COMPLETA DO PROFISSIONAL)
   // =========================================================================
-  async getAppointments(request: FastifyRequest<{ Querystring: { date?: string; status?: string } }>, reply: FastifyReply) {
+  async getAppointments(request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string } }>, reply: FastifyReply) {
     const user = await ensureProfessional(request, reply);
     if (!user) return;
 
-    const { date, status } = request.query;
+    const { date, startDate, endDate, status } = request.query;
     const where: any = {
-      professionalId: user.id,
+      OR: [
+        { professionalId: user.id },
+        { establishmentId: user.id },
+      ],
     };
 
     if (status && status !== 'ALL') {
@@ -149,13 +215,19 @@ export const professionalController = {
     }
 
     if (date) {
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
+      // Use explicit UTC boundaries for nominal date filter matching stored UTC dates
+      const dayStart = new Date(`${date}T00:00:00.000Z`);
+      const dayEnd = new Date(`${date}T23:59:59.999Z`);
       where.date = {
         gte: dayStart,
         lte: dayEnd,
+      };
+    } else if (startDate && endDate) {
+      const rangeStart = new Date(`${startDate}T00:00:00.000Z`);
+      const rangeEnd = new Date(`${endDate}T23:59:59.999Z`);
+      where.date = {
+        gte: rangeStart,
+        lte: rangeEnd,
       };
     }
 
@@ -165,28 +237,47 @@ export const professionalController = {
         pet: true,
         tutor: true,
         service: true,
+        establishment: {
+          include: {
+            establishmentProfile: true,
+          },
+        },
       },
       orderBy: {
-        date: 'desc',
+        date: 'asc', // Ordem cronológica dos atendimentos do dia
       },
     });
 
     const formatted = appointments.map(a => {
       const dateObj = new Date(a.date);
+      // Extrai hora nominal do agendamento
+      const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+      const dateStr = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+      const estName = a.establishment?.establishmentProfile?.businessName || a.establishment?.name || null;
+
       return {
         id: a.id,
-        time: dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        date: a.date.toISOString(),
-        petName: a.pet.name,
-        petSpecies: a.pet.species,
-        petBreed: a.pet.breed || null,
-        petPhoto: a.pet.photo || null,
-        tutorName: a.tutor.name,
-        tutorPhone: a.tutor.phone || a.tutor.email,
-        tutorPhoto: a.tutor.avatar || null,
-        service: a.service.name,
-        price: a.service.price,
-        duration: a.service.duration,
+        time: timeStr,
+        date: dateStr,
+        dateISO: a.date.toISOString(),
+        petId: a.petId,
+        petName: a.pet?.name || 'Pet',
+        petSpecies: a.pet?.species || 'Animal',
+        petBreed: a.pet?.breed || null,
+        petPhoto: a.pet?.photo || null,
+        tutorId: a.tutorId,
+        tutorName: a.tutor?.name || 'Tutor',
+        tutorEmail: a.tutor?.email || '',
+        tutorPhone: a.tutor?.phone || null,
+        tutorPhoto: a.tutor?.avatar || null,
+        serviceId: a.serviceId,
+        service: a.service?.name || 'Serviço',
+        serviceCategory: a.service?.category || null,
+        price: Number(a.service?.price ?? 0),
+        duration: a.service?.duration || 60,
+        establishmentId: a.establishmentId,
+        establishmentName: a.establishmentId !== user.id ? estName : null,
+        professionalId: a.professionalId || null,
         status: a.status,
       };
     });
@@ -208,7 +299,7 @@ export const professionalController = {
       where: { id },
     });
 
-    if (!appointment || appointment.professionalId !== user.id) {
+    if (!appointment || (appointment.professionalId !== user.id && appointment.establishmentId !== user.id)) {
       return reply.status(404).send({ error: 'Agendamento não encontrado.' });
     }
 

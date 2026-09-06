@@ -165,6 +165,8 @@ export const TutorLayout: React.FC = () => {
               name={currentUser?.name || ''}
               size="sm"
               status="online"
+              fallbackSrc={currentUser?.defaultAvatar || undefined}
+              entityType="tutor"
             />
             <AnimatePresence>
               {!sidebarCollapsed && (
@@ -294,7 +296,13 @@ export const TutorLayout: React.FC = () => {
               </nav>
               <div className="p-4 border-t border-neutral-100 dark:border-[#313335]">
                 <div className="flex items-center gap-3 mb-3">
-                  <Avatar src={currentUser?.avatar} name={currentUser?.name || ''} size="md" />
+                  <Avatar
+                    src={currentUser?.avatar}
+                    name={currentUser?.name || ''}
+                    size="md"
+                    fallbackSrc={currentUser?.defaultAvatar || undefined}
+                    entityType="tutor"
+                  />
                   <div>
                     <p className="text-sm font-semibold text-neutral-800 dark:text-[#E3E3E3]">{currentUser?.name}</p>
                     <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{currentUser?.email}</p>
@@ -348,7 +356,13 @@ export const TutorLayout: React.FC = () => {
               <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
             </NavLink>
             <NavLink to="/tutor/profile">
-              <Avatar src={currentUser?.avatar} name={currentUser?.name || ''} size="sm" />
+              <Avatar
+                src={currentUser?.avatar}
+                name={currentUser?.name || ''}
+                size="sm"
+                fallbackSrc={currentUser?.defaultAvatar || undefined}
+                entityType="tutor"
+              />
             </NavLink>
           </div>
         </header>

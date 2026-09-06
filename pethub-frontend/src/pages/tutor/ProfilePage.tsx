@@ -52,7 +52,8 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append('file', selectedFile);
       const res = await api.post('/upload/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      useAuthStore.getState().setUser({ ...user, avatar: res.data.url } as any);
+      const fullUrl = res.data.url.startsWith('http') ? res.data.url : `http://localhost:3000${res.data.url}`;
+      useAuthStore.getState().setUser({ ...user, avatar: fullUrl } as any);
       setPreviewUrl(null);
       setSelectedFile(null);
       toast.success('Foto atualizada!');

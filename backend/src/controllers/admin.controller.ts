@@ -27,6 +27,9 @@ export const adminController = {
       where: { status: ApprovalStatus.PENDING_APPROVAL },
     });
     const totalProfessionals = await prisma.professionalProfile.count();
+    const pendingProfessionals = await prisma.professionalProfile.count({
+      where: { status: ApprovalStatus.PENDING_APPROVAL },
+    });
     const totalAppointments = await prisma.appointment.count();
 
     const completedAppointments = await prisma.appointment.findMany({
@@ -47,6 +50,7 @@ export const adminController = {
       activeEstablishments: activeEstabs,
       pendingEstablishments: pendingEstabs,
       professionals: totalProfessionals,
+      pendingProfessionals,
       appointments: totalAppointments,
       revenue,
     });

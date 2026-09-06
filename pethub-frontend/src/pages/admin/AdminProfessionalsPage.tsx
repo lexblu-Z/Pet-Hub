@@ -14,10 +14,20 @@ import {
   FileText,
   PauseCircle,
   PlayCircle,
+  MapPin,
+  Camera,
+  ExternalLink,
 } from 'lucide-react';
 import { Input, Button, Badge, Modal, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
+
+const getFullImageUrl = (url?: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/uploads')) return `http://localhost:3000${url}`;
+  return url;
+};
 
 export default function AdminProfessionalsPage() {
   const [professionals, setProfessionals] = useState<any[]>([]);
@@ -27,6 +37,7 @@ export default function AdminProfessionalsPage() {
 
   // Modals
   const [selectedProf, setSelectedProf] = useState<any>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -512,6 +523,101 @@ export default function AdminProfessionalsPage() {
               </div>
             )}
 
+            {/* Workplace Photo & Address Section */}
+            <div className="space-y-3">
+              {/* Foto do Local */}
+              <div className="p-3.5 bg-white dark:bg-[#1E1F20] border border-neutral-200/80 dark:border-[#313335] rounded-2xl space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-[#313335]">
+                  <div className="flex items-center gap-2 text-neutral-900 dark:text-[#E3E3E3] font-bold text-xs">
+                    <Camera size={14} className="text-orange-500" />
+                    <span>Foto do Local de Atendimento</span>
+                  </div>
+                  {selectedProf.professionalProfile?.workplacePhoto ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 rounded-md">
+                      Disponível
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-md">
+                      Pendente
+                    </span>
+                  )}
+                </div>
+
+                {selectedProf.professionalProfile?.workplacePhoto ? (
+                  <div
+                    onClick={() => setPreviewPhoto(getFullImageUrl(selectedProf.professionalProfile.workplacePhoto))}
+                    className="group relative rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] aspect-video bg-neutral-100 dark:bg-[#282A2C] cursor-pointer shadow-xs hover:border-orange-400 transition-all"
+                  >
+                    <img
+                      src={getFullImageUrl(selectedProf.professionalProfile.workplacePhoto)}
+                      alt="Local de atendimento"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                      <ExternalLink size={14} /> Ampliar foto
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 text-center bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+                    <Camera size={20} className="mx-auto text-neutral-400 mb-1" />
+                    <p className="text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5]">Foto do local não informada</p>
+                    <p className="text-[10px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Profissional cadastrado anteriormente ou sem foto enviada.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Endereço de Atendimento */}
+              <div className="p-3.5 bg-white dark:bg-[#1E1F20] border border-neutral-200/80 dark:border-[#313335] rounded-2xl space-y-2">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-neutral-100 dark:border-[#313335] text-neutral-900 dark:text-[#E3E3E3] font-bold text-xs">
+                  <MapPin size={14} className="text-orange-500" />
+                  <span>Endereço do Atendimento</span>
+                </div>
+
+                {selectedProf.professionalProfile?.address || selectedProf.professionalProfile?.city ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-neutral-400 dark:text-[#8E918F] block font-medium">Logradouro / Número:</span>
+                      <span className="text-neutral-800 dark:text-[#C4C7C5] font-semibold">
+                        {selectedProf.professionalProfile?.address || 'Não informado'} {selectedProf.professionalProfile?.number ? `, nº ${selectedProf.professionalProfile.number}` : ''}
+                      </span>
+                    </div>
+                    {selectedProf.professionalProfile?.complement && (
+                      <div>
+                        <span className="text-neutral-400 dark:text-[#8E918F] block font-medium">Complemento:</span>
+                        <span className="text-neutral-800 dark:text-[#C4C7C5] font-semibold">
+                          {selectedProf.professionalProfile.complement}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-neutral-400 dark:text-[#8E918F] block font-medium">Bairro:</span>
+                      <span className="text-neutral-800 dark:text-[#C4C7C5] font-semibold">
+                        {selectedProf.professionalProfile?.neighborhood || 'Não informado'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 dark:text-[#8E918F] block font-medium">Cidade / UF:</span>
+                      <span className="text-neutral-800 dark:text-[#C4C7C5] font-semibold">
+                        {selectedProf.professionalProfile?.city || 'Ourinhos'} - {selectedProf.professionalProfile?.state || 'SP'}
+                      </span>
+                    </div>
+                    {selectedProf.professionalProfile?.zipCode && (
+                      <div>
+                        <span className="text-neutral-400 dark:text-[#8E918F] block font-medium">CEP:</span>
+                        <span className="text-neutral-800 dark:text-[#C4C7C5] font-mono font-semibold">
+                          {selectedProf.professionalProfile.zipCode}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] py-1">
+                    Nenhum endereço físico registrado para este profissional.
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Contact & Bio Info */}
             <div className="space-y-2 border border-neutral-100 dark:border-[#313335] rounded-xl p-3 text-xs bg-white dark:bg-[#1E1F20]">
               <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
@@ -745,6 +851,27 @@ export default function AdminProfessionalsPage() {
               >
                 Confirmar suspensão
               </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Preview Photo */}
+      {previewPhoto && (
+        <Modal
+          isOpen={!!previewPhoto}
+          onClose={() => setPreviewPhoto(null)}
+          title="Foto Ampliada do Local de Atendimento"
+          size="lg"
+        >
+          <div className="flex flex-col items-center justify-center p-2">
+            <img
+              src={previewPhoto}
+              alt="Visualização ampliada do local"
+              className="max-h-[70vh] w-auto rounded-2xl object-contain border border-neutral-200 dark:border-[#313335]"
+            />
+            <div className="mt-4 flex justify-end w-full">
+              <Button onClick={() => setPreviewPhoto(null)}>Fechar</Button>
             </div>
           </div>
         </Modal>

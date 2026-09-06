@@ -116,6 +116,8 @@ export default function ProfessionalServicesPage() {
   });
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
+  const [copySourceDay, setCopySourceDay] = useState<string | null>(null);
+  const [copyTargetDays, setCopyTargetDays] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchServices();
@@ -295,6 +297,25 @@ export default function ProfessionalServicesPage() {
         hasBreak: !prev[dayKey]?.hasBreak,
       },
     }));
+  };
+
+  const handleCopyToDay = () => {
+    if (!copySourceDay) return;
+    const source = workingHours[copySourceDay];
+    if (!source) return;
+    const targets = Object.entries(copyTargetDays)
+      .filter(([, checked]) => checked)
+      .map(([key]) => key);
+    if (targets.length === 0) return;
+    setWorkingHours((prev) => {
+      const updated = { ...prev };
+      targets.forEach((key) => {
+        updated[key] = { ...source };
+      });
+      return updated;
+    });
+    setCopySourceDay(null);
+    setCopyTargetDays({});
   };
 
   // Validate working hours
@@ -621,6 +642,24 @@ export default function ProfessionalServicesPage() {
 
           {/* Days of Week Hours */}
           <div className="bg-white dark:bg-[#282A2C] rounded-3xl p-6 border border-neutral-100 dark:border-[#313335] shadow-sm space-y-5">
+            {/* Weekly summary */}
+            {(() => {
+              const activeDays = DAYS_OF_WEEK.filter(({ key }) => workingHours[key]?.enabled).length;
+              return (
+                <div className="flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40 rounded-2xl">
+                  <div className="w-8 h-8 bg-orange-500/10 rounded-xl flex items-center justify-center shrink-0">
+                    <Calendar size={15} className="text-orange-500" />
+                  </div>
+                  <p className="text-sm font-semibold text-neutral-700 dark:text-[#E3E3E3]">
+                    {activeDays === 0
+                      ? 'Nenhum dia configurado como disponível.'
+                      : <>Você está disponível <span className="text-orange-600 dark:text-orange-400">{activeDays} dia{activeDays !== 1 ? 's' : ''}</span> por semana.</>
+                    }
+                  </p>
+                </div>
+              );
+            })()}
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar size={20} className="text-orange-500" />
@@ -630,7 +669,7 @@ export default function ProfessionalServicesPage() {
             </div>
 
             <div className="space-y-4">
-              {DAYS_OF_WEEK.map(({ key, label }) => {
+              {DAYS_OF_WEEK.map(({ key, label, short }) => {
                 const day = workingHours[key] || {
                   enabled: false,
                   open: '08:00',
@@ -649,118 +688,204 @@ export default function ProfessionalServicesPage() {
                 return (
                   <div
                     key={key}
-                    className={`p-4 rounded-2xl border transition-all ${
+                    className={`rounded-2xl border transition-all overflow-hidden ${
                       day.enabled
-                        ? 'bg-neutral-50/70 dark:bg-[#1E1F20] border-neutral-200/70 dark:border-[#313335]'
-                        : 'bg-neutral-50/30 dark:bg-[#1E1F20]/40 border-dashed border-neutral-200 dark:border-[#313335]/60 opacity-60'
+                        ? 'bg-white dark:bg-[#1E1F20] border-orange-200/60 dark:border-[#313335] shadow-sm'
+                        : 'bg-neutral-50/50 dark:bg-[#1E1F20]/40 border-neutral-200 dark:border-[#313335]/60'
                     }`}
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Day toggle */}
-                      <div className="flex items-center gap-3 min-w-[160px]">
+                    {/* Cabeçalho do dia */}
+                    <div className={`flex items-center justify-between px-4 py-3.5 ${day.enabled ? 'border-b border-neutral-100 dark:border-[#313335]' : ''}`}>
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => handleToggleDay(key)}
-                          className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                          className={`relative w-11 h-6 flex items-center rounded-full transition-colors cursor-pointer shrink-0 ${
                             day.enabled ? 'bg-orange-500' : 'bg-neutral-300 dark:bg-[#313335]'
                           }`}
+                          aria-label={day.enabled ? 'Desativar dia' : 'Ativar dia'}
                         >
-                          <div
-                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                          <span
+                            className={`absolute left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
                               day.enabled ? 'translate-x-5' : 'translate-x-0'
                             }`}
                           />
                         </button>
-                        <span
-                          className={`text-sm font-bold ${
-                            day.enabled ? 'text-neutral-900 dark:text-[#E3E3E3]' : 'text-neutral-400 dark:text-[#8E918F]'
-                          }`}
-                        >
-                          {label}
-                        </span>
+
+                        <div>
+                          <span className={`font-bold text-sm sm:hidden ${day.enabled ? 'text-neutral-900 dark:text-[#E3E3E3]' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
+                            {short}
+                          </span>
+                          <span className={`font-bold text-sm hidden sm:inline ${day.enabled ? 'text-neutral-900 dark:text-[#E3E3E3]' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
+                            {label}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Working Hours Input */}
+                      {/* Badge de status */}
                       {day.enabled ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-neutral-500 dark:text-[#8E918F]">Das:</span>
-                            <input
-                              type="time"
-                              value={day.open}
-                              onChange={(e) => handleTimeChange(key, 'open', e.target.value)}
-                              className={`bg-white dark:bg-[#282A2C] border text-xs px-2.5 py-1.5 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                                hasHoursError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
-                              }`}
-                            />
-                            <span className="text-xs text-neutral-500 dark:text-[#8E918F]">até:</span>
-                            <input
-                              type="time"
-                              value={day.close}
-                              onChange={(e) => handleTimeChange(key, 'close', e.target.value)}
-                              className={`bg-white dark:bg-[#282A2C] border text-xs px-2.5 py-1.5 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                                hasHoursError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
-                              }`}
-                            />
-                          </div>
-
-                          {/* Break Toggle */}
-                          <div className="flex items-center gap-2 pl-2 border-l border-neutral-200 dark:border-[#313335]">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleBreak(key)}
-                              className={`text-xs px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer ${
-                                day.hasBreak
-                                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/50 font-semibold'
-                                  : 'text-neutral-500 dark:text-[#8E918F] border-neutral-200 dark:border-[#313335] hover:bg-neutral-100 dark:hover:bg-[#282A2C]'
-                              }`}
-                            >
-                              <Coffee size={13} />
-                              <span>{day.hasBreak ? 'Com Intervalo' : '+ Adicionar Intervalo'}</span>
-                            </button>
-
-                            {day.hasBreak && (
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="time"
-                                  value={day.breakStart || '12:00'}
-                                  onChange={(e) => handleTimeChange(key, 'breakStart', e.target.value)}
-                                  className={`bg-white dark:bg-[#282A2C] border text-xs px-2 py-1 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                                    hasBreakError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
-                                  }`}
-                                />
-                                <span className="text-xs text-neutral-400">-</span>
-                                <input
-                                  type="time"
-                                  value={day.breakEnd || '13:00'}
-                                  onChange={(e) => handleTimeChange(key, 'breakEnd', e.target.value)}
-                                  className={`bg-white dark:bg-[#282A2C] border text-xs px-2 py-1 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                                    hasBreakError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
-                                  }`}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                          DISPONÍVEL
+                        </span>
                       ) : (
-                        <span className="text-xs font-semibold text-neutral-400 dark:text-[#8E918F]">
-                          Fechado / Não atende
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-[#313335] text-neutral-400 dark:text-[#8E918F]">
+                          INDISPONÍVEL
                         </span>
                       )}
                     </div>
 
-                    {/* Inline error feedback */}
-                    {hasHoursError && (
-                      <p className="text-[11px] text-red-500 flex items-center gap-1 mt-2">
-                        <AlertTriangle size={12} />
-                        Horário de encerramento deve ser posterior ao início.
-                      </p>
-                    )}
-                    {hasBreakError && (
-                      <p className="text-[11px] text-red-500 flex items-center gap-1 mt-2">
-                        <AlertTriangle size={12} />
-                        O intervalo deve ser válido e estar dentro do horário de atendimento.
-                      </p>
+                    {/* Corpo com horários e opções quando habilitado */}
+                    {day.enabled && (
+                      <div className="p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          {/* Horário de Atendimento */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-neutral-500 dark:text-[#8E918F] flex items-center gap-1.5">
+                              <Clock size={14} className="text-orange-500" />
+                              Atendimento:
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={day.open}
+                                onChange={(e) => handleTimeChange(key, 'open', e.target.value)}
+                                className={`bg-neutral-50 dark:bg-[#282A2C] border text-xs px-2.5 py-1.5 rounded-lg text-neutral-900 dark:text-[#E3E3E3] font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                                  hasHoursError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
+                                }`}
+                              />
+                              <span className="text-xs text-neutral-400 font-bold">→</span>
+                              <input
+                                type="time"
+                                value={day.close}
+                                onChange={(e) => handleTimeChange(key, 'close', e.target.value)}
+                                className={`bg-neutral-50 dark:bg-[#282A2C] border text-xs px-2.5 py-1.5 rounded-lg text-neutral-900 dark:text-[#E3E3E3] font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                                  hasHoursError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Botão de Intervalo / Adicionar Intervalo */}
+                          <div className="flex items-center gap-2">
+                            {!day.hasBreak ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBreak(key)}
+                                className="text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-neutral-300 dark:border-[#313335] hover:border-orange-400 dark:hover:border-orange-500 text-neutral-600 dark:text-[#C4C7C5] hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Coffee size={13} />
+                                <span>+ Intervalo / Almoço</span>
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Linha de Intervalo Ativo */}
+                        {day.hasBreak && (
+                          <div className="flex items-center gap-2.5 p-2.5 bg-neutral-50 dark:bg-[#282A2C]/60 rounded-xl border border-neutral-100 dark:border-[#313335] flex-wrap">
+                            <span className="text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] flex items-center gap-1.5">
+                              <Coffee size={14} className="text-orange-500" />
+                              Pausa / Almoço:
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={day.breakStart || '12:00'}
+                                onChange={(e) => handleTimeChange(key, 'breakStart', e.target.value)}
+                                className={`bg-white dark:bg-[#282A2C] border text-xs px-2 py-1 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                                  hasBreakError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
+                                }`}
+                              />
+                              <span className="text-xs text-neutral-400 font-bold">→</span>
+                              <input
+                                type="time"
+                                value={day.breakEnd || '13:00'}
+                                onChange={(e) => handleTimeChange(key, 'breakEnd', e.target.value)}
+                                className={`bg-white dark:bg-[#282A2C] border text-xs px-2 py-1 rounded-lg text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                                  hasBreakError ? 'border-red-500' : 'border-neutral-200 dark:border-[#313335]'
+                                }`}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBreak(key)}
+                              title="Remover intervalo"
+                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer ml-auto"
+                            >
+                              <X size={15} />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Erros inline de validação */}
+                        {hasHoursError && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <AlertTriangle size={13} />
+                            Horário de encerramento deve ser posterior ao início.
+                          </p>
+                        )}
+                        {hasBreakError && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <AlertTriangle size={13} />
+                            O intervalo deve estar totalmente dentro do horário de atendimento.
+                          </p>
+                        )}
+
+                        {/* Funcionalidade de copiar horários */}
+                        <div className="pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                          {copySourceDay === key ? (
+                            <div className="p-3 bg-orange-50/70 dark:bg-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-900/40 space-y-2.5">
+                              <p className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3]">
+                                Copiar horários de <span className="text-orange-600 dark:text-orange-400">{label}</span> para:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {DAYS_OF_WEEK.filter((d) => d.key !== key).map(({ key: targetKey, short: targetShort }) => (
+                                  <label
+                                    key={targetKey}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] text-xs cursor-pointer font-medium"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={!!copyTargetDays[targetKey]}
+                                      onChange={(e) =>
+                                        setCopyTargetDays((prev) => ({ ...prev, [targetKey]: e.target.checked }))
+                                      }
+                                      className="w-3.5 h-3.5 text-orange-500 rounded border-neutral-300 focus:ring-orange-500"
+                                    />
+                                    <span>{targetShort}</span>
+                                  </label>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleCopyToDay}
+                                  disabled={Object.values(copyTargetDays).every((v) => !v)}
+                                  className="text-xs font-bold px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
+                                >
+                                  Aplicar nos dias selecionados
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setCopySourceDay(null); setCopyTargetDays({}); }}
+                                  className="text-xs text-neutral-500 dark:text-[#8E918F] hover:text-neutral-700 dark:hover:text-[#E3E3E3] transition-colors cursor-pointer"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { setCopySourceDay(key); setCopyTargetDays({}); }}
+                              className="text-xs font-medium text-neutral-500 dark:text-[#8E918F] hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Check size={13} />
+                              <span>Replicar este horário em outros dias</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );

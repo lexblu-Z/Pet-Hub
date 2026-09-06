@@ -2,12 +2,12 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { establishmentsController } from '../controllers/establishments.controller';
 
 export const establishmentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  // Public route (might be protected by JWT, but any role can see)
+  // Public route for users to see approved establishments & professionals
   fastify.get(
     '/',
     {
-      onRequest: [async (request, reply) => {
-        try { await request.jwtVerify(); } catch (err) { reply.send(err); }
+      onRequest: [async (request) => {
+        try { await request.jwtVerify(); } catch (err) { /* Auth opcional na rota pública */ }
       }],
     },
     establishmentsController.listPublic

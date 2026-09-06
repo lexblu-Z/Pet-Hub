@@ -27,6 +27,13 @@ export interface User {
   defaultAvatar?: string | null;
   role: UserRole;
   hasPassword?: boolean;
+  address?: Address | string | null;
+  number?: string | null;
+  complement?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
   createdAt: string;
 }
 

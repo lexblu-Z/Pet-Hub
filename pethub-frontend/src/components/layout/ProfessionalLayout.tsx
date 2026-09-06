@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Star,
   User,
+  BarChart3,
 } from 'lucide-react';
 import { SharedBusinessLayout } from './SharedBusinessLayout';
 import type { NavItemConfig } from './SharedBusinessLayout';
@@ -18,6 +19,7 @@ const navItems: NavItemConfig[] = [
   { path: '/profissional/prestar-servicos', icon: Briefcase, label: 'Prestar Serviços' },
   { path: '/profissional/ordens', icon: ClipboardList, label: 'Ordens de Serviço' },
   { path: '/profissional/avaliacoes', icon: Star, label: 'Avaliações' },
+  { path: '/profissional/relatorios', icon: BarChart3, label: 'Relatórios' },
   { path: '/profissional/perfil', icon: User, label: 'Meu Perfil' },
 ];
 
@@ -42,6 +44,7 @@ export const ProfessionalLayout = () => {
       homeLink="/profissional"
       navItems={navItems}
       userPhoto={currentUser?.avatar}
+      userDefaultAvatar={currentUser?.defaultAvatar}
       userName={userName}
       userSubtitle={specialty}
       isEstablishment={false}

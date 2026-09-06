@@ -24,6 +24,8 @@ import { establishmentAreaRoutes } from './routes/establishmentArea.routes';
 import { notificationsRoutes } from './routes/notifications.routes';
 import { professionalRoutes } from './routes/professional.routes';
 import { easterEggRoutes } from './routes/easterEgg.routes';
+import { messagesRoutes } from './routes/messages.routes';
+import { reportsRoutes } from './routes/reports.routes';
 
 dotenv.config();
 
@@ -85,6 +87,8 @@ fastify.register(establishmentAreaRoutes, { prefix: '/api/establishment' });
 fastify.register(notificationsRoutes, { prefix: '/api' });
 fastify.register(professionalRoutes, { prefix: '/api/professional' });
 fastify.register(easterEggRoutes, { prefix: '/api/easter-egg' });
+fastify.register(messagesRoutes, { prefix: '/api/messages' });
+fastify.register(reportsRoutes, { prefix: '/api/reports' });
 
 // Basic route
 fastify.get('/', async (request, reply) => {

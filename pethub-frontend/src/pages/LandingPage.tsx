@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Star, Calendar, ChevronRight, PawPrint, Dog, Cat, Heart, Bone, Stethoscope, DollarSign, ArrowDown } from 'lucide-react';
+import { FluidText } from '../components/ui/FluidText';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -107,12 +108,25 @@ export default function LandingPage() {
                 Nova plataforma pet de Ourinhos-SP
               </motion.div>
               
-              <motion.div variants={fadeUp} className="relative inline-block">
+              <motion.div variants={fadeUp} className="relative inline-block w-full">
                 {/* O EFEITO DE BLUR LARANJA ATRÁS DO TEXTO - SUTIL E DIFUSO */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-orange-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
                 
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 leading-[1.1] relative z-10">
-                  O universo pet <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">na palma</span> da sua mão
+                  <span>O universo pet</span>{' '}
+                  <span className="block mt-1 sm:mt-2 h-[56px] sm:h-[76px] md:h-[88px] lg:h-[104px] w-full max-w-[620px] mx-auto lg:mx-0">
+                    <FluidText
+                      text="na palma da sua mão"
+                      className="w-full h-full"
+                      fontWeight={800}
+                      fontFamily="inherit"
+                      color="#F97316"
+                      accentColor="#FB923C"
+                      splatRadius={0.0045}
+                      splatForce={6000}
+                      curl={28}
+                    />
+                  </span>
                 </h1>
               </motion.div>
               

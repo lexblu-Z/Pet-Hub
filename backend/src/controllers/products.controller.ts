@@ -29,11 +29,18 @@ export const productsController = {
             select: {
               id: true,
               name: true,
+              avatar: true,
+              defaultAvatar: true,
+              phone: true,
               establishmentProfile: {
                 select: {
                   businessName: true,
                   address: true,
                   city: true,
+                  state: true,
+                  zipCode: true,
+                  phone: true,
+                  photos: true,
                 }
               }
             }
@@ -60,13 +67,18 @@ export const productsController = {
             select: {
               id: true,
               name: true,
+              avatar: true,
+              defaultAvatar: true,
               phone: true,
               establishmentProfile: {
                 select: {
                   businessName: true,
                   address: true,
                   city: true,
+                  state: true,
+                  zipCode: true,
                   phone: true,
+                  photos: true,
                 }
               }
             }

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, Building2, MapPin, Search, Camera, Check, Upload, Trash2, Stethoscope, FileText, Sparkles } from 'lucide-react';
+import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, Building2, MapPin, Search, Camera, Check, Upload, Trash2, Stethoscope, FileText, Sparkles, AlertTriangle } from 'lucide-react';
 import { Input, Button, Progress } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
@@ -85,6 +85,11 @@ export default function RegisterPage() {
   const [isCepLoading, setIsCepLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
 
+  // Professional Workplace Photo states
+  const [workplacePhoto, setWorkplacePhoto] = useState<string | null>(null);
+  const [isUploadingWorkplacePhoto, setIsUploadingWorkplacePhoto] = useState(false);
+  const workplacePhotoInputRef = useRef<HTMLInputElement>(null);
+
   // Email verification OTP modal states
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [regOtpCode, setRegOtpCode] = useState('');
@@ -101,7 +106,7 @@ export default function RegisterPage() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  const totalSteps = selectedRole === 'estabelecimento' ? 4 : 3;
+  const totalSteps = 4;
   const progressValue = (step / totalSteps) * 100;
 
   // Mask & Search CEP
@@ -131,7 +136,7 @@ export default function RegisterPage() {
 
         // Validate Ourinhos - SP restriction
         if (data.localidade?.trim().toLowerCase() !== 'ourinhos' || data.uf?.trim().toUpperCase() !== 'SP') {
-          setCityError('No momento, o PetHub está disponível apenas para estabelecimentos localizados em Ourinhos - SP.');
+          setCityError('No momento, o PetHub está disponível apenas para residentes e estabelecimentos de Ourinhos - SP.');
         } else {
           setCityError(null);
           toast.success('Endereço preenchido com sucesso!');
@@ -170,6 +175,43 @@ export default function RegisterPage() {
 
   const handleRemovePhoto = (index: number) => {
     setEstablishmentPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleWorkplacePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Formato inválido. Selecione uma imagem JPG, JPEG, PNG ou WEBP.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    setIsUploadingWorkplacePhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/upload/image', formData);
+      if (res.data?.url) {
+        setWorkplacePhoto(res.data.url);
+        toast.success('Foto do local de atendimento adicionada com sucesso!');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao enviar foto do local. Tente novamente.');
+    } finally {
+      setIsUploadingWorkplacePhoto(false);
+      if (workplacePhotoInputRef.current) workplacePhotoInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveWorkplacePhoto = () => {
+    setWorkplacePhoto(null);
+    if (workplacePhotoInputRef.current) workplacePhotoInputRef.current.value = '';
   };
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -213,11 +255,25 @@ export default function RegisterPage() {
         return;
       }
 
-      if (selectedRole === 'estabelecimento') {
-        setStep(3); // Go to establishment details & photos
-      } else {
-        handleRequestVerification(); // Tutor or professional
+      setStep(3); // Go to step 3 (Address / Details) for all roles
+    } else if (step === 3 && selectedRole === 'tutor') {
+      if (!cep || !street || !number || !neighborhood) {
+        toast.error('Preencha o endereço completo (CEP, Rua, Número e Bairro).');
+        return;
       }
+      if (city.trim().toLowerCase() !== 'ourinhos' || state.trim().toUpperCase() !== 'SP') {
+        setCityError('No momento, o PetHub está disponível apenas para tutores residentes em Ourinhos - SP.');
+        toast.error('Cadastro de tutor permitido apenas para Ourinhos - SP.');
+        return;
+      }
+      const cleanCep = cep.replace(/\D/g, '');
+      const prefix = parseInt(cleanCep.slice(0, 5), 10);
+      if (cleanCep.length !== 8 || prefix < 19900 || prefix > 19919) {
+        setCityError('O CEP informado não pertence a Ourinhos - SP.');
+        toast.error('O CEP deve pertencer ao município de Ourinhos - SP.');
+        return;
+      }
+      handleRequestVerification();
     } else if (step === 3 && selectedRole === 'estabelecimento') {
       if (!businessName) {
         toast.error('Informe o nome do estabelecimento.');
@@ -234,6 +290,16 @@ export default function RegisterPage() {
       }
       if (establishmentPhotos.length === 0) {
         toast.error('É obrigatório adicionar pelo menos 1 foto do estabelecimento para verificação.');
+        return;
+      }
+      handleRequestVerification();
+    } else if (step === 3 && selectedRole === 'profissional') {
+      if (!workplacePhoto) {
+        toast.error('A foto do local de atendimento é obrigatória.');
+        return;
+      }
+      if (!cep || !street || !number || !neighborhood || !city || !state) {
+        toast.error('Preencha o endereço completo de atendimento (CEP, Rua, Número e Bairro).');
         return;
       }
       handleRequestVerification();
@@ -285,7 +351,15 @@ export default function RegisterPage() {
         role: roleMap[selectedRole] || 'TUTOR',
       };
 
-      if (selectedRole === 'estabelecimento') {
+      if (selectedRole === 'tutor') {
+        payload.address = street;
+        payload.number = number;
+        payload.complement = complement || undefined;
+        payload.neighborhood = neighborhood;
+        payload.city = city || 'Ourinhos';
+        payload.state = state || 'SP';
+        payload.zipCode = cep;
+      } else if (selectedRole === 'estabelecimento') {
         payload.businessName = businessName;
         payload.establishmentType = establishmentType;
         payload.description = description || undefined;
@@ -300,6 +374,14 @@ export default function RegisterPage() {
         payload.specialty = profSpecialty;
         payload.bio = profBio || undefined;
         payload.document = document || undefined;
+        payload.workplacePhoto = workplacePhoto || undefined;
+        payload.address = street || undefined;
+        payload.number = number || undefined;
+        payload.complement = complement || undefined;
+        payload.neighborhood = neighborhood || undefined;
+        payload.city = city || undefined;
+        payload.state = state || undefined;
+        payload.zipCode = cep || undefined;
       }
 
       const response = await api.post('/auth/register', payload);
@@ -640,7 +722,124 @@ export default function RegisterPage() {
               </div>
 
               <Button fullWidth size="lg" onClick={handleNext} isLoading={isLoading} rightIcon={<ArrowRight size={18} />}>
-                {selectedRole === 'estabelecimento' ? 'Próximo: dados do estabelecimento' : (isLoading ? 'Criando conta...' : 'Criar conta')}
+                {selectedRole === 'estabelecimento'
+                  ? 'Próximo: dados do estabelecimento'
+                  : selectedRole === 'profissional'
+                  ? 'Próximo: local de atendimento'
+                  : 'Próximo: endereço residencial'}
+              </Button>
+            </motion.div>
+          )}
+
+          {/* STEP 3: Tutor Residential Address with ViaCEP */}
+          {step === 3 && selectedRole === 'tutor' && (
+            <motion.div
+              key="step3-tutor"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="flex items-center gap-1 text-sm text-neutral-400 dark:text-[#8E918F] hover:text-neutral-600 dark:hover:text-[#E3E3E3] mb-6 transition-colors cursor-pointer"
+              >
+                <ArrowLeft size={16} /> Voltar
+              </button>
+              <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Endereço Residencial</h2>
+              <p className="text-neutral-500 dark:text-[#8E918F] mb-6">
+                Informe seu endereço em Ourinhos - SP para entregas e agendamentos
+              </p>
+
+              <div className="space-y-4 mb-8">
+                <div className="p-3.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40 rounded-xl flex items-start gap-2.5 text-xs text-orange-900 dark:text-orange-200">
+                  <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                  <span>
+                    O PetHub está disponível para a cidade de <strong>Ourinhos - SP</strong>. O endereço é obrigatório para compras e recebimento de pedidos.
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    label="CEP (Ourinhos - SP) *"
+                    value={cep}
+                    onChange={handleCepChange}
+                    placeholder="19900-000"
+                    maxLength={9}
+                    leftIcon={<Search size={16} className={isCepLoading ? 'animate-spin text-orange-500' : ''} />}
+                    hint={isCepLoading ? 'Consultando ViaCEP...' : 'Digite o CEP para buscar o endereço automaticamente'}
+                    required
+                  />
+                </div>
+
+                {cityError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-red-700 dark:text-red-400 text-xs font-medium">
+                    {cityError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <Input
+                      label="Rua / Avenida *"
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      placeholder="Nome da rua"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      label="Número *"
+                      value={number}
+                      onChange={(e) => setNumber(e.target.value)}
+                      placeholder="123"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Bairro *"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    placeholder="Centro"
+                    required
+                  />
+                  <Input
+                    label="Complemento"
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                    placeholder="Apto 12 (opcional)"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] block mb-1">Cidade</label>
+                    <input
+                      type="text"
+                      value={city || 'Ourinhos'}
+                      disabled
+                      className="w-full text-sm px-3.5 py-2.5 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-600 dark:text-[#8E918F] cursor-not-allowed font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] block mb-1">Estado</label>
+                    <input
+                      type="text"
+                      value={state || 'SP'}
+                      disabled
+                      className="w-full text-sm px-3.5 py-2.5 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-600 dark:text-[#8E918F] cursor-not-allowed font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button fullWidth size="lg" onClick={handleNext} isLoading={isLoading || isSendingRegOtp} rightIcon={<ArrowRight size={18} />}>
+                {isSendingRegOtp ? 'Enviando código...' : 'Finalizar cadastro'}
               </Button>
             </motion.div>
           )}
@@ -846,6 +1045,187 @@ export default function RegisterPage() {
                 onClick={handleNext}
                 isLoading={isLoading}
                 disabled={!!cityError || isCepLoading || isUploadingPhoto}
+                rightIcon={<ArrowRight size={18} />}
+              >
+                {isLoading ? 'Criando conta...' : 'Finalizar cadastro'}
+              </Button>
+            </motion.div>
+          )}
+
+          {/* STEP 3: Professional Workplace Photo & Address */}
+          {step === 3 && selectedRole === 'profissional' && (
+            <motion.div
+              key="step3-prof"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="flex items-center gap-1 text-sm text-neutral-400 dark:text-[#8E918F] hover:text-neutral-600 dark:hover:text-[#E3E3E3] mb-6 transition-colors"
+              >
+                <ArrowLeft size={16} /> Voltar
+              </button>
+              <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Local de Atendimento e Endereço</h2>
+              <p className="text-neutral-500 dark:text-[#8E918F] mb-6">
+                Informe onde você realiza seus atendimentos e envie uma foto do local para aprovação cadastral
+              </p>
+
+              <div className="space-y-4 mb-8">
+                {/* Mandatory Workplace Photo Section */}
+                <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                        Foto do Local de Atendimento *
+                      </label>
+                      <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                        Esta foto mostra o ambiente de atendimento (consultório, clínica ou espaço próprio). Ela é diferente da sua foto de perfil pessoal.
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    ref={workplacePhotoInputRef}
+                    accept="image/jpeg,image/png,image/webp,image/jpg"
+                    className="hidden"
+                    onChange={handleWorkplacePhotoUpload}
+                  />
+
+                  {!workplacePhoto ? (
+                    <button
+                      type="button"
+                      onClick={() => workplacePhotoInputRef.current?.click()}
+                      disabled={isUploadingWorkplacePhoto}
+                      className="w-full border-2 border-dashed border-orange-300 dark:border-orange-700/60 hover:border-orange-500 dark:hover:border-orange-500 bg-white dark:bg-[#282A2C] rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-neutral-600 dark:text-[#C4C7C5] transition-all cursor-pointer"
+                    >
+                      <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center">
+                        <Camera size={24} />
+                      </div>
+                      <span className="text-sm font-bold text-neutral-800 dark:text-[#E3E3E3]">
+                        {isUploadingWorkplacePhoto ? 'Enviando foto...' : 'Enviar foto do local de atendimento'}
+                      </span>
+                      <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
+                        JPG, PNG ou WEBP até 5MB (obrigatório para aprovação)
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] aspect-video bg-neutral-100 dark:bg-[#282A2C]">
+                        <img
+                          src={getFullImageUrl(workplacePhoto)}
+                          alt="Foto do local de atendimento"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveWorkplacePhoto}
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-90 hover:opacity-100 shadow transition-opacity cursor-pointer"
+                          title="Remover foto"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <span className="absolute bottom-2 left-2 bg-neutral-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                          Local de Atendimento
+                        </span>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => workplacePhotoInputRef.current?.click()}
+                          disabled={isUploadingWorkplacePhoto}
+                          className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                        >
+                          Trocar foto
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* CEP with automatic lookup */}
+                <div className="relative">
+                  <Input
+                    label="CEP do Local de Atendimento *"
+                    value={cep}
+                    onChange={handleCepChange}
+                    placeholder="19900-000"
+                    maxLength={9}
+                    leftIcon={<Search size={16} className={isCepLoading ? "animate-spin text-orange-500" : ""} />}
+                    hint={isCepLoading ? "Consultando ViaCEP..." : "Digite o CEP para buscar o endereço automaticamente"}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <Input
+                      label="Rua / Avenida *"
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      placeholder="Nome da rua ou avenida"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      label="Número *"
+                      value={number}
+                      onChange={(e) => setNumber(e.target.value)}
+                      placeholder="123"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Bairro *"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    placeholder="Bairro"
+                    required
+                  />
+                  <Input
+                    label="Complemento (Sala / Bloco)"
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                    placeholder="Sala 12, Bloco B..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Input
+                      label="Cidade *"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Cidade"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      label="Estado (UF) *"
+                      value={state}
+                      onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
+                      placeholder="SP"
+                      maxLength={2}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                fullWidth
+                size="lg"
+                onClick={handleNext}
+                isLoading={isLoading}
+                disabled={!workplacePhoto || isCepLoading || isUploadingWorkplacePhoto}
                 rightIcon={<ArrowRight size={18} />}
               >
                 {isLoading ? 'Criando conta...' : 'Finalizar cadastro'}

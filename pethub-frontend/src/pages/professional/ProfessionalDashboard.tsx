@@ -9,42 +9,68 @@ import {
   ChevronRight, 
   AlertTriangle, 
   Stethoscope,
+  CalendarDays,
+  User
 } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
+import { formatBrasiliaDate } from '@/utils/date';
+
+interface ScheduleItem {
+  id: string;
+  time: string;
+  date: string;
+  dateISO?: string;
+  isToday?: boolean;
+  isTomorrow?: boolean;
+  petName: string;
+  petSpecies: string;
+  petBreed: string | null;
+  petPhoto: string | null;
+  tutorName: string;
+  tutorPhoto: string | null;
+  tutorPhone: string | null;
+  service: string;
+  serviceCategory?: string | null;
+  status: string;
+  price: number;
+  duration: number;
+}
 
 interface DashboardData {
   todayAppointments: number;
   upcomingAppointments: number;
   patientsAttended: number;
   averageRating: number | null;
-  todaySchedule: Array<{
-    id: string;
-    time: string;
-    date: string;
-    petName: string;
-    petSpecies: string;
-    petBreed: string | null;
-    petPhoto: string | null;
-    tutorName: string;
-    tutorPhoto: string | null;
-    tutorPhone: string | null;
-    service: string;
-    status: string;
-    price: number;
-    duration: number;
-  }>;
+  todaySchedule: ScheduleItem[];
+  upcomingSchedule?: ScheduleItem[];
+}
+
+const statusConfig: Record<string, { label: string; badge: 'warning' | 'info' | 'brand' | 'success' | 'error' }> = {
+  PENDING:     { label: 'Agendado',     badge: 'warning' },
+  CONFIRMED:   { label: 'Confirmado',   badge: 'info' },
+  IN_PROGRESS: { label: 'Em Andamento', badge: 'brand' },
+  COMPLETED:   { label: 'Concluído',    badge: 'success' },
+  CANCELLED:   { label: 'Cancelado',    badge: 'error' },
+};
+
+function getFullImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('/uploads')) return `http://localhost:3000${url}`;
+  return url;
 }
 
 export default function ProfessionalDashboard() {
   const { currentUser } = useAuthStore();
   const [period, setPeriod] = useState('month');
+  const [scheduleView, setScheduleView] = useState<'today' | 'upcoming'>('today');
   const [data, setData] = useState<DashboardData>({
     todayAppointments: 0,
     upcomingAppointments: 0,
     patientsAttended: 0,
     averageRating: null,
     todaySchedule: [],
+    upcomingSchedule: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +79,8 @@ export default function ProfessionalDashboard() {
   const isSuspended = profProfile?.status === 'SUSPENDED';
   const userName = currentUser?.name || 'Profissional';
   const specialty = profProfile?.specialty || 'Médico Veterinário';
-  const photoSrc = currentUser?.avatar || '/user.jpg';
+  const photoSrc = currentUser?.avatar;
+  const defaultFallback = currentUser?.defaultAvatar || '/user5.jpg';
 
   // 100% REAL DATA FROM BACKEND API
   useEffect(() => {
@@ -61,7 +88,14 @@ export default function ProfessionalDashboard() {
       setLoading(true);
       try {
         const res = await api.get(`/professional/dashboard?period=${period}`);
-        setData(res.data);
+        setData(res.data || {
+          todayAppointments: 0,
+          upcomingAppointments: 0,
+          patientsAttended: 0,
+          averageRating: null,
+          todaySchedule: [],
+          upcomingSchedule: [],
+        });
       } catch (err) {
         console.error('Error fetching professional dashboard:', err);
         setData({
@@ -70,6 +104,7 @@ export default function ProfessionalDashboard() {
           patientsAttended: 0,
           averageRating: null,
           todaySchedule: [],
+          upcomingSchedule: [],
         });
       } finally {
         setLoading(false);
@@ -79,16 +114,18 @@ export default function ProfessionalDashboard() {
     fetchDashboardData();
   }, [period]);
 
+  const displayedList = scheduleView === 'today' ? data.todaySchedule : (data.upcomingSchedule || []);
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 font-sans">
-      {/* Top Header with Avatar - Identical to Establishment */}
+      {/* Top Header with Avatar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar
             src={photoSrc}
             name={userName}
             size="xl"
-            fallbackSrc="/user.jpg"
+            fallbackSrc={defaultFallback}
             entityType="professional"
             square={true}
           />
@@ -104,7 +141,7 @@ export default function ProfessionalDashboard() {
               )}
             </div>
             <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
-              {specialty} • Profissional PetHub Ourinhos - SP
+              {specialty} • Profissional PetHub
             </p>
           </div>
         </div>
@@ -125,7 +162,7 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
-      {/* Suspended Alert Banner - Identical to Establishment */}
+      {/* Suspended Alert Banner */}
       {isSuspended && (
         <div className="bg-orange-50 dark:bg-orange-950/30 border-2 border-orange-300 dark:border-orange-800 rounded-3xl p-6 shadow-xs text-orange-950 dark:text-orange-200">
           <div className="flex items-start gap-4">
@@ -142,15 +179,12 @@ export default function ProfessionalDashboard() {
               <p className="text-xs text-orange-800 dark:text-orange-300 bg-white/70 dark:bg-[#1E1F20]/70 p-3 rounded-xl border border-orange-200 dark:border-orange-900/40">
                 <span className="font-bold">Motivo:</span> {profProfile?.suspensionReason || 'Violação das diretrizes da plataforma.'}
               </p>
-              <p className="text-[11px] text-orange-700 dark:text-orange-400 mt-1">
-                A reativação da conta ocorrerá automaticamente após o término do período de suspensão.
-              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Pending Approval Checklist Banner - Identical to Establishment */}
+      {/* Pending Approval Checklist Banner */}
       {isPendingApproval && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-5 shadow-xs">
           <div className="flex items-start gap-3">
@@ -201,7 +235,7 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* Próximos Agendamentos */}
+        {/* Próximos Agendamentos (SEM texto fake de 'fila de espera') */}
         <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
           <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Próximos Agendamentos</span>
@@ -213,7 +247,7 @@ export default function ProfessionalDashboard() {
             <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data.upcomingAppointments}
             </span>
-            <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">na fila de espera</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">agendamentos futuros</span>
           </div>
         </div>
 
@@ -259,13 +293,34 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
-      {/* Daily Appointments / Recent Agenda */}
+      {/* Seção de Atendimentos / Próximos Agendamentos com dados REAIS */}
       <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs p-5 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-[#313335]">
-          <div className="flex items-center gap-2 font-bold text-neutral-900 dark:text-[#E3E3E3]">
-            <Calendar size={18} className="text-orange-500" />
-            <span>Consultas e Procedimentos de Hoje</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-[#313335]">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-neutral-100 dark:bg-[#282A2C] p-1 rounded-xl">
+              <button
+                onClick={() => setScheduleView('today')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  scheduleView === 'today'
+                    ? 'bg-white dark:bg-[#1E1F20] text-orange-600 dark:text-orange-400 shadow-xs'
+                    : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
+                }`}
+              >
+                Hoje ({data.todaySchedule.length})
+              </button>
+              <button
+                onClick={() => setScheduleView('upcoming')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  scheduleView === 'upcoming'
+                    ? 'bg-white dark:bg-[#1E1F20] text-orange-600 dark:text-orange-400 shadow-xs'
+                    : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
+                }`}
+              >
+                Próximos Agendamentos ({(data.upcomingSchedule || []).length})
+              </button>
+            </div>
           </div>
+
           <Link
             to="/profissional/agenda"
             className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold flex items-center gap-1"
@@ -274,90 +329,117 @@ export default function ProfessionalDashboard() {
           </Link>
         </div>
 
-        {data.todaySchedule.length === 0 ? (
+        {loading ? (
+          <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
+            <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-xs">Carregando seus atendimentos...</p>
+          </div>
+        ) : displayedList.length === 0 ? (
           <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
             <Stethoscope size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
-            <h4 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
+            <h4 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-sm mb-1">
+              {scheduleView === 'today' ? 'Nenhum atendimento agendado para hoje' : 'Você não possui próximos agendamentos.'}
+            </h4>
             <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-sm mx-auto mb-4">
-              Assim que tutores realizarem agendamentos com você, eles aparecerão aqui.
+              Quando tutores realizarem agendamentos com você pelo PetHub, eles aparecerão aqui com todos os detalhes.
             </p>
             <Link
               to="/profissional/agenda"
               className="inline-flex items-center text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold"
             >
-              Ver minha agenda →
+              Abrir minha agenda →
             </Link>
           </div>
         ) : (
           <div className="space-y-3">
-            {data.todaySchedule.map((apt) => (
-              <div
-                key={apt.id}
-                className="bg-white dark:bg-[#282A2C] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-4 shadow-xs space-y-3 hover:border-orange-200 dark:hover:border-orange-500/40 transition-colors"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Time & Service */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100 dark:border-orange-900/40">
-                      <Clock size={16} />
-                      <span className="text-xs mt-0.5">{apt.time}</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">{apt.service}</span>
-                        <Badge variant={apt.status === 'CONFIRMED' ? 'success' : apt.status === 'IN_PROGRESS' ? 'brand' : 'warning'}>
-                          {apt.status === 'CONFIRMED' ? 'Confirmado' : apt.status === 'IN_PROGRESS' ? 'Em Andamento' : 'Agendado'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
-                        <span className="font-semibold text-neutral-800 dark:text-[#E3E3E3] flex items-center gap-1">
-                          <Clock size={12} className="text-orange-500" /> {apt.duration} min
+            {displayedList.map((apt) => {
+              const status = statusConfig[apt.status] || statusConfig.PENDING;
+              const priceFormatted = Number(apt.price ?? 0).toFixed(2).replace('.', ',');
+
+              // Badge do dia
+              let dayBadgeLabel = formatBrasiliaDate(apt.date);
+              if (apt.isToday) dayBadgeLabel = 'Hoje';
+              else if (apt.isTomorrow) dayBadgeLabel = 'Amanhã';
+
+              return (
+                <div
+                  key={apt.id}
+                  className="bg-white dark:bg-[#282A2C] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-4 shadow-xs space-y-3 hover:border-orange-200 dark:hover:border-orange-500/40 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Time & Service */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100 dark:border-orange-900/40">
+                        <span className="text-[10px] font-black uppercase text-orange-600 dark:text-orange-400">
+                          {dayBadgeLabel}
                         </span>
-                        <span>•</span>
-                        <span className="font-bold text-green-700 dark:text-green-400">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
+                        <span className="text-sm font-black mt-0.5">{apt.time}</span>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Pet and Tutor details */}
-                  <div className="flex items-center gap-6 text-xs">
-                    {/* Pet */}
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-[#1E1F20] overflow-hidden shrink-0 border border-neutral-200 dark:border-[#313335] flex items-center justify-center text-sm">
-                        {apt.petPhoto ? (
-                          <img src={apt.petPhoto} alt={apt.petName} className="w-full h-full object-cover" />
-                        ) : (
-                          '🐾'
-                        )}
-                      </div>
                       <div>
-                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
-                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">
+                            {apt.service}
+                          </span>
+                          <Badge variant={status.badge}>{status.label}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
+                          <span className="font-semibold text-neutral-800 dark:text-[#E3E3E3] flex items-center gap-1">
+                            <Clock size={12} className="text-orange-500" /> {apt.duration} min
+                          </span>
+                          <span>•</span>
+                          <span className="font-bold text-green-700 dark:text-green-400">
+                            R$ {priceFormatted}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Tutor */}
-                    <div className="flex items-center gap-2.5 border-l border-neutral-100 dark:border-[#313335] pl-4">
-                      <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" fallbackSrc="/user.jpg" />
-                      <div>
-                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.tutorName}</p>
-                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.tutorPhone || 'Tutor'}</p>
+                    {/* Pet and Tutor details */}
+                    <div className="flex items-center gap-5 text-xs">
+                      {/* Pet */}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-[#1E1F20] overflow-hidden shrink-0 border border-neutral-200 dark:border-[#313335] flex items-center justify-center text-sm">
+                          {apt.petPhoto ? (
+                            <img src={getFullImageUrl(apt.petPhoto)} alt={apt.petName} className="w-full h-full object-cover" />
+                          ) : (
+                            <PawPrint size={16} className="text-neutral-400 dark:text-[#8E918F]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
+                          <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
+                        </div>
+                      </div>
+
+                      {/* Tutor */}
+                      <div className="flex items-center gap-2.5 border-l border-neutral-100 dark:border-[#313335] pl-4">
+                        <Avatar
+                          src={getFullImageUrl(apt.tutorPhoto)}
+                          name={apt.tutorName}
+                          size="sm"
+                          fallbackSrc="/user.jpg"
+                        />
+                        <div>
+                          <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.tutorName}</p>
+                          <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.tutorPhone || 'Tutor'}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100 dark:border-[#313335]">
-                    <Link
-                      to="/profissional/agenda"
-                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
-                    >
-                      Acessar Ficha
-                    </Link>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100 dark:border-[#313335]">
+                      <Link
+                        to="/profissional/agenda"
+                        className="px-3.5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
+                      >
+                        Acessar Agenda
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

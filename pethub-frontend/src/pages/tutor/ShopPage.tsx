@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingCart, Plus, Minus, X, Store, Check, Package, AlertCircle } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Store, Package } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useToast } from '@/store/toastStore';
-import { Button, SearchBar, Badge, EmptyState } from '@/components/ui';
+import { Button, SearchBar, Badge } from '@/components/ui';
 import { api } from '@/services/api';
+import { CheckoutModal } from '@/components/shared/CheckoutModal';
 
 interface RealProduct {
   id: string;
@@ -17,9 +18,17 @@ interface RealProduct {
   establishment?: {
     id: string;
     name: string;
+    avatar?: string | null;
+    defaultAvatar?: string | null;
+    phone?: string | null;
     establishmentProfile?: {
       businessName?: string;
+      address?: string;
       city?: string;
+      state?: string;
+      zipCode?: string;
+      phone?: string;
+      photos?: string[];
     };
   };
 }
@@ -29,9 +38,10 @@ export default function ShopPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<RealProduct | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [directCheckoutItem, setDirectCheckoutItem] = useState<{ product: any; quantity: number } | null>(null);
 
   const { items, addItem, updateQuantity, total, itemCount, clearCart } = useCartStore();
   const toast = useToast();
@@ -60,6 +70,13 @@ export default function ShopPage() {
     (p.establishment?.establishmentProfile?.businessName || p.establishment?.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const getEstablishmentPhoto = (product: RealProduct) => {
+    return product.establishment?.establishmentProfile?.photos?.[0] ||
+      product.establishment?.avatar ||
+      product.establishment?.defaultAvatar ||
+      null;
+  };
+
   const handleOpenProduct = (product: RealProduct) => {
     setSelectedProduct(product);
     setQuantity(1);
@@ -82,9 +99,11 @@ export default function ShopPage() {
       price: product.price,
       stock: product.stock,
       photos: [product.photo || '/romeu_e_julieta_1788367558045.jpg'],
+      photo: product.photo,
       category: 'outros',
       isActive: true,
       establishmentId: product.establishmentId,
+      establishment: product.establishment,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as any, qty);
@@ -95,36 +114,42 @@ export default function ShopPage() {
     setSelectedProduct(null);
   };
 
-  const handleBuyNow = (product: RealProduct) => {
+  const handleBuyNow = (product: RealProduct, qty = 1) => {
     if (product.stock <= 0) {
       toast.error('Produto sem estoque disponível.');
       return;
     }
-    handleAddToCart(product, 1, false);
-    setIsCartOpen(true);
+    if (qty > product.stock) {
+      toast.error(`A quantidade não pode exceder o estoque disponível (${product.stock} un.).`);
+      return;
+    }
+    setDirectCheckoutItem({
+      product: {
+        id: product.id,
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        stock: product.stock,
+        photos: [product.photo || '/romeu_e_julieta_1788367558045.jpg'],
+        photo: product.photo,
+        category: 'outros',
+        isActive: true,
+        establishmentId: product.establishmentId,
+        establishment: product.establishment,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      quantity: qty,
+    });
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
   };
 
-  const handleCheckout = async () => {
+  const handleOpenCheckout = () => {
     if (items.length === 0) return;
-    try {
-      setIsCheckingOut(true);
-      const payload = {
-        items: items.map(it => ({
-          productId: it.product.id,
-          quantity: it.quantity,
-        })),
-        paymentMethod: 'Cartão de Crédito',
-      };
-      const res = await api.post('/orders', payload);
-      toast.success('Pedido realizado com sucesso!', `Código: #${res.data.id.slice(0, 8).toUpperCase()}`);
-      clearCart();
-      setIsCartOpen(false);
-      fetchProducts();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao processar compra.');
-    } finally {
-      setIsCheckingOut(false);
-    }
+    setDirectCheckoutItem(null);
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
   };
 
   return (
@@ -181,7 +206,9 @@ export default function ShopPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {filteredProducts.map(product => {
               const sellerName = product.establishment?.establishmentProfile?.businessName || product.establishment?.name || 'Pet Shop Parceiro';
+              const estabPhoto = getEstablishmentPhoto(product);
               const isOutOfStock = product.stock <= 0;
+
               return (
                 <motion.div
                   key={product.id}
@@ -216,10 +243,25 @@ export default function ShopPage() {
 
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div onClick={() => handleOpenProduct(product)} className="cursor-pointer">
-                      <div className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-[#8E918F] mb-1">
-                        <Store size={12} className="shrink-0 text-orange-500" />
-                        <span className="truncate">{sellerName}</span>
+                      {/* Discrete establishment identification badge */}
+                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-[#8E918F] mb-1.5">
+                        <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 bg-orange-100 dark:bg-orange-950/40 border border-neutral-200/60 dark:border-[#313335] flex items-center justify-center">
+                          {estabPhoto ? (
+                            <img
+                              src={estabPhoto}
+                              alt={sellerName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <Store size={11} className="text-orange-600 dark:text-orange-400" />
+                          )}
+                        </div>
+                        <span className="truncate font-medium text-neutral-700 dark:text-[#C4C7C5]">{sellerName}</span>
                       </div>
+
                       <h3 className="font-semibold text-sm text-neutral-900 dark:text-[#E3E3E3] line-clamp-2 mb-1 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors">
                         {product.name}
                       </h3>
@@ -293,20 +335,36 @@ export default function ShopPage() {
                 <X size={18} />
               </button>
 
-              <div className="relative h-60 sm:h-64 bg-neutral-100 dark:bg-[#282A2C] shrink-0">
+              {/* Product Photo Showcase: object-contain without cutting */}
+              <div className="relative h-64 sm:h-72 bg-neutral-50 dark:bg-[#282A2C] border-b border-neutral-100 dark:border-[#313335] flex items-center justify-center p-4 overflow-hidden shrink-0">
                 <img
                   src={selectedProduct.photo || '/romeu_e_julieta_1788367558045.jpg'}
                   alt={selectedProduct.name}
-                  className="w-full h-full object-cover"
+                  className="max-h-full max-w-full object-contain drop-shadow-xs transition-transform duration-300 hover:scale-102"
                 />
               </div>
 
               <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <div className="flex items-center gap-2">
-                  <Badge variant="brand">
-                    <Store size={12} className="mr-1 inline" />
-                    {selectedProduct.establishment?.establishmentProfile?.businessName || selectedProduct.establishment?.name || 'Pet Shop Parceiro'}
-                  </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Seller badge with small establishment photo */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200/60 dark:border-orange-900/40">
+                    <div className="w-4 h-4 rounded-full overflow-hidden shrink-0 bg-white dark:bg-[#1E1F20] border border-orange-200 dark:border-orange-800 flex items-center justify-center">
+                      {getEstablishmentPhoto(selectedProduct) ? (
+                        <img
+                          src={getEstablishmentPhoto(selectedProduct)!}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <Store size={10} className="text-orange-500" />
+                      )}
+                    </div>
+                    <span>
+                      {selectedProduct.establishment?.establishmentProfile?.businessName || selectedProduct.establishment?.name || 'Pet Shop Parceiro'}
+                    </span>
+                  </div>
+
                   {selectedProduct.stock > 0 ? (
                     <Badge variant="success">Em estoque ({selectedProduct.stock} un.)</Badge>
                   ) : (
@@ -364,15 +422,26 @@ export default function ShopPage() {
                 )}
               </div>
 
-              <div className="p-4 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] shrink-0 flex gap-3">
+              <div className="p-4 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] shrink-0 flex flex-col sm:flex-row gap-3">
                 <Button
-                  fullWidth
+                  variant="outline"
                   size="lg"
                   disabled={selectedProduct.stock <= 0}
                   onClick={() => handleAddToCart(selectedProduct, quantity)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                  className="flex-1 font-semibold"
                 >
-                  Adicionar ao carrinho ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct.price * quantity)})
+                  Adicionar ao carrinho
+                </Button>
+                <Button
+                  size="lg"
+                  disabled={selectedProduct.stock <= 0}
+                  onClick={() => {
+                    handleBuyNow(selectedProduct, quantity);
+                    setSelectedProduct(null);
+                  }}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                >
+                  Comprar agora ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct.price * quantity)})
                 </Button>
               </div>
             </motion.div>
@@ -463,8 +532,7 @@ export default function ShopPage() {
                   <Button
                     fullWidth
                     size="lg"
-                    isLoading={isCheckingOut}
-                    onClick={handleCheckout}
+                    onClick={handleOpenCheckout}
                     className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
                   >
                     Finalizar Pedido
@@ -475,6 +543,32 @@ export default function ShopPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Structured Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setDirectCheckoutItem(null);
+        }}
+        onSuccess={() => {
+          if (!directCheckoutItem) {
+            clearCart();
+          }
+          setDirectCheckoutItem(null);
+          fetchProducts();
+        }}
+        cartItems={
+          directCheckoutItem
+            ? [{ product: directCheckoutItem.product, quantity: directCheckoutItem.quantity }]
+            : items
+        }
+        totalAmount={
+          directCheckoutItem
+            ? directCheckoutItem.product.price * directCheckoutItem.quantity
+            : total()
+        }
+      />
     </div>
   );
 }

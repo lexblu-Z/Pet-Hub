@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronRight, X, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, X, Plus } from 'lucide-react';
 import { api } from '@/services/api';
-import { Tabs, Badge, EmptyState } from '@/components/ui';
+import { Tabs, Badge, EmptyState, Modal, Button } from '@/components/ui';
 import { GoogleCalendarPromptModal } from '@/components/shared/GoogleCalendarPromptModal';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 import { GoogleCalendarViewModal } from '@/components/shared/GoogleCalendarViewModal';
 import { useToast } from '@/store/toastStore';
+import { useBookingStore } from '@/store/bookingStore';
+import { formatAppointmentTime, formatBrasiliaDate } from '@/utils/date';
 
-const statusConfig = {
-  CONFIRMED: { label: 'Confirmado', variant: 'success' as const },
-  PENDING: { label: 'Pendente', variant: 'warning' as const },
-  IN_PROGRESS: { label: 'Em andamento', variant: 'info' as const },
-  COMPLETED: { label: 'Concluído', variant: 'success' as const },
-  CANCELLED: { label: 'Cancelado', variant: 'error' as const },
+const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'error' }> = {
+  CONFIRMED: { label: 'Confirmado', variant: 'success' },
+  PENDING: { label: 'Pendente', variant: 'warning' },
+  IN_PROGRESS: { label: 'Em andamento', variant: 'info' },
+  COMPLETED: { label: 'Concluído', variant: 'success' },
+  CANCELLED: { label: 'Cancelado', variant: 'error' },
 };
 
 export default function AppointmentsPage() {
@@ -23,6 +25,7 @@ export default function AppointmentsPage() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
   // Google Calendar Integration states
   const [googleStatus, setGoogleStatus] = useState<{ isConnected: boolean; googleEmail?: string } | null>(null);
@@ -36,9 +39,10 @@ export default function AppointmentsPage() {
     const loadAppointments = async () => {
       try {
         const response = await api.get('/appointments/me');
-        setAppointments(response.data);
+        setAppointments(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
-        console.error(err);
+        console.error('Erro ao carregar agendamentos:', err);
+        setAppointments([]);
       } finally {
         setIsLoading(false);
       }
@@ -99,16 +103,15 @@ export default function AppointmentsPage() {
     }
   };
 
-  const myAppointments = appointments.sort((a, b) => b.date.localeCompare(a.date));
+  const myAppointments = [...appointments].sort((a, b) => {
+    const timeA = a.date ? new Date(a.date).getTime() : 0;
+    const timeB = b.date ? new Date(b.date).getTime() : 0;
+    return timeB - timeA;
+  });
+
   const upcomingApts = myAppointments.filter(a => ['CONFIRMED', 'PENDING', 'IN_PROGRESS'].includes(a.status));
   const pastApts = myAppointments.filter(a => ['COMPLETED', 'CANCELLED'].includes(a.status));
 
-  const externalGoogleEvents = googleEvents
-    .filter(ev => !ev.isPetHub && ev.start)
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    .slice(0, 5);
-
-  // Only the official PetHub Schedule Tabs (NO Google Calendar tab here)
   const tabs = [
     { id: 'upcoming', label: 'Próximos', badge: upcomingApts.length },
     { id: 'past', label: 'Histórico' },
@@ -116,165 +119,163 @@ export default function AppointmentsPage() {
 
   const displayedApts = activeTab === 'upcoming' ? upcomingApts : pastApts;
 
+  const getStatusObj = (status: string) => {
+    return statusConfig[status] || { label: status || 'Agendado', variant: 'warning' as const };
+  };
+
+  const getFormattedDate = (dateVal: string | Date | undefined) => {
+    if (!dateVal) return 'Data a definir';
+    return formatBrasiliaDate(String(dateVal));
+  };
+
+  const getFormattedTime = (apt: any) => {
+    return formatAppointmentTime(apt);
+  };
+
+  const handleNewBooking = () => {
+    useBookingStore.getState().reset();
+    navigate('/tutor/booking');
+  };
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 font-sans">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 font-sans relative">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Agendamentos</h1>
           <p className="text-neutral-500 dark:text-[#C4C7C5] text-sm">Gerencie suas consultas, vacinas e procedimentos</p>
         </div>
 
-        {/* Discreet Google Calendar Action/Badge */}
-        {googleStatus?.isConnected ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setShowFullCalendarModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-xs transition-colors cursor-pointer"
-            >
-              <Calendar size={14} />
-              <span>Ver agenda completa</span>
-            </button>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Google Calendar conectado</span>
+        {/* Google Calendar Action/Badge */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {googleStatus?.isConnected ? (
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => setShowManageModal(true)}
-                className="text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white font-bold ml-1.5 underline underline-offset-2 cursor-pointer"
+                onClick={() => setShowFullCalendarModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 dark:bg-[#282A2C] dark:hover:bg-[#313335] text-neutral-700 dark:text-[#E3E3E3] border border-neutral-200 dark:border-[#383A3C] shadow-xs transition-colors cursor-pointer"
               >
-                Gerenciar
+                <Calendar size={14} className="text-orange-500" />
+                <span>Ver agenda Google</span>
               </button>
-            </span>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowPromptModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] hover:text-orange-600 bg-white dark:bg-[#1E1F20] hover:bg-orange-50/60 dark:hover:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] hover:border-orange-200 dark:hover:border-orange-500/40 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
-          >
-            <Calendar size={14} className="text-orange-500" />
-            <span>Sincronizar com Google Calendar</span>
-          </button>
-        )}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Google conectado</span>
+                <button
+                  onClick={() => setShowManageModal(true)}
+                  className="text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white font-bold ml-1.5 underline underline-offset-2 cursor-pointer"
+                >
+                  Gerenciar
+                </button>
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPromptModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] hover:text-orange-600 bg-white dark:bg-[#1E1F20] hover:bg-orange-50/60 dark:hover:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] hover:border-orange-200 dark:hover:border-orange-500/40 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+            >
+              <Calendar size={14} className="text-orange-500" />
+              <span>Sincronizar Google</span>
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Tabs */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+      {/* Action Button below Tabs */}
+      <div className="flex items-center">
+        <Button
+          onClick={handleNewBooking}
+          className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer hover:shadow-orange-500/25 active:scale-95"
+        >
+          <Plus size={18} className="stroke-[2.5]" />
+          <span>Fazer novo agendamento</span>
+        </Button>
+      </div>
 
       {displayedApts.length === 0 ? (
         <EmptyState
           imageUrl={activeTab === 'upcoming' ? '/zeca_macaque_1788367569922.jpg' : '/beicinho_pitbull_1788367520420.jpg'}
           title={activeTab === 'upcoming' ? 'Nenhum agendamento futuro' : 'Nenhum histórico'}
           description={activeTab === 'upcoming' ? 'Nenhum agendamento por aqui ainda 🐾 Que tal marcar um horário?' : 'Você ainda não realizou nenhum serviço.'}
-          action={activeTab === 'upcoming' ? { label: 'Agendar um serviço', onClick: () => navigate('/tutor/booking') } : undefined}
+          action={{ label: 'Fazer novo agendamento', onClick: handleNewBooking }}
         />
       ) : (
         <div className="space-y-4">
-          {displayedApts.map((apt, i) => (
-            <motion.div
-              key={apt.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => navigate(`/tutor/appointments/${apt.id}`)}
-              className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-sm hover:shadow-md hover:border-orange-200 dark:hover:border-orange-500/40 transition-all cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${apt.serviceCategory === 'consulta' ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-orange-50 dark:bg-orange-950/40'}`}>
-                    {apt.serviceCategory === 'consulta' ? '🩺' : '✂️'}
+          {displayedApts.map((apt, i) => {
+            const serviceName = apt.service?.name || apt.serviceName || 'Serviço';
+            const providerName =
+              apt.professional?.name
+                ? `Dr(a). ${apt.professional.name}`
+                : apt.establishment?.establishmentProfile?.businessName ||
+                  apt.establishment?.name ||
+                  apt.establishmentName ||
+                  'Prestador';
+            const petName = apt.pet?.name || apt.petName || 'Pet';
+            const price = Number(apt.service?.price ?? apt.price ?? 0);
+            const statusObj = getStatusObj(apt.status);
+            const dateDisplay = getFormattedDate(apt.date);
+            const timeDisplay = getFormattedTime(apt);
+            const isConsultation =
+              apt.serviceCategory === 'consulta' ||
+              apt.service?.category?.toLowerCase() === 'consulta' ||
+              apt.service?.category?.toLowerCase() === 'veterinary';
+
+            return (
+              <motion.div
+                key={apt.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => setSelectedAppointment(apt)}
+                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-sm hover:shadow-md hover:border-orange-200 dark:hover:border-orange-500/40 transition-all cursor-pointer"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                        isConsultation ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-orange-50 dark:bg-orange-950/40'
+                      }`}
+                    >
+                      {isConsultation ? '🩺' : '✂️'}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{serviceName}</h3>
+                      <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{providerName}</p>
+                    </div>
+                  </div>
+                  <Badge variant={statusObj.variant}>
+                    {statusObj.label}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl mb-3">
+                  <div>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet</p>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{petName}</p>
                   </div>
                   <div>
-                    <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.serviceName}</h3>
-                    <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{apt.establishmentName}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">📅 Data</p>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{dateDisplay}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">⏰ Horário</p>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{timeDisplay}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor</p>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">R${price.toFixed(2)}</p>
                   </div>
                 </div>
-                <Badge variant={statusConfig[apt.status].variant}>
-                  {statusConfig[apt.status].label}
-                </Badge>
-              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl mb-3">
-                <div>
-                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet</p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
+                <div className="flex items-center justify-between text-sm text-orange-500 font-medium">
+                  Ver detalhes <ChevronRight size={16} />
                 </div>
-                <div>
-                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">📅 Data</p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">⏰ Horário</p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{apt.time}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor</p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">R${apt.price.toFixed(2)}</p>
-                </div>
-              </div>
+              </motion.div>
+            );
+          })}
 
-              <div className="flex items-center justify-between text-sm text-orange-500 font-medium">
-                Ver detalhes <ChevronRight size={16} />
-              </div>
-            </motion.div>
-          ))}
-
-          {/* External Google Calendar Events */}
-          {activeTab === 'upcoming' && googleStatus?.isConnected && externalGoogleEvents.length > 0 && (
-            <div className="pt-6 space-y-3 border-t border-neutral-200/60 dark:border-[#313335]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">📅</span>
-                  <h3 className="font-bold text-sm text-neutral-800 dark:text-[#E3E3E3]">
-                    Outros compromissos da sua agenda Google
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowFullCalendarModal(true)}
-                  className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold hover:underline cursor-pointer"
-                >
-                  Ver todos na agenda completa →
-                </button>
-              </div>
-
-              <div className="space-y-2.5">
-                {externalGoogleEvents.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] hover:bg-neutral-100/70 dark:hover:bg-[#313335] rounded-2xl border border-neutral-200/70 dark:border-[#313335] flex items-center justify-between gap-3 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0">
-                        <Calendar size={16} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{ev.summary}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 shrink-0">
-                            Google Calendar
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 dark:text-[#C4C7C5] mt-0.5">
-                          {ev.start ? new Date(ev.start).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Horário a definir'}
-                          {ev.location ? ` • ${ev.location}` : ''}
-                        </p>
-                      </div>
-                    </div>
-
-                    {ev.htmlLink && (
-                      <a
-                        href={ev.htmlLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-neutral-400 dark:text-[#8E918F] hover:text-blue-600 dark:hover:text-blue-400 font-medium shrink-0 flex items-center gap-1 p-1"
-                        title="Abrir no Google Calendar"
-                      >
-                        Abrir <ExternalLink size={13} />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -318,6 +319,99 @@ export default function AppointmentsPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Detalhes do Agendamento */}
+      {selectedAppointment && (
+        <Modal
+          isOpen={!!selectedAppointment}
+          onClose={() => setSelectedAppointment(null)}
+          title="Detalhes do Agendamento"
+          size="md"
+        >
+          <div className="space-y-4 text-sm font-sans">
+            {/* Header do Agendamento */}
+            <div className="flex items-center justify-between p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335]">
+              <div>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">
+                  {selectedAppointment.service?.name || selectedAppointment.serviceName || 'Serviço'}
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                  {selectedAppointment.professional?.name
+                    ? `Dr(a). ${selectedAppointment.professional.name}`
+                    : selectedAppointment.establishment?.establishmentProfile?.businessName ||
+                      selectedAppointment.establishment?.name ||
+                      selectedAppointment.establishmentName ||
+                      'Prestador'}
+                </p>
+              </div>
+              <Badge variant={getStatusObj(selectedAppointment.status).variant}>
+                {getStatusObj(selectedAppointment.status).label}
+              </Badge>
+            </div>
+
+            {/* Informações detalhadas */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335]">
+                <p className="text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet Atendido</p>
+                <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">
+                  {selectedAppointment.pet?.name || selectedAppointment.petName || 'Pet'}
+                </p>
+                {selectedAppointment.pet?.breed && (
+                  <p className="text-neutral-500 dark:text-[#8E918F] text-[11px]">{selectedAppointment.pet.breed}</p>
+                )}
+              </div>
+
+              <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335]">
+                <p className="text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor Total</p>
+                <p className="font-bold text-orange-600 dark:text-orange-400 text-sm">
+                  R${Number(selectedAppointment.service?.price ?? selectedAppointment.price ?? 0).toFixed(2)}
+                </p>
+                <p className="text-neutral-400 dark:text-[#8E918F] text-[11px]">Pagamento no local</p>
+              </div>
+            </div>
+
+            {/* Data, Horário e Local */}
+            <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335] space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-neutral-700 dark:text-[#E3E3E3]">
+                <Calendar size={15} className="text-orange-500 shrink-0" />
+                <span className="font-medium">{getFormattedDate(selectedAppointment.date)}</span>
+                <span className="text-neutral-300 dark:text-[#8E918F]">|</span>
+                <Clock size={15} className="text-orange-500 shrink-0" />
+                <span className="font-medium">{getFormattedTime(selectedAppointment)}</span>
+              </div>
+
+              {(selectedAppointment.establishment?.establishmentProfile?.address ||
+                selectedAppointment.professional?.professionalProfile?.address) && (
+                <div className="flex items-start gap-2 text-neutral-600 dark:text-[#C4C7C5] pt-1 border-t border-neutral-100 dark:border-[#313335]">
+                  <MapPin size={15} className="text-orange-500 shrink-0 mt-0.5" />
+                  <span>
+                    {selectedAppointment.establishment?.establishmentProfile?.address ||
+                      selectedAppointment.professional?.professionalProfile?.address}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Botão de Fechar */}
+            <div className="pt-2 flex justify-end">
+              <Button onClick={() => setSelectedAppointment(null)} className="w-full sm:w-auto">
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Mobile Floating Action Button */}
+      <div className="sm:hidden fixed bottom-20 right-4 z-40">
+        <button
+          onClick={handleNewBooking}
+          className="flex items-center gap-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-full shadow-lg shadow-orange-500/30 transition-all cursor-pointer active:scale-95"
+        >
+          <Plus size={18} className="stroke-[2.5]" />
+          <span>Novo agendamento</span>
+        </button>
+      </div>
     </div>
   );
 }

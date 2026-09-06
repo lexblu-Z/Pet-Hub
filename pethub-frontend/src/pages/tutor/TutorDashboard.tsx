@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
 import { Badge, Card, Avatar } from '@/components/ui';
 import type { TutorProfile } from '@/types';
+import { formatBrasiliaDate, formatAppointmentTime } from '@/utils/date';
 
 const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
@@ -309,13 +310,13 @@ export default function TutorDashboard() {
                 <div className="bg-white/5 rounded-xl p-3">
                   <p className="text-white/40 text-xs mb-1">📅 Data</p>
                   <p className="font-semibold text-sm">
-                    {new Date(nextApt.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {formatBrasiliaDate(nextApt.date)}
                   </p>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3">
                   <p className="text-white/40 text-xs mb-1">⏰ Horário</p>
                   <p className="font-semibold text-sm">
-                    {new Date(nextApt.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {formatAppointmentTime(nextApt)}
                   </p>
                 </div>
               </div>

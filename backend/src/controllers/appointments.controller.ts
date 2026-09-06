@@ -8,7 +8,8 @@ const createAppointmentSchema = z.object({
   petId: z.string(),
   serviceId: z.string(),
   establishmentId: z.string(),
-  professionalId: z.string().optional(),
+  professionalId: z.string().nullable().optional(),
+  employeeId: z.string().nullable().optional(),
   date: z.string().datetime(), // e.g. "2026-10-10T14:00:00Z"
 });
 
@@ -25,11 +26,42 @@ export const appointmentsController = {
       include: {
         pet: true,
         service: true,
-        establishment: true,
-        professional: true,
-      }
+        establishment: {
+          include: {
+            establishmentProfile: true,
+          }
+        },
+        professional: {
+          include: {
+            professionalProfile: true,
+          }
+        },
+      },
+      orderBy: { date: 'desc' },
     });
-    return reply.send(appointments);
+
+    const formatted = appointments.map((apt) => {
+      const dateObj = new Date(apt.date);
+      const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+      const dateStr = apt.date.toISOString().split('T')[0];
+      const providerName =
+        apt.professional?.name
+          ? `Dr(a). ${apt.professional.name}`
+          : apt.establishment?.establishmentProfile?.businessName || apt.establishment?.name || 'Estabelecimento';
+
+      return {
+        ...apt,
+        serviceName: apt.service?.name || 'Serviço',
+        serviceCategory: apt.service?.category?.toLowerCase() || 'consulta',
+        establishmentName: providerName,
+        petName: apt.pet?.name || 'Pet',
+        date: dateStr,
+        time: timeStr,
+        price: apt.service?.price || 0,
+      };
+    });
+
+    return reply.send(formatted);
   },
 
   // Establishment / Professional listing their appointments
@@ -140,20 +172,45 @@ export const appointmentsController = {
         }
       }
     } else if (establishmentId) {
-      const est = await prisma.user.findUnique({
+      const providerUser = await prisma.user.findUnique({
         where: { id: establishmentId },
-        include: { establishmentProfile: true },
+        include: { establishmentProfile: true, professionalProfile: true },
       });
-      if (!est || est.establishmentProfile?.status !== 'ACTIVE') {
+
+      const isEstActive = providerUser?.establishmentProfile?.status === 'ACTIVE';
+      const isProfActive = providerUser?.professionalProfile?.status === 'ACTIVE';
+
+      if (!providerUser || (!isEstActive && !isProfActive)) {
         return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
       }
-      const workingHours = est.establishmentProfile.workingHours as any;
+
+      if (isProfActive && providerUser.professionalProfile) {
+        const bookingSettings = providerUser.professionalProfile.bookingSettings as any;
+        if (bookingSettings) {
+          if (bookingSettings.acceptOnlineBooking === false || bookingSettings.allowOnlineBooking === false) {
+            return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Agendamentos online indisponíveis para este profissional.' });
+          }
+          if (bookingSettings.defaultDurationMinutes) {
+            stepMinutes = bookingSettings.defaultDurationMinutes;
+          }
+          if (bookingSettings.minAdvanceNoticeHours) {
+            minAdvanceHours = bookingSettings.minAdvanceNoticeHours;
+          }
+        }
+      }
+
+      const workingHours = (providerUser.establishmentProfile?.workingHours || providerUser.professionalProfile?.workingHours) as any;
       if (workingHours) {
         const dayConfig = workingHours[dayKey] || workingHours[ptDayKey];
         if (dayConfig) {
           isOpen = dayConfig.enabled !== undefined ? Boolean(dayConfig.enabled) : Boolean(dayConfig.isOpen);
           if (dayConfig.open) openTime = dayConfig.open;
           if (dayConfig.close) closeTime = dayConfig.close;
+          if (dayConfig.hasBreak) {
+            hasBreak = true;
+            if (dayConfig.breakStart) breakStart = dayConfig.breakStart;
+            if (dayConfig.breakEnd) breakEnd = dayConfig.breakEnd;
+          }
         }
       }
     }
@@ -196,14 +253,8 @@ export const appointmentsController = {
         date: { gte: dayStart, lte: dayEnd },
         status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
       },
+      include: { service: true },
     });
-
-    const busyTimes = new Set(
-      existingAppts.map(a => {
-        const d = new Date(a.date);
-        return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
-      })
-    );
 
     const now = new Date();
     const isToday = now.toISOString().split('T')[0] === date;
@@ -211,7 +262,23 @@ export const appointmentsController = {
     const minTimeStr = `${String(minTimeForToday.getHours()).padStart(2, '0')}:${String(minTimeForToday.getMinutes()).padStart(2, '0')}`;
 
     const availableSlots = candidateSlots.filter(slot => {
-      if (busyTimes.has(slot)) return false;
+      const [sh, sm] = slot.split(':').map(Number);
+      const slotStartMin = sh * 60 + sm;
+      const slotEndMin = slotStartMin + stepMinutes;
+
+      const overlapsExisting = existingAppts.some(apt => {
+        if (professionalId && apt.professionalId && apt.professionalId !== professionalId) {
+          return false;
+        }
+        const d = new Date(apt.date);
+        const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+        const aptDuration = apt.service?.duration || 60;
+        const aptEndMin = aptStartMin + aptDuration;
+
+        return slotStartMin < aptEndMin && slotEndMin > aptStartMin;
+      });
+
+      if (overlapsExisting) return false;
       if (isToday && slot < minTimeStr) return false;
       return true;
     });
@@ -237,18 +304,42 @@ export const appointmentsController = {
       
       const data = createAppointmentSchema.parse(request.body);
       
-      // Check if establishment is ACTIVE
+      // Check if provider (establishment or autonomous professional) is ACTIVE
       const estUser = await prisma.user.findUnique({
         where: { id: data.establishmentId },
-        include: { establishmentProfile: true }
+        include: { establishmentProfile: true, professionalProfile: true }
       });
-      if (!estUser || estUser.establishmentProfile?.status !== 'ACTIVE') {
-        return reply.status(403).send({ error: 'Estabelecimento indisponível para agendamentos.' });
+      const isEstActive = estUser?.establishmentProfile?.status === 'ACTIVE';
+      const isProfActive = estUser?.professionalProfile?.status === 'ACTIVE';
+
+      if (!estUser || (!isEstActive && !isProfActive)) {
+        return reply.status(403).send({ error: 'Estabelecimento ou profissional indisponível para agendamentos.' });
       }
 
+      if (isProfActive && !data.professionalId) {
+        data.professionalId = estUser.id;
+      }
+
+      // Fetch service to get real duration & price
+      const service = await prisma.service.findUnique({
+        where: { id: data.serviceId },
+      });
+      if (!service || !service.active) {
+        return reply.status(404).send({ error: 'Serviço não encontrado ou inativo.' });
+      }
+      const serviceDuration = service.duration || 60; // in minutes
+
+      // Parse appointment start and calculate end time
+      const newStart = new Date(data.date);
+      if (isNaN(newStart.getTime())) {
+        return reply.status(400).send({ error: 'Data e horário do agendamento inválidos.' });
+      }
+      const newEnd = new Date(newStart.getTime() + serviceDuration * 60 * 1000);
+
       // Check if professional is ACTIVE and available
+      let profUser: any = null;
       if (data.professionalId) {
-        const profUser = await prisma.user.findUnique({
+        profUser = await prisma.user.findUnique({
           where: { id: data.professionalId },
           include: { professionalProfile: true }
         });
@@ -257,45 +348,98 @@ export const appointmentsController = {
         }
 
         const bookingSettings = profUser.professionalProfile.bookingSettings as any;
-        if (bookingSettings?.acceptOnlineBooking === false) {
+        if (bookingSettings?.acceptOnlineBooking === false || bookingSettings?.allowOnlineBooking === false) {
           return reply.status(403).send({ error: 'Este profissional não está aceitando agendamentos online no momento.' });
         }
+      }
 
-        const dateObj = new Date(data.date);
-        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const dayKey = dayKeys[dateObj.getUTCDay()];
-        const workingHours = profUser.professionalProfile.workingHours as any;
+      // Check working hours and breaks
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const ptDayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+      const dayIdx = newStart.getUTCDay();
 
-        if (workingHours && workingHours[dayKey]) {
-          const config = workingHours[dayKey];
-          if (!config.isOpen) {
-            return reply.status(409).send({ error: 'O profissional não atende neste dia da semana.' });
+      const workingHours = ((profUser?.professionalProfile?.workingHours || estUser.establishmentProfile?.workingHours || estUser.professionalProfile?.workingHours)) as any;
+      if (workingHours) {
+        const config = workingHours[dayKeys[dayIdx]] || workingHours[ptDayKeys[dayIdx]];
+        if (config) {
+          const isOpen = config.enabled !== undefined ? Boolean(config.enabled) : Boolean(config.isOpen);
+          if (!isOpen) {
+            return reply.status(409).send({ error: 'O prestador não atende neste dia da semana.' });
           }
-          const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
-          if (timeStr < config.open || timeStr >= config.close) {
-            return reply.status(409).send({ error: `Horário fora do expediente do profissional (${config.open} às ${config.close}).` });
+          const startHH = String(newStart.getUTCHours()).padStart(2, '0');
+          const startMM = String(newStart.getUTCMinutes()).padStart(2, '0');
+          const startTimeStr = `${startHH}:${startMM}`;
+
+          const endHH = String(newEnd.getUTCHours()).padStart(2, '0');
+          const endMM = String(newEnd.getUTCMinutes()).padStart(2, '0');
+          const endTimeStr = `${endHH}:${endMM}`;
+
+          if (config.open && startTimeStr < config.open) {
+            return reply.status(409).send({ error: `Horário antes do início do expediente (${config.open}).` });
+          }
+          if (config.close && endTimeStr > config.close) {
+            return reply.status(409).send({ error: `O serviço (${serviceDuration} min) ultrapassa o horário de encerramento (${config.close}).` });
           }
           if (config.hasBreak && config.breakStart && config.breakEnd) {
-            if (timeStr >= config.breakStart && timeStr < config.breakEnd) {
-              return reply.status(409).send({ error: 'Horário coincide com o intervalo de atendimento do profissional.' });
+            if (startTimeStr < config.breakEnd && endTimeStr > config.breakStart) {
+              return reply.status(409).send({ error: 'Horário coincide com o intervalo de atendimento do prestador.' });
             }
           }
         }
       }
 
-      // Check appointment conflicts
-      const existing = await prisma.appointment.findFirst({
+      // Check tutor's OWN conflicts on this day
+      // Tutor can have multiple appointments on different days, or different times on the same day.
+      // Tutor is ONLY blocked if they already have an overlapping appointment.
+      const dayStart = new Date(Date.UTC(newStart.getUTCFullYear(), newStart.getUTCMonth(), newStart.getUTCDate(), 0, 0, 0));
+      const dayEnd = new Date(Date.UTC(newStart.getUTCFullYear(), newStart.getUTCMonth(), newStart.getUTCDate(), 23, 59, 59, 999));
+
+      const tutorExisting = await prisma.appointment.findMany({
         where: {
-          OR: [
-            ...(data.professionalId ? [{ professionalId: data.professionalId, date: data.date }] : []),
-            { establishmentId: data.establishmentId, date: data.date },
-          ],
+          tutorId: user.sub,
+          date: { gte: dayStart, lte: dayEnd },
           status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] }
-        }
+        },
+        include: { service: true }
       });
 
-      if (existing) {
-        return reply.status(409).send({ error: 'Horário já ocupado por outro agendamento.' });
+      for (const apt of tutorExisting) {
+        const aptStart = new Date(apt.date);
+        const aptDuration = apt.service?.duration || 60;
+        const aptEnd = new Date(aptStart.getTime() + aptDuration * 60 * 1000);
+
+        // Overlap check: newStart < aptEnd && newEnd > aptStart
+        if (newStart < aptEnd && newEnd > aptStart) {
+          return reply.status(409).send({ error: 'Você já possui um agendamento nesse horário.' });
+        }
+      }
+
+      // Check provider (professional or establishment) conflicts
+      const providerExisting = await prisma.appointment.findMany({
+        where: {
+          OR: [
+            ...(data.professionalId ? [{ professionalId: data.professionalId }] : []),
+            { establishmentId: data.establishmentId },
+          ],
+          date: { gte: dayStart, lte: dayEnd },
+          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] }
+        },
+        include: { service: true }
+      });
+
+      for (const apt of providerExisting) {
+        const sameProfessional = data.professionalId && apt.professionalId === data.professionalId;
+        const sameEstablishment = !data.professionalId && apt.establishmentId === data.establishmentId;
+
+        if (sameProfessional || sameEstablishment) {
+          const aptStart = new Date(apt.date);
+          const aptDuration = apt.service?.duration || 60;
+          const aptEnd = new Date(aptStart.getTime() + aptDuration * 60 * 1000);
+
+          if (newStart < aptEnd && newEnd > aptStart) {
+            return reply.status(409).send({ error: 'Horário já ocupado por outro agendamento.' });
+          }
+        }
       }
       
       const appointment = await prisma.appointment.create({
@@ -309,12 +453,12 @@ export const appointmentsController = {
         }
       });
 
-      // Generate real notification for the establishment
-      try {
-        const petName = appointment.pet?.name || 'Pet';
-        const serviceName = appointment.service?.name || 'Serviço';
-        const formattedDate = new Date(appointment.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      // Generate notifications
+      const petName = appointment.pet?.name || 'Pet';
+      const serviceName = appointment.service?.name || 'Serviço';
+      const formattedDate = new Date(appointment.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
+      try {
         await prisma.notification.create({
           data: {
             userId: data.establishmentId,
@@ -325,6 +469,21 @@ export const appointmentsController = {
         });
       } catch (notifErr) {
         request.log.error(notifErr);
+      }
+
+      if (data.professionalId && data.professionalId !== data.establishmentId) {
+        try {
+          await prisma.notification.create({
+            data: {
+              userId: data.professionalId,
+              title: 'Novo agendamento recebido',
+              message: `${petName} possui um serviço de ${serviceName} agendado para ${formattedDate}.`,
+              type: 'APPOINTMENT',
+            }
+          });
+        } catch (notifErr) {
+          request.log.error(notifErr);
+        }
       }
 
       // Synchronize with Google Calendar (idempotent, asynchronous, non-blocking)
@@ -361,7 +520,59 @@ export const appointmentsController = {
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status: data.status },
+      include: {
+        pet: true,
+        service: true,
+      }
     });
+
+    // Notify parties about status change
+    try {
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'confirmado',
+        IN_PROGRESS: 'iniciado',
+        COMPLETED: 'concluído',
+        CANCELLED: 'cancelado',
+        PENDING: 'agendado',
+      };
+      const label = statusLabels[data.status] || data.status.toLowerCase();
+      const petName = appointment.pet?.name || 'Pet';
+      const serviceName = appointment.service?.name || 'Serviço';
+
+      // If tutor updated (e.g. cancelled), notify establishment & professional
+      if (isOwner) {
+        await prisma.notification.create({
+          data: {
+            userId: existing.establishmentId,
+            title: `Agendamento ${label}`,
+            message: `O agendamento de ${petName} (${serviceName}) foi marcado como ${label} pelo tutor.`,
+            type: 'APPOINTMENT',
+          }
+        });
+        if (existing.professionalId && existing.professionalId !== existing.establishmentId) {
+          await prisma.notification.create({
+            data: {
+              userId: existing.professionalId,
+              title: `Agendamento ${label}`,
+              message: `O agendamento de ${petName} (${serviceName}) foi marcado como ${label} pelo tutor.`,
+              type: 'APPOINTMENT',
+            }
+          });
+        }
+      } else {
+        // Provider updated, notify tutor
+        await prisma.notification.create({
+          data: {
+            userId: existing.tutorId,
+            title: `Agendamento ${label}`,
+            message: `O agendamento de ${petName} (${serviceName}) foi ${label}.`,
+            type: 'APPOINTMENT',
+          }
+        });
+      }
+    } catch (notifErr) {
+      request.log.warn({ err: notifErr }, 'Could not create notification on status change');
+    }
 
     // Synchronize status change with Google Calendar (idempotent, asynchronous)
     const syncAction = data.status === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';

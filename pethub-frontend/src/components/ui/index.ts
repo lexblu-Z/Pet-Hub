@@ -19,3 +19,5 @@ export {
   StatCard,
   Tabs,
 } from './Misc';
+export { FluidText } from './FluidText';
+export type { FluidTextProps } from './FluidText';

@@ -243,6 +243,23 @@ export default function SelectRolePage() {
     setPhoneError(null);
 
     // Validações específicas por perfil
+    if (selectedRole === 'TUTOR') {
+      if (!cep || !street || !number || !neighborhood) {
+        toast.error('Preencha seu endereço residencial completo (CEP, Rua, Número e Bairro).');
+        return;
+      }
+      if (city.trim().toLowerCase() !== 'ourinhos' || state.trim().toUpperCase() !== 'SP') {
+        toast.error('O cadastro de tutor é permitido apenas para residentes em Ourinhos - SP.');
+        return;
+      }
+      const cleanCep = cep.replace(/\D/g, '');
+      const prefix = parseInt(cleanCep.slice(0, 5), 10);
+      if (cleanCep.length !== 8 || prefix < 19900 || prefix > 19919) {
+        toast.error('O CEP deve pertencer ao município de Ourinhos - SP.');
+        return;
+      }
+    }
+
     if (selectedRole === 'ESTABLISHMENT') {
       if (!businessName.trim()) {
         toast.error('Informe o nome do estabelecimento.');
@@ -290,7 +307,15 @@ export default function SelectRolePage() {
         phone: phone.trim(),
       };
 
-      if (selectedRole === 'ESTABLISHMENT') {
+      if (selectedRole === 'TUTOR') {
+        basePayload.address = street;
+        basePayload.number = number;
+        basePayload.complement = complement || undefined;
+        basePayload.neighborhood = neighborhood;
+        basePayload.city = city || 'Ourinhos';
+        basePayload.state = state || 'SP';
+        basePayload.zipCode = cep;
+      } else if (selectedRole === 'ESTABLISHMENT') {
         basePayload.businessName = businessName.trim();
         basePayload.establishmentType = establishmentType;
         basePayload.document = estabDocument.trim();
@@ -550,6 +575,87 @@ export default function SelectRolePage() {
                     Utilizaremos para confirmação de agendamentos e contato com a plataforma.
                   </p>
                 </div>
+
+                {/* ================= TUTOR ================= */}
+                {selectedRole === 'TUTOR' && (
+                  <div className="space-y-4 pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                    <div className="p-3.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40 rounded-2xl flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-orange-900 dark:text-orange-200 leading-relaxed">
+                        O PetHub está disponível para residentes em <strong>Ourinhos - SP</strong>. O endereço é obrigatório para entrega de compras e agendamentos.
+                      </p>
+                    </div>
+
+                    <div className="relative">
+                      <Input
+                        label="CEP (Ourinhos - SP) *"
+                        value={cep}
+                        onChange={handleCepChange}
+                        placeholder="19900-000"
+                        maxLength={9}
+                        leftIcon={<Search size={16} className={isCepLoading ? 'animate-spin text-orange-500' : ''} />}
+                        hint={isCepLoading ? 'Buscando CEP...' : 'Preenchimento automático do endereço'}
+                        required
+                      />
+                    </div>
+
+                    {cityError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-red-700 dark:text-red-400 text-xs font-medium">
+                        {cityError}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <Input
+                          label="Rua / Avenida *"
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
+                          placeholder="Nome da rua"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Número *"
+                          value={number}
+                          onChange={(e) => setNumber(e.target.value)}
+                          placeholder="123"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        label="Bairro *"
+                        value={neighborhood}
+                        onChange={(e) => setNeighborhood(e.target.value)}
+                        placeholder="Centro"
+                        required
+                      />
+                      <Input
+                        label="Complemento"
+                        value={complement}
+                        onChange={(e) => setComplement(e.target.value)}
+                        placeholder="Apto 12 (opcional)"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        label="Cidade"
+                        value={city || 'Ourinhos'}
+                        disabled
+                      />
+                      <Input
+                        label="Estado"
+                        value={state || 'SP'}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* ================= ESTABELECIMENTO ================= */}
                 {selectedRole === 'ESTABLISHMENT' && (

@@ -163,7 +163,7 @@ export default function EstablishmentDashboard() {
           />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">{businessName}</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {businessName} 👋</h1>
               {isSuspended ? (
                 <Badge variant="warning">⏸️ Suspenso</Badge>
               ) : isPendingApproval ? (
@@ -172,7 +172,7 @@ export default function EstablishmentDashboard() {
                 <Badge variant="success">✓ Ativo</Badge>
               )}
             </div>
-            <p className="text-neutral-500 dark:text-[#C4C7C5] text-sm mt-0.5">
+            <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
               Painel de controle e desempenho do seu negócio em Ourinhos - SP
             </p>
           </div>
@@ -184,12 +184,12 @@ export default function EstablishmentDashboard() {
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+            className="bg-white dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
           >
-            <option value="today">Hoje</option>
-            <option value="7days">Últimos 7 dias</option>
-            <option value="month">Últimos 30 dias</option>
-            <option value="year">Este ano</option>
+            <option value="today" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Hoje</option>
+            <option value="7days" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Últimos 7 dias</option>
+            <option value="month" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Últimos 30 dias</option>
+            <option value="year" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Este ano</option>
           </select>
         </div>
       </div>
@@ -419,7 +419,7 @@ export default function EstablishmentDashboard() {
           )}
         </div>
 
-        {/* Top Sold Products */}
+        {/* Top Sold Products Ranking */}
         <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Produtos Mais Vendidos</h2>
@@ -430,45 +430,60 @@ export default function EstablishmentDashboard() {
 
           {loading ? (
             <div className="h-48 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
-              Carregando...
+              Carregando ranking...
             </div>
           ) : !data?.topProducts || data.topProducts.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
               <Package size={32} className="text-neutral-300 dark:text-[#8E918F] mb-2" />
               <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum produto vendido ainda</p>
-              <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Cadastre produtos para começar a vender online</p>
+              <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">As vendas realizadas comporão o ranking de produtos desta seção.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {data.topProducts.map((prod, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335]">
-                    {prod.photo ? (
-                      <img src={prod.photo} alt={prod.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package size={18} className="text-neutral-400 dark:text-[#8E918F]" />
-                    )}
+            <div className="space-y-2.5">
+              {data.topProducts.map((prod, idx) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                const isPodium = idx < 3;
+                return (
+                  <div 
+                    key={idx} 
+                    className={`flex items-center gap-3 p-2.5 rounded-2xl transition-colors border ${
+                      idx === 0 
+                        ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-900/40' 
+                        : idx === 1 
+                        ? 'bg-neutral-50/80 dark:bg-[#282A2C]/60 border-neutral-200/70 dark:border-[#313335]' 
+                        : idx === 2 
+                        ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-900/30' 
+                        : 'bg-white dark:bg-[#1E1F20] border-transparent hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
+                    }`}
+                  >
+                    <div className="w-7 text-center font-bold text-sm shrink-0">
+                      {isPodium ? medals[idx] : <span className="text-xs text-neutral-400">#{idx + 1}</span>}
+                    </div>
+
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
+                      {prod.photo ? (
+                        <img src={prod.photo} alt={prod.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Package size={18} className="text-neutral-400 dark:text-[#8E918F]" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{prod.name}</p>
+                      <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">{prod.quantity} {prod.quantity === 1 ? 'unidade vendida' : 'unidades vendidas'}</p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs block">
+                        R$ {prod.revenue.toFixed(2).replace('.', ',')}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-medium">total faturado</span>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{prod.name}</p>
-                    <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{prod.quantity} unidades vendidas</p>
-                  </div>
-                  <span className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-xs">
-                    R$ {prod.revenue.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-
-          <div className="pt-2 border-t border-neutral-50 dark:border-[#313335]">
-            <Link
-              to="/estabelecimento/produtos"
-              className="w-full flex items-center justify-center gap-1 py-2 bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-800 dark:text-[#E3E3E3] font-bold text-xs rounded-xl transition-colors"
-            >
-              <Plus size={14} /> Adicionar Novo Produto
-            </Link>
-          </div>
         </div>
       </div>
     </div>

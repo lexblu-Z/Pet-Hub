@@ -198,9 +198,20 @@ export const googleCalendarService = {
       return;
     }
 
-    const startDate = new Date(appt.date);
+    const dateObj = new Date(appt.date);
+    const startDate = dateObj;
+    const dateStr = dateObj.toISOString().split('T')[0];
+    const startH = String(dateObj.getUTCHours()).padStart(2, '0');
+    const startM = String(dateObj.getUTCMinutes()).padStart(2, '0');
+    const startISO = `${dateStr}T${startH}:${startM}:00-03:00`;
+
     const durationMin = appt.service?.duration || 60;
-    const endDate = new Date(startDate.getTime() + durationMin * 60 * 1000);
+    const endTimestamp = dateObj.getTime() + durationMin * 60 * 1000;
+    const endDateObj = new Date(endTimestamp);
+    const endDateStr = endDateObj.toISOString().split('T')[0];
+    const endH = String(endDateObj.getUTCHours()).padStart(2, '0');
+    const endM = String(endDateObj.getUTCMinutes()).padStart(2, '0');
+    const endISO = `${endDateStr}T${endH}:${endM}:00-03:00`;
 
     const establishmentName = appt.establishment?.establishmentProfile?.businessName || appt.establishment?.name || 'PetHub';
     const address = appt.establishment?.establishmentProfile?.address || 'Ourinhos - SP';
@@ -245,11 +256,11 @@ export const googleCalendarService = {
       description,
       location: address,
       start: {
-        dateTime: startDate.toISOString(),
+        dateTime: startISO,
         timeZone: 'America/Sao_Paulo',
       },
       end: {
-        dateTime: endDate.toISOString(),
+        dateTime: endISO,
         timeZone: 'America/Sao_Paulo',
       },
     };

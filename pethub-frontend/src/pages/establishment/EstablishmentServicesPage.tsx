@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Wrench, Plus, Edit2, Trash2, Clock, DollarSign, Image as ImageIcon, Users, Check } from 'lucide-react';
+import { Wrench, Plus, Edit2, Trash2, Clock, DollarSign, Users, Check, Upload, Scissors } from 'lucide-react';
 import { Input, Button, Modal } from '@/components/ui';
 
 interface ServiceItem {
@@ -16,12 +16,12 @@ interface ServiceItem {
   employees?: { employee: { id: string; name: string } }[];
 }
 
-const serviceImagePresets = [
-  { label: 'Banho & Higiene', url: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Tosa & Estética', url: 'https://images.unsplash.com/photo-1527526029430-319f10814151?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Consulta Veterinária', url: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Hospedagem & Creche', url: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=600&q=80' },
-];
+const getFullImageUrl = (url?: string | null) => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export default function EstablishmentServicesPage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -41,7 +41,33 @@ export default function EstablishmentServicesPage() {
   const [animalType, setAnimalType] = useState('all');
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
+  // File Upload State
+  const serviceFileRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
   const toast = useToast();
+
+  const handleServiceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/upload/image', formData);
+      if (res.data?.url) {
+        setImage(res.data.url);
+        toast.success('Foto do serviço carregada com sucesso!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao fazer upload da imagem.');
+    } finally {
+      setIsUploadingPhoto(false);
+      if (serviceFileRef.current) serviceFileRef.current.value = '';
+    }
+  };
 
   const fetchServices = async () => {
     setLoading(true);
@@ -68,7 +94,7 @@ export default function EstablishmentServicesPage() {
     setDescription('');
     setPrice('');
     setDuration('30');
-    setImage(serviceImagePresets[0].url);
+    setImage('');
     setCategory('Banho e tosa');
     setAnimalType('all');
     setSelectedEmployeeIds([]);
@@ -81,7 +107,7 @@ export default function EstablishmentServicesPage() {
     setDescription(s.description || '');
     setPrice(String(s.price));
     setDuration(String(s.duration));
-    setImage(s.image || serviceImagePresets[0].url);
+    setImage(s.image || '');
     setCategory(s.category || 'Banho e tosa');
     setAnimalType(s.animalType || 'all');
     setSelectedEmployeeIds(s.employees?.map(e => e.employee.id) || []);
@@ -157,8 +183,8 @@ export default function EstablishmentServicesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Serviços Oferecidos</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Serviços Oferecidos</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Cadastre e gerencie os serviços disponíveis para agendamento pelos tutores
           </p>
         </div>
@@ -171,14 +197,14 @@ export default function EstablishmentServicesPage() {
       {loading ? (
         <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm">Carregando serviços do PostgreSQL...</p>
+          <p className="text-sm">Carregando serviços...</p>
         </div>
       ) : services.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
           <Wrench size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
           <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum serviço cadastrado</h3>
           <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto mb-4">
-            Cadastre banhos, tosas, consultas e outros serviços para que os tutores de Ourinhos possam agendar online.
+            Cadastre banhos, tosas, consultas e outros serviços para que os tutores possam agendar online.
           </p>
           <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
             Cadastrar serviço
@@ -189,12 +215,21 @@ export default function EstablishmentServicesPage() {
           {services.map((s) => (
             <div key={s.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
               {/* Service Image */}
-              <div className="h-44 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden">
-                <img
-                  src={s.image || serviceImagePresets[0].url}
-                  alt={s.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+              <div className="h-44 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden flex items-center justify-center">
+                {s.image ? (
+                  <img
+                    src={getFullImageUrl(s.image)}
+                    alt={s.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 gap-2">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-100/70 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                      <Scissors size={24} />
+                    </div>
+                    <span className="text-[11px] font-semibold tracking-wide">Sem foto</span>
+                  </div>
+                )}
                 <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                   <span className="bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
                     {s.duration} min
@@ -333,31 +368,62 @@ export default function EstablishmentServicesPage() {
               />
             </div>
 
-            {/* Image Selection / Presets */}
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Imagem do Serviço</label>
-              <Input
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="URL da imagem"
-                leftIcon={<ImageIcon size={14} />}
+            {/* Real Service Photo Upload */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase">
+                Foto do Serviço
+              </label>
+              <input
+                type="file"
+                ref={serviceFileRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleServiceFile}
               />
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                {serviceImagePresets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setImage(preset.url)}
-                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-colors ${
-                      image === preset.url
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300'
-                        : 'border-neutral-200 dark:border-[#313335] bg-neutral-50 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-100 dark:hover:bg-[#313335]'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
+              
+              {image ? (
+                <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] h-36 bg-neutral-50 dark:bg-[#282A2C] group">
+                  <img
+                    src={getFullImageUrl(image)}
+                    alt="Preview do serviço"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => serviceFileRef.current?.click()}
+                      disabled={isUploadingPhoto}
+                      className="px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold shadow hover:bg-neutral-100 cursor-pointer"
+                    >
+                      Substituir foto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImage('')}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow hover:bg-red-700 cursor-pointer"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => serviceFileRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  className="w-full border-2 border-dashed border-neutral-300 dark:border-[#313335] hover:border-orange-500 dark:hover:border-orange-500 bg-neutral-50 dark:bg-[#282A2C] hover:bg-orange-50/40 dark:hover:bg-orange-950/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5] transition-all cursor-pointer"
+                >
+                  <div className="w-9 h-9 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
+                    <Upload size={18} className={isUploadingPhoto ? 'animate-bounce' : ''} />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3]">
+                    {isUploadingPhoto ? 'Enviando imagem...' : 'Adicionar foto do serviço'}
+                  </span>
+                  <span className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
+                    Selecione do computador ou celular (PNG, JPG, WEBP)
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Assign Employees */}
@@ -391,7 +457,7 @@ export default function EstablishmentServicesPage() {
               </div>
             )}
 
-            <div className="pt-3 border-t border-neutral-100 flex gap-2 justify-end">
+            <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>

@@ -719,6 +719,15 @@ export const establishmentAreaController = {
           orderNumber: order.id.slice(0, 8).toUpperCase(),
           status: order.status,
           paymentMethod: order.paymentMethod,
+          deliveryMethod: order.deliveryMethod || 'DELIVERY',
+          deliveryAddress: order.deliveryAddress,
+          needsChange: order.needsChange || false,
+          changeFor: order.changeFor,
+          notes: order.notes,
+          cancelledAt: order.cancelledAt,
+          cancelledBy: order.cancelledBy,
+          cancellationReason: order.cancellationReason,
+          cancellationNotes: order.cancellationNotes,
           createdAt: order.createdAt,
           tutor: order.tutor,
           items: [],
@@ -748,28 +757,267 @@ export const establishmentAreaController = {
     const { id } = request.params;
     const { status } = z.object({ status: z.nativeEnum(OrderStatus) }).parse(request.body);
 
-    const hasItem = await prisma.orderItem.findFirst({
-      where: { orderId: id, establishmentId: user.id },
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
     });
+
+    if (!order) return reply.status(404).send({ error: 'Pedido não encontrado.' });
+
+    const hasItem = order.items.some((it) => it.establishmentId === user.id);
     if (!hasItem) return reply.status(403).send({ error: 'Você não tem permissão para alterar este pedido.' });
+
+    // 1. Immutable final states or delivered state cannot be updated via updateOrderStatus
+    if (order.status === OrderStatus.COMPLETED) {
+      return reply.status(400).send({
+        error: 'Este pedido já foi concluído pelo tutor e seu status não pode mais ser alterado.',
+      });
+    }
+
+    if (order.status === OrderStatus.CANCELLED) {
+      return reply.status(400).send({
+        error: 'Este pedido foi cancelado e seu status não pode ser alterado.',
+      });
+    }
+
+    if (order.status === OrderStatus.DELIVERED) {
+      return reply.status(400).send({
+        error: 'Este pedido já foi entregue e aguarda confirmação de recebimento pelo tutor. Não é possível regredir ou alterar seu status.',
+      });
+    }
+
+    // 2. Disallow setting to COMPLETED (only tutor can confirm receipt)
+    if (status === OrderStatus.COMPLETED) {
+      return reply.status(400).send({
+        error: 'A conclusão do pedido requer a confirmação de recebimento pelo cliente/tutor.',
+      });
+    }
+
+    // 3. Disallow setting to CANCELLED via generic status update (must use /cancel route)
+    if (status === OrderStatus.CANCELLED) {
+      return reply.status(400).send({
+        error: 'Para cancelar o pedido, utilize a funcionalidade de cancelamento informando o motivo.',
+      });
+    }
+
+    // 4. Validate legitimate forward progression
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED],
+      [OrderStatus.PAID]: [OrderStatus.PREPARING],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING],
+      [OrderStatus.PREPARING]: [OrderStatus.SHIPPED, OrderStatus.READY_FOR_PICKUP],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
+      [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.DELIVERED],
+      [OrderStatus.DELIVERED]: [],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CANCELLED]: [],
+    };
+
+    const allowedNext = validTransitions[order.status] || [];
+    if (!allowedNext.includes(status) && order.status !== status) {
+      return reply.status(400).send({
+        error: `Transição de status inválida de "${order.status}" para "${status}".`,
+      });
+    }
 
     const updated = await prisma.order.update({
       where: { id },
       data: { status },
+      include: { tutor: true },
     });
 
+    try {
+      const statusTranslations: Record<string, string> = {
+        PENDING: 'Pendente',
+        PAID: 'Confirmado',
+        CONFIRMED: 'Confirmado pelo Estabelecimento',
+        PREPARING: 'Em Preparo / Separando Produtos',
+        SHIPPED: 'Em Transporte / A Caminho',
+        READY_FOR_PICKUP: 'Pronto para Retirada no Balcão',
+        DELIVERED: 'Entregue / Aguardando Confirmação do Cliente',
+        COMPLETED: 'Concluído',
+        CANCELLED: 'Cancelado',
+      };
+      const label = statusTranslations[status] || status;
+      await prisma.notification.create({
+        data: {
+          userId: updated.tutorId,
+          title: `Atualização no pedido #${id.slice(0, 8).toUpperCase()}`,
+          message: `O status do seu pedido foi atualizado para "${label}".`,
+          type: 'ORDER',
+        },
+      });
+    } catch (notifErr) {
+      request.log.error(notifErr, 'Erro ao criar notificação de atualização de status do pedido');
+    }
+
     return reply.send(updated);
+  },
+
+  async cancelOrder(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    const { id } = request.params;
+    const cancelSchema = z.object({
+      reason: z.string().min(1, 'Motivo do cancelamento é obrigatório'),
+      notes: z.string().optional().nullable(),
+    });
+
+    const { reason, notes } = cancelSchema.parse(request.body);
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!order) return reply.status(404).send({ error: 'Pedido não encontrado.' });
+
+    const hasItem = order.items.some((it) => it.establishmentId === user.id);
+    if (!hasItem) return reply.status(403).send({ error: 'Você não tem permissão para cancelar este pedido.' });
+
+    // Explicit checks for non-cancellable statuses
+    if (order.status === OrderStatus.DELIVERED) {
+      return reply.status(400).send({
+        error: 'Este pedido já foi entregue e não pode mais ser cancelado pelo estabelecimento.',
+      });
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      return reply.status(400).send({
+        error: 'Este pedido já foi concluído pelo tutor e não pode mais ser cancelado.',
+      });
+    }
+
+    if (order.status === OrderStatus.CANCELLED) {
+      return reply.status(400).send({
+        error: 'Este pedido já foi cancelado anteriormente.',
+      });
+    }
+
+    // Cancellable statuses for establishment
+    const cancellableStatuses: OrderStatus[] = [
+      OrderStatus.PENDING,
+      OrderStatus.PAID,
+      OrderStatus.CONFIRMED,
+      OrderStatus.PREPARING,
+      OrderStatus.SHIPPED,
+      OrderStatus.READY_FOR_PICKUP,
+    ];
+
+    if (!cancellableStatuses.includes(order.status)) {
+      return reply.status(400).send({
+        error: `Pedidos com status "${order.status}" não podem ser cancelados pelo estabelecimento.`,
+      });
+    }
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Atomic conditional update to prevent race conditions
+        const updateResult = await tx.order.updateMany({
+          where: {
+            id,
+            status: { in: cancellableStatuses },
+          },
+          data: {
+            status: OrderStatus.CANCELLED,
+            cancelledAt: new Date(),
+            cancelledBy: 'ESTABLISHMENT',
+            cancellationReason: reason,
+            cancellationNotes: notes || null,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          // Status changed concurrently! Re-fetch to return exact descriptive error
+          const currentOrder = await tx.order.findUnique({ where: { id } });
+          if (!currentOrder) throw new Error('Pedido não encontrado.');
+          if (currentOrder.status === OrderStatus.DELIVERED) {
+            throw new Error('Este pedido já foi entregue e não pode mais ser cancelado pelo estabelecimento.');
+          }
+          if (currentOrder.status === OrderStatus.COMPLETED) {
+            throw new Error('Este pedido já foi concluído pelo tutor e não pode mais ser cancelado.');
+          }
+          if (currentOrder.status === OrderStatus.CANCELLED) {
+            throw new Error('Este pedido já foi cancelado anteriormente.');
+          }
+          throw new Error('O status do pedido foi alterado concorrentemente e não pode mais ser cancelado.');
+        }
+
+        // Fetch the updated order
+        const updated = await tx.order.findUniqueOrThrow({
+          where: { id },
+          include: { items: true },
+        });
+
+        // Restore stock for each item strictly inside the transaction
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+
+        // Create notification for tutor
+        const orderShortId = id.slice(0, 8).toUpperCase();
+        await tx.notification.create({
+          data: {
+            userId: order.tutorId,
+            title: `Pedido #${orderShortId} Cancelado pelo Estabelecimento`,
+            message: `Seu pedido foi cancelado pelo estabelecimento parceiro. Motivo: ${reason}${notes ? ` (${notes})` : ''}. O estoque foi reposto.`,
+            type: 'ORDER',
+          },
+        });
+
+        return updated;
+      });
+
+      return reply.send({ success: true, order: result });
+    } catch (txErr: any) {
+      return reply.status(400).send({
+        error: txErr.message || 'Erro ao processar cancelamento do pedido.',
+      });
+    }
   },
 
   // =========================================================================
   // 7. APPOINTMENTS
   // =========================================================================
-  async listAppointments(request: FastifyRequest, reply: FastifyReply) {
+  async listAppointments(
+    request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string } }>,
+    reply: FastifyReply
+  ) {
     const user = await ensureEstablishment(request, reply);
     if (!user) return;
 
+    const { date, startDate, endDate, status } = request.query;
+
+    const where: any = {
+      establishmentId: user.id,
+    };
+
+    if (status && status !== 'ALL') {
+      where.status = status as AppointmentStatus;
+    }
+
+    if (date) {
+      const dayStart = new Date(`${date}T00:00:00.000Z`);
+      const dayEnd = new Date(`${date}T23:59:59.999Z`);
+      where.date = {
+        gte: dayStart,
+        lte: dayEnd,
+      };
+    } else if (startDate && endDate) {
+      const rangeStart = new Date(`${startDate}T00:00:00.000Z`);
+      const rangeEnd = new Date(`${endDate}T23:59:59.999Z`);
+      where.date = {
+        gte: rangeStart,
+        lte: rangeEnd,
+      };
+    }
+
     const appointments = await prisma.appointment.findMany({
-      where: { establishmentId: user.id },
+      where,
       include: {
         pet: true,
         tutor: {
@@ -787,7 +1035,43 @@ export const establishmentAreaController = {
       orderBy: { date: 'asc' },
     });
 
-    return reply.send(appointments);
+    const formatted = appointments.map(a => {
+      const dateObj = new Date(a.date);
+      const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+      const dateStr = dateObj.toISOString().split('T')[0];
+      return {
+        id: a.id,
+        time: timeStr,
+        date: dateStr,
+        dateISO: a.date.toISOString(),
+        petId: a.petId,
+        petName: a.pet?.name || 'Pet',
+        petSpecies: a.pet?.species || 'Animal',
+        petBreed: a.pet?.breed || null,
+        petPhoto: a.pet?.photo || null,
+        tutorId: a.tutorId,
+        tutorName: a.tutor?.name || 'Tutor',
+        tutorEmail: a.tutor?.email || '',
+        tutorPhone: a.tutor?.phone || null,
+        tutorPhoto: a.tutor?.avatar || null,
+        serviceId: a.serviceId,
+        service: a.service?.name || 'Serviço',
+        serviceCategory: a.service?.category || null,
+        price: Number(a.service?.price ?? 0),
+        duration: a.service?.duration || 60,
+        status: a.status,
+        employeeId: a.employeeId || null,
+        employee: a.employee ? {
+          id: a.employee.id,
+          name: a.employee.name,
+          role: a.employee.role,
+        } : null,
+        establishmentId: a.establishmentId,
+        professionalId: a.professionalId || null,
+      };
+    });
+
+    return reply.send(formatted);
   },
 
   async updateAppointmentStatus(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
@@ -799,6 +1083,10 @@ export const establishmentAreaController = {
 
     const existing = await prisma.appointment.findFirst({
       where: { id, establishmentId: user.id },
+      include: {
+        pet: true,
+        service: true,
+      }
     });
     if (!existing) return reply.status(404).send({ error: 'Agendamento não encontrado ou acesso negado.' });
 
@@ -812,6 +1100,28 @@ export const establishmentAreaController = {
         employee: true,
       }
     });
+
+    // Notify tutor about status change
+    try {
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'confirmado',
+        IN_PROGRESS: 'iniciado',
+        COMPLETED: 'concluído',
+        CANCELLED: 'cancelado',
+        PENDING: 'agendado',
+      };
+      const label = statusLabels[status] || status.toLowerCase();
+      await prisma.notification.create({
+        data: {
+          userId: existing.tutorId,
+          title: `Agendamento ${label}`,
+          message: `O agendamento de ${existing.pet?.name || 'seu pet'} para ${existing.service?.name || 'o serviço'} foi ${label}.`,
+          type: 'APPOINTMENT',
+        }
+      });
+    } catch (notifErr) {
+      request.log.warn({ err: notifErr }, 'Could not create notification for tutor on status change');
+    }
 
     const action = status === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';
     googleCalendarService.syncAppointment(id, action).catch(() => {});

@@ -49,6 +49,8 @@ import EstablishmentOrdersPage from '@/pages/establishment/EstablishmentOrdersPa
 import EstablishmentAppointmentsPage from '@/pages/establishment/EstablishmentAppointmentsPage';
 import EstablishmentEmployeesPage from '@/pages/establishment/EstablishmentEmployeesPage';
 import EstablishmentSettingsPage from '@/pages/establishment/EstablishmentSettingsPage';
+import EstablishmentMessagesPage from '@/pages/establishment/EstablishmentMessagesPage';
+import EstablishmentReportsPage from '@/pages/establishment/EstablishmentReportsPage';
 
 // Professional Pages
 import ProfessionalDashboard from '@/pages/professional/ProfessionalDashboard';
@@ -57,6 +59,7 @@ import ProfessionalWorkOrdersPage from '@/pages/professional/ProfessionalWorkOrd
 import ProfessionalReviewsPage from '@/pages/professional/ProfessionalReviewsPage';
 import ProfessionalProfilePage from '@/pages/professional/ProfessionalProfilePage';
 import ProfessionalServicesPage from '@/pages/professional/ProfessionalServicesPage';
+import ProfessionalReportsPage from '@/pages/professional/ProfessionalReportsPage';
 
 // Admin Pages
 import AdminDashboard from '@/pages/admin/AdminDashboard';
@@ -93,6 +96,8 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/agendar" element={<Navigate to="/tutor/booking" replace />} />
+        <Route path="/booking" element={<Navigate to="/tutor/booking" replace />} />
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
@@ -114,7 +119,10 @@ export default function App() {
           <Route path="pets/:id/editar" element={<PetFormPage isEditing />} />
           <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="agendamentos" element={<AppointmentsPage />} />
+          <Route path="booking" element={<BookingPage />} />
           <Route path="booking/:id" element={<BookingPage />} />
+          <Route path="agendar" element={<Navigate to="/tutor/booking" replace />} />
+          <Route path="agendar/:id" element={<Navigate to="/tutor/booking/:id" replace />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="explorar" element={<ExplorePage />} />
           <Route path="establishment/:id" element={<TutorEstablishmentViewPage />} />
@@ -149,6 +157,8 @@ export default function App() {
           <Route path="pedidos" element={<EstablishmentOrdersPage />} />
           <Route path="agendamentos" element={<EstablishmentAppointmentsPage />} />
           <Route path="funcionarios" element={<EstablishmentEmployeesPage />} />
+          <Route path="relatorios" element={<EstablishmentReportsPage />} />
+          <Route path="mensagens" element={<EstablishmentMessagesPage />} />
           <Route path="configuracoes" element={<EstablishmentSettingsPage />} />
           <Route path="*" element={<Navigate to="/estabelecimento" replace />} />
         </Route>
@@ -163,6 +173,7 @@ export default function App() {
           <Route path="agenda" element={<ProfessionalSchedulePage />} />
           <Route path="ordens" element={<ProfessionalWorkOrdersPage />} />
           <Route path="avaliacoes" element={<ProfessionalReviewsPage />} />
+          <Route path="relatorios" element={<ProfessionalReportsPage />} />
           <Route path="prestar-servicos" element={<ProfessionalServicesPage />} />
           <Route path="perfil" element={<ProfessionalProfilePage />} />
           <Route path="*" element={<Navigate to="/profissional" replace />} />

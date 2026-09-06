@@ -42,6 +42,7 @@ export const establishmentAreaRoutes: FastifyPluginAsync = async (fastify: Fasti
   // 6. Orders
   fastify.get('/orders', establishmentAreaController.listOrders);
   fastify.put('/orders/:id/status', establishmentAreaController.updateOrderStatus);
+  fastify.post('/orders/:id/cancel', establishmentAreaController.cancelOrder);
 
   // 7. Appointments
   fastify.get('/appointments', establishmentAreaController.listAppointments);
