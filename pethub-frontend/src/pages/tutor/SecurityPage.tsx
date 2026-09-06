@@ -43,6 +43,11 @@ export default function SecurityPage() {
       return;
     }
 
+    if (newPassword === '12345678') {
+      toast.error('Que senha merda (●\'◡\'●) 💩 Faz uma senha boa aí man!');
+      return;
+    }
+
     if (newPassword.length < 6) {
       toast.error('A nova senha deve ter no mínimo 6 caracteres');
       return;
@@ -152,6 +157,13 @@ export default function SecurityPage() {
             leftIcon={<Lock size={16} />}
             required
           />
+
+          {newPassword === '12345678' && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 animate-fade-in">
+              <p className="font-bold text-amber-900">Que senha merda (●'◡'●) 💩</p>
+              <p className="text-amber-800 font-medium">Faz uma senha boa aí man!</p>
+            </div>
+          )}
 
           <Input
             label="Confirmar nova senha"

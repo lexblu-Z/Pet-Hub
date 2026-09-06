@@ -38,6 +38,7 @@ import PaymentMethodsPage from '@/pages/tutor/PaymentMethodsPage';
 import SecurityPage from '@/pages/tutor/SecurityPage';
 import PreferencesPage from '@/pages/tutor/PreferencesPage';
 import NotificationSettingsPage from '@/pages/tutor/NotificationSettingsPage';
+import EasterEggPage from '@/pages/tutor/EasterEggPage';
 
 // Establishment Pages
 import EstablishmentDashboard from '@/pages/establishment/EstablishmentDashboard';
@@ -131,6 +132,7 @@ export default function App() {
           <Route path="seguranca" element={<SecurityPage />} />
           <Route path="preferencias" element={<PreferencesPage />} />
           <Route path="notificacoes-config" element={<NotificationSettingsPage />} />
+          <Route path="easter-egg" element={<EasterEggPage />} />
         </Route>
 
         {/* Establishment Routes */}

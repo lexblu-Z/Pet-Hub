@@ -7,6 +7,7 @@ import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui';
 import { formatPhone } from '@/utils/phone';
+import { EasterEggUnlockModal } from '@/components/shared/EasterEggUnlockModal';
 import type { TutorProfile } from '@/types';
 
 export default function ProfilePage() {
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showEasterEggModal, setShowEasterEggModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -219,6 +221,34 @@ export default function ProfilePage() {
                 </motion.div>
               ))}
 
+              {/* Easter Egg Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="pt-2"
+              >
+                <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden shadow-xs hover:shadow-md transition-all">
+                  <button
+                    onClick={() => setShowEasterEggModal(true)}
+                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors group cursor-pointer"
+                  >
+                    <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                      🚫
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-orange-500 transition-colors flex items-center gap-1.5">
+                        Easter Egg 🚫🚫🚫
+                      </p>
+                      <p className="text-xs text-neutral-400">
+                        Área confidencial. Não clique aqui...
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className="text-neutral-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                  </button>
+                </div>
+              </motion.div>
+
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -227,7 +257,7 @@ export default function ProfilePage() {
               >
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 text-red-600 font-bold rounded-2xl hover:bg-red-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
                 >
                   <LogOut size={18} />
                   Sair da conta
@@ -324,6 +354,12 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Easter Egg Unlock Challenge Modal */}
+      <EasterEggUnlockModal
+        isOpen={showEasterEggModal}
+        onClose={() => setShowEasterEggModal(false)}
+      />
     </div>
   );
 }

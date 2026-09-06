@@ -196,8 +196,16 @@ export default function RegisterPage() {
         toast.error(selectedRole === 'estabelecimento' ? 'O CNPJ/CPF é obrigatório.' : 'O CPF / Registro Profissional é obrigatório.');
         return;
       }
+      if (password === '12345678') {
+        toast.error('Que senha merda (●\'◡\'●) 💩 Faz uma senha boa aí man!');
+        return;
+      }
       if (password.length < 6) {
         toast.error('A senha deve ter pelo menos 6 caracteres.');
+        return;
+      }
+      if (password === '123456' || password === '1234567' || password.toLowerCase() === 'password') {
+        toast.error('Essa senha é muito fraca e previsível. Escolha uma senha mais segura.');
         return;
       }
       if (password !== confirmPassword) {
@@ -614,6 +622,12 @@ export default function RegisterPage() {
                   placeholder="Mínimo 6 caracteres"
                   required
                 />
+                {password === '12345678' && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 animate-fade-in">
+                    <p className="font-bold text-amber-900">Que senha merda (●'◡'●) 💩</p>
+                    <p className="text-amber-800 font-medium">Faz uma senha boa aí man!</p>
+                  </div>
+                )}
                 <Input
                   label="Confirmar senha *"
                   type="password"

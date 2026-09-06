@@ -176,6 +176,12 @@ export const authController = {
     try {
       const data = registerSchema.parse(request.body);
 
+      if (data.password === '12345678') {
+        return reply.status(400).send({
+          error: "Que senha merda (●'◡'●) 💩 Faz uma senha boa aí man!",
+        });
+      }
+
       // Strict validation for establishments: only Ourinhos - SP is accepted
       if (data.role === Role.ESTABLISHMENT) {
         if (data.city && data.city.trim().toLowerCase() !== 'ourinhos') {
@@ -557,6 +563,12 @@ export const authController = {
     try {
       const token = request.user as any;
       const data = changePasswordSchema.parse(request.body);
+
+      if (data.newPassword === '12345678') {
+        return reply.status(400).send({
+          error: "Que senha merda (●'◡'●) 💩 Faz uma senha boa aí man!",
+        });
+      }
 
       const user = await prisma.user.findUnique({ where: { id: token.sub } });
       if (!user) return reply.status(404).send({ error: 'Usuário não encontrado.' });
@@ -1006,6 +1018,12 @@ export const authController = {
       const email = decoded.email.trim().toLowerCase();
       const normalizedPhone = validateAndNormalizePhone(phone).normalized || phone;
 
+      if (password === '12345678') {
+        return reply.status(400).send({
+          error: "Que senha merda (●'◡'●) 💩 Faz uma senha boa aí man!",
+        });
+      }
+
       // Verificar se o usuário já existe
       let user = await prisma.user.findUnique({
         where: { email },
@@ -1210,6 +1228,13 @@ export const authController = {
   async resetPassword(request: FastifyRequest, reply: FastifyReply) {
     try {
       const data = resetPasswordSchema.parse(request.body);
+
+      if (data.newPassword === '12345678') {
+        return reply.status(400).send({
+          error: "Que senha merda (●'◡'●) 💩 Faz uma senha boa aí man!",
+        });
+      }
+
       const email = data.email.trim().toLowerCase();
       const inputCode = data.code.trim();
 
