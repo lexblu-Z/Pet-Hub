@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,9 +6,7 @@ import {
   ClipboardList, Stethoscope, Sparkles, AlertCircle, Weight,
   Hash, Heart, Plus
 } from 'lucide-react';
-import { pets } from '@/data/pets';
-import { vaccines } from '@/data/vaccines';
-import { appointments } from '@/data/appointments';
+import { api } from '@/services/api';
 import { Badge, Tabs, EmptyState } from '@/components/ui';
 
 const speciesEmoji: Record<string, string> = {
@@ -39,25 +37,62 @@ export default function PetProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('info');
+  const [pet, setPet] = useState<any>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const pet = pets.find((p) => p.id === id);
+  useEffect(() => {
+    async function loadPetData() {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const [petRes, aptsRes] = await Promise.allSettled([
+          api.get(`/pets/${id}`),
+          api.get('/appointments/me'),
+        ]);
+
+        if (petRes.status === 'fulfilled' && petRes.value.data) {
+          setPet(petRes.value.data);
+        }
+        if (aptsRes.status === 'fulfilled' && Array.isArray(aptsRes.value.data)) {
+          setAppointments(aptsRes.value.data.filter((a: any) => a.petId === id));
+        }
+      } catch (err) {
+        console.error('Erro ao carregar pet:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadPetData();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 space-y-4">
+        <div className="h-64 bg-neutral-100 rounded-3xl animate-pulse" />
+        <div className="h-32 bg-neutral-100 rounded-3xl animate-pulse" />
+      </div>
+    );
+  }
+
   if (!pet) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-24">
         <p className="text-6xl mb-4">🐾</p>
-        <p className="text-neutral-500">Pet não encontrado</p>
-        <button onClick={() => navigate('/tutor/pets')} className="mt-4 text-orange-500 hover:underline">
+        <p className="text-neutral-500 font-semibold">Pet não encontrado</p>
+        <button onClick={() => navigate('/tutor/pets')} className="mt-4 text-orange-500 font-bold hover:underline">
           Voltar para Meus Pets
         </button>
       </div>
     );
   }
 
-  const petVaccines = vaccines.filter((v) => v.petId === pet.id);
-  const petAppointments = appointments.filter((a) => a.petId === pet.id);
-  const upToDate = petVaccines.filter((v) => v.status === 'up-to-date').length;
-  const overdue = petVaccines.filter((v) => v.status === 'overdue').length;
-  const upcoming = petVaccines.filter((v) => v.status === 'upcoming').length;
+  const petVaccines: any[] = [];
+  const petAppointments = appointments;
+  const upToDate = 0;
+  const overdue = 0;
+  const upcoming = 0;
 
   const tabs = [
     { id: 'info', label: 'Informações', icon: '🐾' },

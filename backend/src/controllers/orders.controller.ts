@@ -79,53 +79,71 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
     });
   }
 
-  const order = await prisma.$transaction(async (tx) => {
-    const newOrder = await tx.order.create({
-      data: {
-        tutorId: user.sub,
-        totalAmount,
-        status: 'PAID',
-        paymentMethod: paymentMethod || 'Cartão de Crédito',
-        items: {
-          create: orderItemsData,
-        }
-      },
-      include: {
-        items: { include: { product: true } }
-      }
-    });
-
-    for (const item of items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } }
-      });
-    }
-
-    await tx.cartItem.deleteMany({
-      where: { tutorId: user.sub, productId: { in: productIds } }
-    });
-
-    return newOrder;
-  });
-
-  // Create real notifications for establishments
   try {
-    for (const estId of establishmentIds) {
-      const estabItems = order.items.filter(it => it.establishmentId === estId);
-      const prodSummary = estabItems.map(it => `${it.quantity}x ${it.product?.name || 'Item'}`).join(', ');
-      await prisma.notification.create({
-        data: {
-          userId: estId,
-          title: 'Novo pedido recebido',
-          message: `Você recebeu um novo pedido (#${order.id.slice(0, 8).toUpperCase()}) contendo: ${prodSummary}.`,
-          type: 'ORDER',
-        }
-      });
-    }
-  } catch (notifErr) {
-    request.log.error(notifErr);
-  }
+    const order = await prisma.$transaction(async (tx) => {
+      // 1. Verify and atomically decrement stock for each item
+      for (const item of items) {
+        const updateResult = await tx.product.updateMany({
+          where: {
+            id: item.productId,
+            stock: { gte: item.quantity },
+          },
+          data: {
+            stock: { decrement: item.quantity },
+          },
+        });
 
-  return reply.status(201).send(order);
+        if (updateResult.count === 0) {
+          const current = await tx.product.findUnique({ where: { id: item.productId } });
+          throw new Error(`Estoque insuficiente ou esgotado para "${current?.name || 'o produto'}".`);
+        }
+      }
+
+      // 2. Create Order with items
+      const newOrder = await tx.order.create({
+        data: {
+          tutorId: user.sub,
+          totalAmount,
+          status: 'PAID',
+          paymentMethod: paymentMethod || 'Cartão de Crédito',
+          items: {
+            create: orderItemsData,
+          },
+        },
+        include: {
+          items: { include: { product: true } },
+        },
+      });
+
+      // 3. Clean cart items
+      await tx.cartItem.deleteMany({
+        where: { tutorId: user.sub, productId: { in: productIds } },
+      });
+
+      return newOrder;
+    });
+
+    // Create real notifications for establishments
+    try {
+      for (const estId of establishmentIds) {
+        const estabItems = order.items.filter((it: any) => it.establishmentId === estId);
+        const prodSummary = estabItems.map((it: any) => `${it.quantity}x ${it.product?.name || 'Item'}`).join(', ');
+        await prisma.notification.create({
+          data: {
+            userId: estId,
+            title: 'Novo pedido recebido',
+            message: `Você recebeu um novo pedido (#${order.id.slice(0, 8).toUpperCase()}) contendo: ${prodSummary}.`,
+            type: 'ORDER',
+          },
+        });
+      }
+    } catch (notifErr) {
+      request.log.error(notifErr);
+    }
+
+    return reply.status(201).send(order);
+  } catch (err: any) {
+    request.log.error(err, 'Erro ao criar pedido');
+    return reply.status(400).send({ error: err.message || 'Erro ao processar compra.' });
+  }
 }

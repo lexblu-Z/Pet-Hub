@@ -19,9 +19,12 @@ import {
   Menu,
   X,
   Plus,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
+import { useThemeStore } from '@/store/themeStore';
 import { Avatar, Badge } from '@/components/ui';
 
 interface NavItem {
@@ -57,6 +60,7 @@ export const TutorLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { currentUser, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const { addToast } = useToastStore();
   const navigate = useNavigate();
 
@@ -178,6 +182,35 @@ export const TutorLayout: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
+
+          <div className="mt-1">
+            {!sidebarCollapsed ? (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 rounded-xl transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  {theme === 'dark' ? <Moon size={15} className="text-orange-500" /> : <Sun size={15} className="text-orange-500" />}
+                  <span>{theme === 'dark' ? 'Tema Escuro' : 'Tema Claro'}</span>
+                </span>
+                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                  {theme}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                className="w-full flex items-center justify-center p-2 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 rounded-xl transition-colors cursor-pointer"
+              >
+                {theme === 'dark' ? <Moon size={16} className="text-orange-500" /> : <Sun size={16} className="text-orange-500" />}
+              </button>
+            )}
+          </div>
+
           <AnimatePresence>
             {!sidebarCollapsed && (
               <motion.button
@@ -298,7 +331,15 @@ export const TutorLayout: React.FC = () => {
               Pet<span className="text-orange-500">Hub</span>
             </span>
           </Link>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title="Alternar tema"
+              className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-600 transition-colors cursor-pointer"
+            >
+              {theme === 'dark' ? <Moon size={18} className="text-orange-500" /> : <Sun size={18} className="text-orange-500" />}
+            </button>
             <NavLink
               to="/tutor/notifications"
               className="relative p-2 rounded-xl hover:bg-neutral-100 text-neutral-600"

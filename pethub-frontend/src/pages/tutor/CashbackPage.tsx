@@ -145,6 +145,41 @@ export default function CashbackPage() {
         </div>
       </motion.div>
 
+      {/* How it works tutorial section */}
+      <div className="bg-white rounded-3xl p-6 border border-neutral-100 shadow-sm space-y-4">
+        <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+          <span>💡 Como usar seu cashback</span>
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+          {[
+            {
+              step: '1',
+              title: 'Acumule em cada compra',
+              desc: 'Ao realizar agendamentos ou comprar produtos em parceiros PetHub, você recebe cashback automaticamente.',
+            },
+            {
+              step: '2',
+              title: 'Resgate o saldo',
+              desc: 'Clique em "Resgatar Saldo" para gerar um código de desconto exclusivo no valor que desejar.',
+            },
+            {
+              step: '3',
+              title: 'Apresente o código',
+              desc: 'Informe seu código no balcão ou agendamento para abater diretamente no pagamento do serviço.',
+            },
+          ].map(({ step, title, desc }) => (
+            <div key={step} className="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-100 flex flex-col items-center text-center">
+              <div className="w-10 h-10 rounded-full border-2 border-orange-500 bg-orange-50 text-orange-600 font-bold text-sm flex items-center justify-center shrink-0 mb-3 shadow-xs">
+                {step}
+              </div>
+              <h4 className="text-sm font-bold text-neutral-900 mb-1">{title}</h4>
+              <p className="text-xs text-neutral-500 leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* History Section */}
       <div>
         <h2 className="text-lg font-bold text-neutral-900 mb-4">Histórico de Movimentações</h2>
@@ -228,9 +263,9 @@ export default function CashbackPage() {
               { step: '5', title: 'Desconto aplicado', desc: 'O valor resgatado é descontado diretamente da sua conta conforme as regras da transação.' },
             ].map(({ step, title, desc }) => (
               <div key={step} className="flex items-start gap-3 p-3 bg-neutral-50 rounded-xl">
-                <span className="w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-full border-2 border-orange-500 bg-orange-50 text-orange-600 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                   {step}
-                </span>
+                </div>
                 <div>
                   <h4 className="text-sm font-semibold text-neutral-900">{title}</h4>
                   <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>

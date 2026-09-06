@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-50: #fff7ed;
   --color-brand-100: #ffedd5;
@@ -65,7 +67,7 @@
   }
 
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased;
+    @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
   }
 
   h1, h2, h3, h4, h5, h6 {

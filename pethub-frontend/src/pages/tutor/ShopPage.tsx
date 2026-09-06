@@ -31,8 +31,9 @@ export default function ShopPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<RealProduct | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const { items, addItem, removeItem, updateQuantity, total, itemCount, clearCart } = useCartStore();
+  const { items, addItem, updateQuantity, total, itemCount, clearCart } = useCartStore();
   const toast = useToast();
 
   useEffect(() => {
@@ -64,7 +65,16 @@ export default function ShopPage() {
     setQuantity(1);
   };
 
-  const handleAddToCart = (product: RealProduct, qty: number) => {
+  const handleAddToCart = (product: RealProduct, qty: number, showToast = true) => {
+    if (product.stock <= 0) {
+      toast.error('Produto sem estoque disponível.');
+      return;
+    }
+    if (qty > product.stock) {
+      toast.error(`A quantidade não pode exceder o estoque disponível (${product.stock} un.).`);
+      return;
+    }
+
     addItem({
       id: product.id,
       name: product.name,
@@ -79,15 +89,42 @@ export default function ShopPage() {
       updatedAt: new Date().toISOString(),
     } as any, qty);
 
-    toast.success('Adicionado ao carrinho!', `${qty}x ${product.name}`);
+    if (showToast) {
+      toast.success('Adicionado ao carrinho!', `${qty}x ${product.name}`);
+    }
     setSelectedProduct(null);
   };
 
-  const handleCheckout = () => {
+  const handleBuyNow = (product: RealProduct) => {
+    if (product.stock <= 0) {
+      toast.error('Produto sem estoque disponível.');
+      return;
+    }
+    handleAddToCart(product, 1, false);
+    setIsCartOpen(true);
+  };
+
+  const handleCheckout = async () => {
     if (items.length === 0) return;
-    toast.success('Pedido realizado com sucesso!', 'Em breve você receberá atualizações sobre o envio.');
-    clearCart();
-    setIsCartOpen(false);
+    try {
+      setIsCheckingOut(true);
+      const payload = {
+        items: items.map(it => ({
+          productId: it.product.id,
+          quantity: it.quantity,
+        })),
+        paymentMethod: 'Cartão de Crédito',
+      };
+      const res = await api.post('/orders', payload);
+      toast.success('Pedido realizado com sucesso!', `Código: #${res.data.id.slice(0, 8).toUpperCase()}`);
+      clearCart();
+      setIsCartOpen(false);
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao processar compra.');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   return (
@@ -100,15 +137,14 @@ export default function ShopPage() {
         </div>
         <button
           onClick={() => setIsCartOpen(true)}
-          className="relative p-3 bg-white rounded-2xl shadow-sm border border-neutral-100 text-neutral-700 hover:text-orange-500 transition-colors"
+          className="relative flex items-center gap-2 px-3.5 py-2.5 bg-white rounded-2xl shadow-xs border border-neutral-200 text-neutral-800 hover:border-orange-300 hover:text-orange-600 transition-all cursor-pointer font-bold text-sm"
           title="Ver carrinho"
         >
-          <ShoppingCart size={20} />
-          {itemCount() > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow">
-              {itemCount()}
-            </span>
-          )}
+          <ShoppingCart size={18} className="text-orange-500" />
+          <span className="hidden sm:inline">Carrinho</span>
+          <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+            {itemCount()}
+          </span>
         </button>
       </div>
 
@@ -127,68 +163,103 @@ export default function ShopPage() {
       <div>
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map(i => (
+            {[1, 2, 3].map(i => (
               <div key={i} className="h-64 bg-neutral-100 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <EmptyState
-            imageUrl="/salsicha_borzoi_1788367580508.jpg"
-            title="Ainda não há produtos disponíveis"
-            description="Os estabelecimentos parceiros estão cadastrando seus estoques. Volte em breve para conferir as novidades!"
-          />
+          <div className="bg-white rounded-3xl p-10 border border-neutral-100 text-center shadow-sm">
+            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-500">
+              <Package size={32} />
+            </div>
+            <h3 className="font-bold text-neutral-900 text-base mb-1">Não há produtos disponíveis no momento.</h3>
+            <p className="text-neutral-400 text-xs max-w-md mx-auto leading-relaxed">
+              Os estabelecimentos parceiros estão cadastrando novos produtos no catálogo. Volte em breve para conferir as novidades!
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {filteredProducts.map(product => {
               const sellerName = product.establishment?.establishmentProfile?.businessName || product.establishment?.name || 'Pet Shop Parceiro';
+              const isOutOfStock = product.stock <= 0;
               return (
                 <motion.div
                   key={product.id}
                   whileHover={{ y: -3 }}
-                  onClick={() => handleOpenProduct(product)}
-                  className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col cursor-pointer group"
+                  className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
                 >
-                  <div className="relative aspect-square bg-neutral-50 overflow-hidden">
+                  <div
+                    onClick={() => handleOpenProduct(product)}
+                    className="relative aspect-square bg-neutral-50 overflow-hidden cursor-pointer"
+                  >
                     <img
                       src={product.photo || '/romeu_e_julieta_1788367558045.jpg'}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    {product.stock <= 3 && product.stock > 0 && (
-                      <div className="absolute top-2 left-2">
-                        <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
-                          Restam {product.stock}
+                    <div className="absolute top-2 left-2">
+                      {isOutOfStock ? (
+                        <span className="bg-neutral-800/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
+                          Sem estoque
                         </span>
-                      </div>
-                    )}
+                      ) : product.stock <= 3 ? (
+                        <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
+                          Restam {product.stock} un.
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
+                          Em estoque
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
+                    <div onClick={() => handleOpenProduct(product)} className="cursor-pointer">
                       <div className="flex items-center gap-1 text-[11px] text-neutral-400 mb-1">
                         <Store size={12} className="shrink-0 text-orange-500" />
                         <span className="truncate">{sellerName}</span>
                       </div>
-                      <h3 className="font-semibold text-sm text-neutral-900 line-clamp-2 mb-2 group-hover:text-orange-500 transition-colors">
+                      <h3 className="font-semibold text-sm text-neutral-900 line-clamp-2 mb-1 group-hover:text-orange-500 transition-colors">
                         {product.name}
                       </h3>
+                      {product.description && (
+                        <p className="text-xs text-neutral-400 line-clamp-2 mb-2 leading-relaxed">
+                          {product.description}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-50">
-                      <span className="text-base font-bold text-neutral-900">
+                    <div>
+                      <div className="text-base font-bold text-neutral-900 mb-3">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product, 1);
-                        }}
-                        className="w-8 h-8 rounded-xl bg-orange-50 hover:bg-orange-500 text-orange-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
-                        title="Adicionar ao carrinho"
-                      >
-                        <Plus size={16} />
-                      </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuyNow(product);
+                          }}
+                          className="flex-1 py-2 px-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shadow-xs hover:shadow"
+                        >
+                          {isOutOfStock ? 'Esgotado' : 'Comprar agora'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenProduct(product);
+                          }}
+                          className="w-9 h-9 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                          title="Selecionar quantidade e adicionar ao carrinho"
+                        >
+                          <ShoppingCart size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -198,7 +269,7 @@ export default function ShopPage() {
         )}
       </div>
 
-      {/* Product Details Modal */}
+      {/* Product Details & Quantity Modal */}
       <AnimatePresence>
         {selectedProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -217,12 +288,12 @@ export default function ShopPage() {
             >
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-neutral-500 hover:text-neutral-900 shadow transition-colors z-20"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-neutral-500 hover:text-neutral-900 shadow transition-colors z-20 cursor-pointer"
               >
                 <X size={18} />
               </button>
 
-              <div className="relative h-64 sm:h-72 bg-neutral-100 shrink-0">
+              <div className="relative h-60 sm:h-64 bg-neutral-100 shrink-0">
                 <img
                   src={selectedProduct.photo || '/romeu_e_julieta_1788367558045.jpg'}
                   alt={selectedProduct.name}
@@ -239,7 +310,7 @@ export default function ShopPage() {
                   {selectedProduct.stock > 0 ? (
                     <Badge variant="success">Em estoque ({selectedProduct.stock} un.)</Badge>
                   ) : (
-                    <Badge variant="error">Indisponível</Badge>
+                    <Badge variant="error">Sem estoque</Badge>
                   )}
                 </div>
 
@@ -260,28 +331,35 @@ export default function ShopPage() {
                   </div>
                 )}
 
-                {selectedProduct.stock > 0 && (
-                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-                    <span className="text-sm font-medium text-neutral-700">Quantidade:</span>
+                {selectedProduct.stock > 0 ? (
+                  <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-semibold text-neutral-700">Quantidade:</span>
+                      <p className="text-[11px] text-neutral-400">Máximo: {selectedProduct.stock} unidades</p>
+                    </div>
                     <div className="flex items-center gap-3 bg-neutral-100 rounded-xl px-3 py-1.5">
                       <button
                         type="button"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="text-neutral-600 hover:text-neutral-900"
+                        className="text-neutral-600 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
                         disabled={quantity <= 1}
                       >
                         <Minus size={16} />
                       </button>
-                      <span className="font-bold text-sm w-6 text-center">{quantity}</span>
+                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{quantity}</span>
                       <button
                         type="button"
                         onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
-                        className="text-neutral-600 hover:text-neutral-900"
+                        className="text-neutral-600 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
                         disabled={quantity >= selectedProduct.stock}
                       >
                         <Plus size={16} />
                       </button>
                     </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-neutral-100 rounded-xl text-center text-xs text-neutral-500 font-medium">
+                    Este produto está indisponível no momento.
                   </div>
                 )}
               </div>
@@ -292,6 +370,7 @@ export default function ShopPage() {
                   size="lg"
                   disabled={selectedProduct.stock <= 0}
                   onClick={() => handleAddToCart(selectedProduct, quantity)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
                 >
                   Adicionar ao carrinho ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct.price * quantity)})
                 </Button>
@@ -322,9 +401,9 @@ export default function ShopPage() {
               <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
                 <h2 className="font-bold text-lg text-neutral-900 flex items-center gap-2">
                   <ShoppingCart size={20} className="text-orange-500" />
-                  Seu Carrinho
+                  Seu Carrinho ({itemCount()})
                 </h2>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 text-neutral-400 hover:text-neutral-900">
+                <button onClick={() => setIsCartOpen(false)} className="p-2 text-neutral-400 hover:text-neutral-900 cursor-pointer">
                   <X size={20} />
                 </button>
               </div>
@@ -334,12 +413,12 @@ export default function ShopPage() {
                   <div className="text-center py-16 text-neutral-400">
                     <ShoppingCart size={48} className="mx-auto mb-3 opacity-30" />
                     <p className="font-semibold text-neutral-600">Seu carrinho está vazio</p>
-                    <p className="text-xs text-neutral-400 mt-1">Navegue pelos produtos e adicione seus itens</p>
+                    <p className="text-xs text-neutral-400 mt-1">Navegue pela loja e adicione produtos reais</p>
                   </div>
                 ) : (
                   items.map(item => (
                     <div key={item.product.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-2xl">
-                      <img src={item.product.photos[0]} alt="" className="w-14 h-14 rounded-xl object-cover bg-white" />
+                      <img src={item.product.photos?.[0] || '/romeu_e_julieta_1788367558045.jpg'} alt="" className="w-14 h-14 rounded-xl object-cover bg-white" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-neutral-900 truncate">{item.product.name}</p>
                         <p className="text-sm text-orange-600 font-bold mt-0.5">
@@ -347,11 +426,24 @@ export default function ShopPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 bg-white rounded-xl border border-neutral-200 p-1">
-                        <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="p-1 text-neutral-400 hover:text-neutral-900">
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="p-1 text-neutral-400 hover:text-neutral-900 cursor-pointer"
+                        >
                           <Minus size={14} />
                         </button>
                         <span className="text-xs font-bold w-5 text-center">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-1 text-neutral-400 hover:text-neutral-900">
+                        <button
+                          onClick={() => {
+                            if (item.quantity >= item.product.stock) {
+                              toast.error(`Limite de estoque atingido (${item.product.stock} un.).`);
+                              return;
+                            }
+                            updateQuantity(item.product.id, item.quantity + 1);
+                          }}
+                          disabled={item.quantity >= item.product.stock}
+                          className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                        >
                           <Plus size={14} />
                         </button>
                       </div>
@@ -363,12 +455,18 @@ export default function ShopPage() {
               {items.length > 0 && (
                 <div className="pt-4 border-t border-neutral-100 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-500">Total:</span>
+                    <span className="text-neutral-500 font-medium">Total:</span>
                     <span className="text-xl font-bold text-neutral-900">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total())}
                     </span>
                   </div>
-                  <Button fullWidth size="lg" onClick={handleCheckout}>
+                  <Button
+                    fullWidth
+                    size="lg"
+                    isLoading={isCheckingOut}
+                    onClick={handleCheckout}
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                  >
                     Finalizar Pedido
                   </Button>
                 </div>

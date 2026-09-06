@@ -3,11 +3,6 @@ import { api } from '@/services/api';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe } from 'lucide-react';
-import { establishments } from '@/data/users';
-import { services } from '@/data/services';
-import { reviews } from '@/data/reports';
-import { professionals } from '@/data/users';
-import { products } from '@/data/products';
 import { SearchBar, Badge, Rating, EmptyState } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
@@ -236,21 +231,50 @@ export function EstablishmentProfilePage() {
   const toast = useToast();
   const { currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState('servicos');
-  const [isFavorite, setIsFavorite] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [est, setEst] = useState<any>(null);
+  const [estServices, setEstServices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const est = establishments.find((e) => e.id === id);
-  if (!est) return <div className="p-8 text-center text-neutral-500">Estabelecimento não encontrado</div>;
+  useEffect(() => {
+    async function loadData() {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const [estsRes, srvRes] = await Promise.allSettled([
+          api.get('/establishments'),
+          api.get(`/services?establishmentId=${id}`),
+        ]);
+        if (estsRes.status === 'fulfilled' && Array.isArray(estsRes.value.data)) {
+          const found = estsRes.value.data.find((e: any) => e.id === id);
+          if (found) setEst(found);
+        }
+        if (srvRes.status === 'fulfilled' && Array.isArray(srvRes.value.data)) {
+          setEstServices(srvRes.value.data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [id]);
 
-  const estServices = services.filter((s) => s.establishmentId === est.id);
-  const estProfessionals = professionals.filter((p) => p.establishmentId === est.id);
-  const estProducts = products.filter((p) => p.establishmentId === est.id);
-  const estReviews = reviews.filter((r) => r.establishmentId === est.id);
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-4">
+        <div className="h-64 bg-neutral-100 rounded-3xl animate-pulse" />
+        <div className="h-32 bg-neutral-100 rounded-3xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!est) return <div className="p-8 text-center text-neutral-500 font-semibold">Estabelecimento não encontrado</div>;
 
   const tabs = [
     { id: 'servicos', label: 'Serviços', count: estServices.length },
-    { id: 'fotos', label: 'Fotos', count: est.photos.length },
-    { id: 'avaliacoes', label: 'Avaliações', count: est.reviewCount },
-    { id: 'profissionais', label: 'Profissionais', count: estProfessionals.length },
+    { id: 'avaliacoes', label: 'Avaliações', count: est.reviewCount || 0 },
   ];
 
   const weekdayNow = weekDays[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -306,16 +330,16 @@ export function EstablishmentProfilePage() {
             <p className="text-xs text-neutral-400">{est.reviewCount} avaliações</p>
           </div>
           <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-sm font-medium text-neutral-700 mb-1">{est.workingHours[weekdayNow as keyof typeof est.workingHours]?.isOpen ? '🟢 Aberto agora' : '🔴 Fechado'}</p>
-            <p className="text-xs text-neutral-400">{est.workingHours[weekdayNow as keyof typeof est.workingHours]?.open} - {est.workingHours[weekdayNow as keyof typeof est.workingHours]?.close}</p>
+            <p className="text-sm font-medium text-neutral-700 mb-1">{est.workingHours?.[weekdayNow]?.isOpen === false ? '🔴 Fechado' : '🟢 Aberto agora'}</p>
+            <p className="text-xs text-neutral-400">{est.workingHours?.[weekdayNow]?.open ? `${est.workingHours[weekdayNow].open} - ${est.workingHours[weekdayNow].close}` : '08:00 - 18:00'}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 text-sm text-neutral-500 mb-2">
           <MapPin size={14} />
-          <span>{est.address.street}, {est.address.number} · {est.address.neighborhood}, {est.address.city}</span>
+          <span>{typeof est.address === 'string' ? est.address : (est.address?.street ? `${est.address.street}, ${est.address.number || ''} · ${est.address.city || ''}` : `${est.city || 'Ourinhos'}, ${est.state || 'SP'}`)}</span>
         </div>
-        <p className="text-sm text-neutral-600 mb-4">{est.description}</p>
+        <p className="text-sm text-neutral-600 mb-4">{est.description || 'Estabelecimento parceiro dedicado aos melhores cuidados para o seu pet.'}</p>
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-neutral-100 overflow-x-auto scrollbar-hide -mx-4 px-4">
@@ -408,54 +432,68 @@ export function EstablishmentProfilePage() {
               </div>
             </div>
 
-            {estReviews.map((rev) => (
-              <div key={rev.id} className="bg-white rounded-xl border border-neutral-100 p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <img src={rev.userAvatar} alt={rev.userName} className="w-9 h-9 rounded-full object-cover" />
-                  <div>
-                    <p className="font-medium text-sm text-neutral-900">{rev.userName}</p>
-                    <div className="flex text-amber-400 text-xs">{'★'.repeat(rev.rating)}</div>
-                    <p className="text-xs text-neutral-400">{new Date(rev.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+            {est.reviews && est.reviews.length > 0 ? (
+              est.reviews.map((rev: any) => (
+                <div key={rev.id} className="bg-white rounded-xl border border-neutral-100 p-4">
+                  <div className="flex items-start gap-3 mb-3">
+                    {rev.userAvatar ? (
+                      <img src={rev.userAvatar} alt={rev.userName} className="w-9 h-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-xs">
+                        {rev.userName?.[0] || 'U'}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-sm text-neutral-900">{rev.userName}</p>
+                      <div className="flex text-amber-400 text-xs">{'★'.repeat(rev.rating || 5)}</div>
+                      {rev.date && (
+                        <p className="text-xs text-neutral-400">{new Date(rev.date).toLocaleDateString('pt-BR')}</p>
+                      )}
+                    </div>
                   </div>
+                  <p className="text-sm text-neutral-600">{rev.comment}</p>
+                  {rev.reply && (
+                    <div className="mt-3 pl-3 border-l-2 border-orange-200">
+                      <p className="text-xs font-medium text-orange-600 mb-1">Resposta do estabelecimento</p>
+                      <p className="text-xs text-neutral-500">{rev.reply}</p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-neutral-600">{rev.comment}</p>
-                {rev.reply && (
-                  <div className="mt-3 pl-3 border-l-2 border-orange-200">
-                    <p className="text-xs font-medium text-orange-600 mb-1">Resposta do estabelecimento</p>
-                    <p className="text-xs text-neutral-500">{rev.reply}</p>
-                  </div>
-                )}
+              ))
+            ) : (
+              <div className="text-center py-8 bg-white rounded-2xl border border-neutral-100 text-neutral-400 text-sm">
+                Nenhuma avaliação disponível ainda.
               </div>
-            ))}
+            )}
           </div>
         )}
 
         {activeTab === 'profissionais' && (
           <div className="space-y-3">
-            {estProfessionals.map((prof) => (
-              <div
-                key={prof.id}
-                onClick={() => navigate(`/tutor/profissionais/${prof.id}`)}
-                className="bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-4 cursor-pointer hover:border-orange-100 transition-all"
-              >
-                <img src={prof.avatar} alt={prof.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-neutral-900">{prof.name}</p>
-                  <p className="text-sm text-neutral-400">{prof.specialty.join(', ')}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star size={12} className="fill-amber-400 text-amber-400" />
-                    <span className="text-sm font-medium text-neutral-700">{prof.rating}</span>
-                    <span className="text-xs text-neutral-400">({prof.reviewCount})</span>
+            {est.employees && est.employees.length > 0 ? (
+              est.employees.map((prof: any) => (
+                <div
+                  key={prof.id}
+                  className="bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-4"
+                >
+                  {prof.avatar ? (
+                    <img src={prof.avatar} alt={prof.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-lg shrink-0">
+                      {prof.name?.[0] || 'P'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-neutral-900">{prof.name}</p>
+                    <p className="text-sm text-neutral-400">{prof.role || 'Profissional'}</p>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigate('/tutor/booking'); }}
-                  className="px-3 py-2 bg-orange-50 text-orange-600 text-xs rounded-xl font-medium hover:bg-orange-100 transition-colors shrink-0"
-                >
-                  Agendar
-                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 bg-white rounded-2xl border border-neutral-100 text-neutral-400 text-sm">
+                Nenhum profissional listado para este estabelecimento.
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

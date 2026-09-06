@@ -4,11 +4,12 @@ import { motion } from 'framer-motion';
 import { Settings, Sun, Moon, Monitor, Globe, ArrowLeft, Calendar, CheckCircle2, ChevronRight } from 'lucide-react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
+import { useThemeStore } from '@/store/themeStore';
 import { Button, Card } from '@/components/ui';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 
 export default function PreferencesPage() {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const { theme, setTheme } = useThemeStore();
   const [language, setLanguage] = useState<'pt-BR' | 'en'>('pt-BR');
   const [googlePromptEnabled, setGooglePromptEnabled] = useState(true);
   const [googleStatus, setGoogleStatus] = useState<{ isConnected: boolean; googleEmail?: string } | null>(null);
@@ -31,10 +32,8 @@ export default function PreferencesPage() {
       if (typeof response.data.googleCalendarPrompt === 'boolean') {
         setGooglePromptEnabled(response.data.googleCalendarPrompt);
       }
-      applyTheme(response.data.theme || 'system');
     } catch (error) {
-      const saved = localStorage.getItem('@PetHub:theme') as any;
-      if (saved) { setTheme(saved); applyTheme(saved); }
+      // themeStore handles local storage fallback
     }
   };
 
@@ -47,31 +46,20 @@ export default function PreferencesPage() {
     }
   };
 
-  const applyTheme = (selectedTheme: string) => {
-    const root = document.documentElement;
-    if (selectedTheme === 'dark' || (selectedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  };
-
   const savePreferences = async (newTheme: typeof theme, newLang: typeof language, newGooglePrompt = googlePromptEnabled) => {
     try {
       setLoading(true);
+      setTheme(newTheme);
       await api.put('/users/me/preferences', {
         theme: newTheme,
         language: newLang,
         googleCalendarPrompt: newGooglePrompt,
       });
-      localStorage.setItem('@PetHub:theme', newTheme);
       localStorage.setItem('@PetHub:language', newLang);
-      applyTheme(newTheme);
       toast.success('Preferências salvas!');
     } catch (error) {
-      localStorage.setItem('@PetHub:theme', newTheme);
+      setTheme(newTheme);
       localStorage.setItem('@PetHub:language', newLang);
-      applyTheme(newTheme);
       toast.success('Preferências salvas localmente!');
     } finally {
       setLoading(false);
@@ -79,8 +67,6 @@ export default function PreferencesPage() {
   };
 
   const handleThemeChange = (t: typeof theme) => {
-    setTheme(t);
-    applyTheme(t);
     savePreferences(t, language, googlePromptEnabled);
   };
 

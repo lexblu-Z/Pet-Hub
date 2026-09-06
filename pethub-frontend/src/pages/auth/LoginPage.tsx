@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Email OTP states (Resend)
-  const [authMethod, setAuthMethod] = useState<'otp' | 'password'>('otp');
+  const [authMethod, setAuthMethod] = useState<'otp' | 'password'>('password');
   const [otpStep, setOtpStep] = useState<'email' | 'code'>('email');
   const [otpCode, setOtpCode] = useState('');
   const [otpCooldown, setOtpCooldown] = useState(0);
@@ -310,9 +310,9 @@ export default function LoginPage() {
               Usaremos apenas os dados necessários para acessar sua conta.
             </p>
 
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex items-center gap-3 py-2">
               <div className="flex-1 h-px bg-neutral-200" />
-              <span className="text-xs text-neutral-400 font-medium">ou entre com seu e-mail</span>
+              <span className="text-xs text-neutral-400 font-medium">ou</span>
               <div className="flex-1 h-px bg-neutral-200" />
             </div>
           </div>
@@ -321,20 +321,8 @@ export default function LoginPage() {
           <div className="flex items-center p-1 bg-neutral-100 rounded-2xl border border-neutral-200/70 mb-6">
             <button
               type="button"
-              onClick={() => { setAuthMethod('otp'); setOtpStep('email'); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                authMethod === 'otp'
-                  ? 'bg-white text-orange-600 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              <Mail size={14} />
-              <span>Código por E-mail</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setAuthMethod('password')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 authMethod === 'password'
                   ? 'bg-white text-orange-600 shadow-xs'
                   : 'text-neutral-500 hover:text-neutral-800'
@@ -343,7 +331,111 @@ export default function LoginPage() {
               <Lock size={14} />
               <span>Senha</span>
             </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMethod('otp'); setOtpStep('email'); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                authMethod === 'otp'
+                  ? 'bg-white text-orange-600 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              <Mail size={14} />
+              <span>Código por E-mail</span>
+            </button>
           </div>
+
+          {/* FORM: PASSWORD METHOD */}
+          {authMethod === 'password' && (
+            <form onSubmit={handleLogin} noValidate className="space-y-4">
+              {noPasswordAlert && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="font-medium leading-relaxed">{noPasswordAlert}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 pl-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMethod('otp');
+                        setOtpStep('email');
+                        setNoPasswordAlert(null);
+                      }}
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                    >
+                      Acessar por código
+                    </button>
+                    <Link
+                      to={`/auth/forgot-password?email=${encodeURIComponent(email)}`}
+                      className="text-orange-600 hover:text-orange-700 font-bold underline text-[11px]"
+                    >
+                      Criar uma senha
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              <Input
+                label="E-mail ou usuário"
+                type="text"
+                autoComplete="username"
+                placeholder="Digite seu e-mail ou usuário"
+                value={email}
+                error={emailError || undefined}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(null);
+                  if (noPasswordAlert) setNoPasswordAlert(null);
+                }}
+                leftIcon={<User size={16} />}
+                required
+              />
+
+              <Input
+                label="Senha"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="digite sua senha"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (noPasswordAlert) setNoPasswordAlert(null);
+                }}
+                leftIcon={<Lock size={16} />}
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
+                    title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                }
+                required
+              />
+
+              <div className="flex justify-end">
+                <Link
+                  to={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                  className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                >
+                  Esqueci minha senha
+                </Link>
+              </div>
+
+              <Button
+                type="submit"
+                fullWidth
+                isLoading={isLoading}
+                size="lg"
+                rightIcon={<ArrowRight size={18} />}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+              >
+                Entrar
+              </Button>
+            </form>
+          )}
 
           {/* FORM: OTP METHOD */}
           {authMethod === 'otp' && (
@@ -451,88 +543,6 @@ export default function LoginPage() {
                 </form>
               )}
             </div>
-          )}
-
-          {/* FORM: PASSWORD METHOD */}
-          {authMethod === 'password' && (
-            <form onSubmit={handleLogin} noValidate className="space-y-4">
-              {noPasswordAlert && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <p className="font-medium leading-relaxed">{noPasswordAlert}</p>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1 pl-6">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMethod('otp');
-                        setOtpStep('email');
-                        setNoPasswordAlert(null);
-                      }}
-                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[11px] cursor-pointer"
-                    >
-                      Acessar por código
-                    </button>
-                    <Link
-                      to={`/auth/forgot-password?email=${encodeURIComponent(email)}`}
-                      className="text-orange-600 hover:text-orange-700 font-bold underline text-[11px]"
-                    >
-                      Criar uma senha
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              <Input
-                label="E-mail ou usuário"
-                type="text"
-                autoComplete="username"
-                placeholder="Digite seu e-mail ou usuário"
-                value={email}
-                error={emailError || undefined}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (emailError) setEmailError(null);
-                  if (noPasswordAlert) setNoPasswordAlert(null);
-                }}
-                leftIcon={<User size={16} />}
-                required
-              />
-
-              <Input
-                label="Senha"
-                type="password"
-                placeholder="digite sua senha"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (noPasswordAlert) setNoPasswordAlert(null);
-                }}
-                leftIcon={<Lock size={16} />}
-                required
-              />
-
-              <div className="flex justify-end">
-                <Link
-                  to={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                  className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
-                >
-                  Esqueci minha senha
-                </Link>
-              </div>
-
-              <Button
-                type="submit"
-                fullWidth
-                isLoading={isLoading}
-                size="lg"
-                rightIcon={<ArrowRight size={18} />}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
-              >
-                Entrar
-              </Button>
-            </form>
           )}
 
           <p className="text-center mt-8 text-sm text-neutral-500">

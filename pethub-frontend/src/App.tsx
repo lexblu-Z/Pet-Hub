@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 
 // Layouts
 import { TutorLayout } from '@/components/layout/TutorLayout';
@@ -77,10 +78,12 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode,
 
 export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const initTheme = useThemeStore((state) => state.initTheme);
 
   React.useEffect(() => {
+    initTheme();
     checkAuth();
-  }, [checkAuth]);
+  }, [checkAuth, initTheme]);
 
   return (
     <BrowserRouter>
