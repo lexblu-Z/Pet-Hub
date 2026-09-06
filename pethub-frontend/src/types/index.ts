@@ -23,7 +23,8 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  avatar?: string;
+  avatar?: string | null;
+  defaultAvatar?: string | null;
   role: UserRole;
   hasPassword?: boolean;
   createdAt: string;

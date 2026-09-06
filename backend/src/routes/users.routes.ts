@@ -17,6 +17,62 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
   // Update preferences
   fastify.put('/me/preferences', authController.updatePreferences);
 
+  // Get current user profile
+  fastify.get('/me/profile', async (request, reply) => {
+    const user = request.user as any;
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.sub },
+      include: {
+        professionalProfile: true,
+        establishmentProfile: true,
+      },
+    });
+    if (!dbUser) return reply.status(404).send({ error: 'Usuário não encontrado.' });
+    return reply.send(dbUser);
+  });
+
+  // Update profile (name, phone, avatar, and professional fields)
+  fastify.put('/me/profile', async (request, reply) => {
+    const user = request.user as any;
+    const { name, phone, avatar, specialty, bio, document } = (request.body as any) || {};
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.sub },
+      data: updateData,
+      include: {
+        professionalProfile: true,
+        establishmentProfile: true,
+      },
+    });
+
+    if (user.role === 'PROFESSIONAL' && (specialty !== undefined || bio !== undefined || document !== undefined)) {
+      const profUpdate: any = {};
+      if (specialty !== undefined) profUpdate.specialty = specialty;
+      if (bio !== undefined) profUpdate.bio = bio;
+      if (document !== undefined) profUpdate.document = document;
+
+      const updatedProf = await prisma.professionalProfile.upsert({
+        where: { userId: user.sub },
+        update: profUpdate,
+        create: {
+          userId: user.sub,
+          ...profUpdate,
+        },
+      });
+      updatedUser.professionalProfile = updatedProf;
+    }
+
+    return reply.send({
+      message: 'Perfil atualizado com sucesso.',
+      user: updatedUser,
+    });
+  });
+
   // List payment methods
   fastify.get('/me/payment-methods', async (request, reply) => {
     const user = request.user as any;

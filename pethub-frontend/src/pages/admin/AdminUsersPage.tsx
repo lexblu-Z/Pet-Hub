@@ -75,18 +75,18 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Usuários da Plataforma</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">Visualize e gerencie todos os tutores, estabelecimentos e administradores</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Usuários da Plataforma</h1>
+          <p className="text-neutral-500 dark:text-[#C4C7C5] text-sm mt-0.5">Visualize e gerencie todos os tutores, estabelecimentos e administradores</p>
         </div>
         <div className="flex gap-2 text-xs font-semibold">
-          <span className="px-3 py-1.5 bg-neutral-100 rounded-xl text-neutral-700">
+          <span className="px-3 py-1.5 bg-neutral-100 dark:bg-[#282A2C] rounded-xl text-neutral-700 dark:text-[#C4C7C5]">
             Total: {users.length} usuários
           </span>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
           <Input
             placeholder="Buscar por nome, e-mail ou telefone..."
@@ -109,8 +109,8 @@ export default function AdminUsersPage() {
               onClick={() => setRoleFilter(r.id)}
               className={`px-3.5 py-2 rounded-xl transition-all ${
                 roleFilter === r.id
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  ? 'bg-neutral-900 text-white dark:bg-orange-500 dark:text-white shadow-xs'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-[#282A2C] dark:text-[#C4C7C5] dark:hover:bg-[#313335]'
               }`}
             >
               {r.label}
@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-neutral-400">
             <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -136,7 +136,7 @@ export default function AdminUsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/50 text-neutral-400 text-[11px] font-bold uppercase tracking-wider">
+                <tr className="border-b border-neutral-100 dark:border-[#313335] bg-neutral-50/50 dark:bg-[#282A2C]/50 text-neutral-400 dark:text-[#8E918F] text-[11px] font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">Usuário</th>
                   <th className="py-3.5 px-4">Tipo de Conta</th>
                   <th className="py-3.5 px-4">Contato</th>
@@ -144,9 +144,9 @@ export default function AdminUsersPage() {
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-100 dark:divide-[#313335]">
                 {filtered.map((user) => (
-                  <tr key={user.id} className="hover:bg-neutral-50/60 transition-colors">
+                  <tr key={user.id} className="hover:bg-neutral-50/60 dark:hover:bg-[#282A2C]/50 transition-colors">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <Avatar
@@ -158,36 +158,36 @@ export default function AdminUsersPage() {
                           entityType={user.role === 'PROFESSIONAL' ? 'professional' : user.role === 'ESTABLISHMENT' ? 'establishment' : 'tutor'}
                         />
                         <div>
-                          <div className="font-bold text-neutral-900">{user.name}</div>
-                          <div className="text-xs text-neutral-400">{user.email}</div>
+                          <div className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{user.name}</div>
+                          <div className="text-xs text-neutral-400 dark:text-[#8E918F]">{user.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       {getRoleBadge(user.role)}
                     </td>
-                    <td className="py-4 px-4 text-neutral-600 text-xs">
+                    <td className="py-4 px-4 text-neutral-600 dark:text-[#C4C7C5] text-xs">
                       {user.phone || 'Sem telefone'}
                     </td>
-                    <td className="py-4 px-4 text-neutral-500 text-xs">
+                    <td className="py-4 px-4 text-neutral-500 dark:text-[#8E918F] text-xs">
                       {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setSelectedUser(user)}
-                          className="px-2.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1.5 bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-700 dark:text-[#C4C7C5] text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Eye size={13} /> Detalhes
                         </button>
                         {user.id === currentUser?.id ? (
-                          <span className="px-2.5 py-1.5 bg-neutral-100 text-neutral-400 text-xs font-semibold rounded-lg select-none">
+                          <span className="px-2.5 py-1.5 bg-neutral-100 dark:bg-[#282A2C] text-neutral-400 dark:text-[#8E918F] text-xs font-semibold rounded-lg select-none">
                             Você
                           </span>
                         ) : (
                           <button
                             onClick={() => setUserToDelete(user)}
-                            className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
                             title="Excluir conta do sistema"
                           >
                             <Trash2 size={13} /> Excluir
@@ -212,7 +212,7 @@ export default function AdminUsersPage() {
           size="sm"
         >
           <div className="space-y-4 text-sm">
-            <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-2xl">
+            <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl">
               <Avatar
                 src={selectedUser.establishmentProfile?.photos?.[0] || selectedUser.avatar}
                 name={selectedUser.name}
@@ -222,37 +222,37 @@ export default function AdminUsersPage() {
                 entityType={selectedUser.role === 'PROFESSIONAL' ? 'professional' : selectedUser.role === 'ESTABLISHMENT' ? 'establishment' : 'tutor'}
               />
               <div>
-                <p className="font-bold text-base text-neutral-900">{selectedUser.name}</p>
+                <p className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">{selectedUser.name}</p>
                 <div className="mt-1">{getRoleBadge(selectedUser.role)}</div>
               </div>
             </div>
 
-            <div className="space-y-2 border border-neutral-100 rounded-xl p-3">
-              <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500 text-xs">E-mail:</span>
-                <span className="font-medium text-neutral-900 text-xs">{selectedUser.email}</span>
+            <div className="space-y-2 border border-neutral-100 dark:border-[#313335] rounded-xl p-3">
+              <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
+                <span className="text-neutral-500 dark:text-[#8E918F] text-xs">E-mail:</span>
+                <span className="font-medium text-neutral-900 dark:text-[#E3E3E3] text-xs">{selectedUser.email}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500 text-xs">Telefone:</span>
-                <span className="font-medium text-neutral-900 text-xs">{selectedUser.phone || 'Não informado'}</span>
+              <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
+                <span className="text-neutral-500 dark:text-[#8E918F] text-xs">Telefone:</span>
+                <span className="font-medium text-neutral-900 dark:text-[#E3E3E3] text-xs">{selectedUser.phone || 'Não informado'}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500 text-xs">Criado em:</span>
-                <span className="font-medium text-neutral-900 text-xs">{new Date(selectedUser.createdAt).toLocaleString('pt-BR')}</span>
+              <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
+                <span className="text-neutral-500 dark:text-[#8E918F] text-xs">Criado em:</span>
+                <span className="font-medium text-neutral-900 dark:text-[#E3E3E3] text-xs">{new Date(selectedUser.createdAt).toLocaleString('pt-BR')}</span>
               </div>
               {selectedUser._count?.pets !== undefined && (
                 <div className="flex justify-between py-1">
-                  <span className="text-neutral-500 text-xs">Pets cadastrados:</span>
-                  <span className="font-bold text-orange-600 text-xs">{selectedUser._count.pets}</span>
+                  <span className="text-neutral-500 dark:text-[#8E918F] text-xs">Pets cadastrados:</span>
+                  <span className="font-bold text-orange-600 dark:text-orange-400 text-xs">{selectedUser._count.pets}</span>
                 </div>
               )}
             </div>
 
             {selectedUser.establishmentProfile && (
-              <div className="p-3 bg-amber-50/60 border border-amber-200/60 rounded-xl space-y-1">
-                <p className="text-xs font-bold text-amber-900">Perfil de Estabelecimento</p>
-                <p className="text-xs text-amber-800 font-medium">Nome: {selectedUser.establishmentProfile.businessName || selectedUser.name}</p>
-                <p className="text-xs text-amber-800">Status: {selectedUser.establishmentProfile.status}</p>
+              <div className="p-3 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50 rounded-xl space-y-1">
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Perfil de Estabelecimento</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">Nome: {selectedUser.establishmentProfile.businessName || selectedUser.name}</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300">Status: {selectedUser.establishmentProfile.status}</p>
               </div>
             )}
 
@@ -274,27 +274,27 @@ export default function AdminUsersPage() {
           size="sm"
         >
           <div className="space-y-4 text-sm">
-            <div className="p-3.5 bg-red-50 border border-red-200/80 rounded-2xl flex items-start gap-3">
+            <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900/50 rounded-2xl flex items-start gap-3">
               <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
-              <div className="text-xs text-red-900 space-y-1">
+              <div className="text-xs text-red-900 dark:text-red-200 space-y-1">
                 <p className="font-bold">Esta ação removerá a conta e todos os dados associados.</p>
-                <p className="text-red-700 leading-relaxed">
+                <p className="text-red-700 dark:text-red-300 leading-relaxed">
                   O usuário poderá criar uma nova conta usando o mesmo e-mail posteriormente.
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-neutral-50 rounded-xl space-y-2 border border-neutral-100 text-xs">
+            <div className="p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl space-y-2 border border-neutral-100 dark:border-[#313335] text-xs">
               <div className="flex justify-between items-center py-0.5">
-                <span className="text-neutral-400 font-medium">Nome:</span>
-                <span className="font-bold text-neutral-800">{userToDelete.name}</span>
+                <span className="text-neutral-400 dark:text-[#8E918F] font-medium">Nome:</span>
+                <span className="font-bold text-neutral-800 dark:text-[#E3E3E3]">{userToDelete.name}</span>
               </div>
               <div className="flex justify-between items-center py-0.5">
-                <span className="text-neutral-400 font-medium">E-mail:</span>
-                <span className="font-mono text-neutral-700">{userToDelete.email}</span>
+                <span className="text-neutral-400 dark:text-[#8E918F] font-medium">E-mail:</span>
+                <span className="font-mono text-neutral-700 dark:text-[#C4C7C5]">{userToDelete.email}</span>
               </div>
               <div className="flex justify-between items-center py-0.5">
-                <span className="text-neutral-400 font-medium">Perfil:</span>
+                <span className="text-neutral-400 dark:text-[#8E918F] font-medium">Perfil:</span>
                 <span>{getRoleBadge(userToDelete.role)}</span>
               </div>
             </div>

@@ -178,19 +178,19 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-neutral-200 overflow-hidden"
+        className="bg-white dark:bg-[#1E1F20] rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-neutral-200 dark:border-[#313335] overflow-hidden"
       >
         {/* Top Header */}
-        <div className="p-4 sm:p-6 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-50/50">
+        <div className="p-4 sm:p-6 border-b border-neutral-100 dark:border-[#313335] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-50/50 dark:bg-[#1E1F20]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-xs">
               <CalendarIcon size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-neutral-900 leading-tight">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3] leading-tight">
                 Agenda Completa Sincronizada
               </h2>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-500 dark:text-[#C4C7C5]">
                 Seus compromissos do PetHub e eventos do Google Calendar em harmonia
               </p>
             </div>
@@ -201,13 +201,13 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
               onClick={fetchGoogleEvents}
               disabled={isLoading}
               title="Atualizar eventos"
-              className="p-2 rounded-xl text-neutral-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-neutral-500 dark:text-[#C4C7C5] hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
             >
               <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-neutral-200/80 hover:bg-neutral-300 text-neutral-600 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full bg-neutral-200/80 dark:bg-[#282A2C] hover:bg-neutral-300 dark:hover:bg-[#313335] text-neutral-600 dark:text-[#C4C7C5] flex items-center justify-center transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -215,40 +215,40 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
         </div>
 
         {/* Toolbar: Navigation & View Toggle */}
-        <div className="px-4 sm:px-6 py-3 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-3 bg-white">
+        <div className="px-4 sm:px-6 py-3 border-b border-neutral-100 dark:border-[#313335] flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#1E1F20]">
           {/* Date Navigator */}
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrev}
-              className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors"
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-[#313335] hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
             <button
               onClick={handleToday}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold border border-neutral-200 dark:border-[#313335] hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] transition-colors"
             >
               Hoje
             </button>
             <button
               onClick={handleNext}
-              className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors"
+              className="p-1.5 rounded-lg border border-neutral-200 dark:border-[#313335] hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] transition-colors"
             >
               <ChevronRight size={16} />
             </button>
-            <span className="font-bold text-sm sm:text-base text-neutral-800 ml-2">
+            <span className="font-bold text-sm sm:text-base text-neutral-800 dark:text-[#E3E3E3] ml-2">
               {monthTitle}
             </span>
           </div>
 
           {/* View Modes */}
-          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl border border-neutral-200/80">
+          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#282A2C] p-1 rounded-xl border border-neutral-200/80 dark:border-[#313335]">
             <button
               onClick={() => { setViewMode('month'); setSelectedDayEvents(null); }}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 viewMode === 'month'
-                  ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/60'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white dark:bg-[#1E1F20] text-orange-600 dark:text-orange-400 shadow-xs border border-neutral-200/60 dark:border-[#313335]'
+                  : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-[#E3E3E3]'
               }`}
             >
               Mês
@@ -257,8 +257,8 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
               onClick={() => { setViewMode('week'); setSelectedDayEvents(null); }}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 viewMode === 'week'
-                  ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/60'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white dark:bg-[#1E1F20] text-orange-600 dark:text-orange-400 shadow-xs border border-neutral-200/60 dark:border-[#313335]'
+                  : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-[#E3E3E3]'
               }`}
             >
               Semana
@@ -267,8 +267,8 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
               onClick={() => { setViewMode('day'); setSelectedDayEvents(null); }}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 viewMode === 'day'
-                  ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/60'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white dark:bg-[#1E1F20] text-orange-600 dark:text-orange-400 shadow-xs border border-neutral-200/60 dark:border-[#313335]'
+                  : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-[#E3E3E3]'
               }`}
             >
               Dia
@@ -303,7 +303,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                   <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                     {getDaysInMonthGrid().map((day, idx) => {
                       if (!day) {
-                        return <div key={`empty-${idx}`} className="h-20 sm:h-24 rounded-2xl bg-neutral-50/50 border border-transparent" />;
+                        return <div key={`empty-${idx}`} className="h-20 sm:h-24 rounded-2xl bg-neutral-50/50 dark:bg-[#131314]/30 border border-transparent" />;
                       }
 
                       const dayEvents = getEventsForDate(day);
@@ -319,10 +319,10 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                           }}
                           className={`h-20 sm:h-24 p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
                             isSelected
-                              ? 'border-orange-500 bg-orange-50/30 ring-2 ring-orange-500/20'
+                              ? 'border-orange-500 bg-orange-50/30 dark:bg-orange-950/20 ring-2 ring-orange-500/20'
                               : isCurrentDay
-                              ? 'border-orange-300 bg-orange-50/20'
-                              : 'border-neutral-200/80 bg-white hover:border-neutral-300 hover:shadow-xs'
+                              ? 'border-orange-300 dark:border-orange-600 bg-orange-50/20 dark:bg-orange-950/20'
+                              : 'border-neutral-200/80 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-neutral-300 dark:hover:border-[#444746] hover:shadow-xs'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -330,13 +330,13 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                               className={`text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${
                                 isCurrentDay
                                   ? 'bg-orange-500 text-white'
-                                  : 'text-neutral-700'
+                                  : 'text-neutral-700 dark:text-[#E3E3E3]'
                               }`}
                             >
                               {day.getDate()}
                             </span>
                             {dayEvents.length > 0 && (
-                              <span className="text-[10px] font-bold px-1 rounded-md bg-neutral-100 text-neutral-600">
+                              <span className="text-[10px] font-bold px-1 rounded-md bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]">
                                 {dayEvents.length}
                               </span>
                             )}
@@ -349,8 +349,8 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                 key={ev.id}
                                 className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md truncate ${
                                   ev.isPetHub
-                                    ? 'bg-orange-100 text-orange-800'
-                                    : 'bg-blue-100 text-blue-800'
+                                    ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-800 dark:text-orange-300'
+                                    : 'bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300'
                                 }`}
                               >
                                 {ev.isPetHub ? '🐶 ' : '📅 '}
@@ -358,7 +358,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                               </div>
                             ))}
                             {dayEvents.length > 2 && (
-                              <p className="text-[9px] text-neutral-400 font-semibold pl-1">
+                              <p className="text-[9px] text-neutral-400 dark:text-[#8E918F] font-semibold pl-1">
                                 +{dayEvents.length - 2} mais
                               </p>
                             )}
@@ -373,22 +373,22 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 p-4 sm:p-5 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3"
+                      className="mt-6 p-4 sm:p-5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-200/80 dark:border-[#313335] space-y-3"
                     >
-                      <div className="flex items-center justify-between border-b border-neutral-200/60 pb-2">
-                        <h4 className="font-bold text-sm text-neutral-800">
+                      <div className="flex items-center justify-between border-b border-neutral-200/60 dark:border-[#313335] pb-2">
+                        <h4 className="font-bold text-sm text-neutral-800 dark:text-[#E3E3E3]">
                           Compromissos para {selectedDayDate.toLocaleDateString('pt-BR', { dateStyle: 'full' })}
                         </h4>
                         <button
                           onClick={() => { setSelectedDayDate(null); setSelectedDayEvents(null); }}
-                          className="text-xs text-neutral-400 hover:text-neutral-600"
+                          className="text-xs text-neutral-400 dark:text-[#8E918F] hover:text-neutral-600 dark:hover:text-[#E3E3E3]"
                         >
                           Fechar
                         </button>
                       </div>
 
                       {selectedDayEvents.length === 0 ? (
-                        <p className="text-xs text-neutral-500 py-2">Nenhum evento registrado nesta data.</p>
+                        <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] py-2">Nenhum evento registrado nesta data.</p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                           {selectedDayEvents.map((ev) => (
@@ -396,8 +396,8 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                               key={ev.id}
                               className={`p-3 rounded-xl border flex items-start justify-between gap-3 ${
                                 ev.isPetHub
-                                  ? 'bg-orange-50/60 border-orange-200'
-                                  : 'bg-white border-neutral-200'
+                                  ? 'bg-orange-50/60 dark:bg-[#1E1F20] border-orange-200 dark:border-orange-800/60'
+                                  : 'bg-white dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335]'
                               }`}
                             >
                               <div className="space-y-1">
@@ -409,14 +409,14 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                     {ev.isPetHub ? 'PetHub' : 'Google Calendar'}
                                   </span>
                                   {ev.start && (
-                                    <span className="text-xs font-mono font-bold text-neutral-600 ml-1">
+                                    <span className="text-xs font-mono font-bold text-neutral-600 dark:text-[#C4C7C5] ml-1">
                                       {new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-bold text-xs text-neutral-900">{ev.summary}</p>
+                                <p className="font-bold text-xs text-neutral-900 dark:text-[#E3E3E3]">{ev.summary}</p>
                                 {ev.description && (
-                                  <p className="text-[11px] text-neutral-500 line-clamp-2">{ev.description}</p>
+                                  <p className="text-[11px] text-neutral-500 dark:text-[#C4C7C5] line-clamp-2">{ev.description}</p>
                                 )}
                               </div>
                               {ev.htmlLink && (
@@ -424,7 +424,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                   href={ev.htmlLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-neutral-400 hover:text-blue-600 p-1"
+                                  className="text-neutral-400 dark:text-[#8E918F] hover:text-blue-600 dark:hover:text-blue-400 p-1"
                                   title="Ver no Google Calendar"
                                 >
                                   <ExternalLink size={14} />
@@ -451,17 +451,17 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                         key={day.toISOString()}
                         className={`p-3 rounded-2xl border flex flex-col gap-2 min-h-[320px] ${
                           isCurrentDay
-                            ? 'bg-orange-50/20 border-orange-300'
-                            : 'bg-neutral-50/40 border-neutral-200'
+                            ? 'bg-orange-50/20 dark:bg-orange-950/20 border-orange-300 dark:border-orange-600'
+                            : 'bg-neutral-50/40 dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335]'
                         }`}
                       >
-                        <div className="text-center pb-2 border-b border-neutral-200/60">
-                          <p className="text-[11px] font-bold text-neutral-400 uppercase">
+                        <div className="text-center pb-2 border-b border-neutral-200/60 dark:border-[#313335]">
+                          <p className="text-[11px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase">
                             {day.toLocaleDateString('pt-BR', { weekday: 'short' })}
                           </p>
                           <p
                             className={`text-sm font-bold w-6 h-6 mx-auto rounded-full flex items-center justify-center mt-1 ${
-                              isCurrentDay ? 'bg-orange-500 text-white' : 'text-neutral-800'
+                              isCurrentDay ? 'bg-orange-500 text-white' : 'text-neutral-800 dark:text-[#E3E3E3]'
                             }`}
                           >
                             {day.getDate()}
@@ -470,15 +470,15 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
 
                         <div className="space-y-2 flex-1 overflow-y-auto">
                           {dayEvents.length === 0 ? (
-                            <p className="text-[11px] text-neutral-400 text-center py-4">Sem eventos</p>
+                            <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] text-center py-4">Sem eventos</p>
                           ) : (
                             dayEvents.map((ev) => (
                               <div
                                 key={ev.id}
                                 className={`p-2 rounded-xl text-xs border shadow-2xs space-y-1 ${
                                   ev.isPetHub
-                                    ? 'bg-white border-orange-200 text-orange-950'
-                                    : 'bg-white border-blue-200 text-blue-950'
+                                    ? 'bg-white dark:bg-[#282A2C] border-orange-200 dark:border-orange-800/60 text-orange-950 dark:text-orange-200'
+                                    : 'bg-white dark:bg-[#282A2C] border-blue-200 dark:border-blue-800/60 text-blue-950 dark:text-blue-200'
                                 }`}
                               >
                                 <div className="flex items-center gap-1 font-bold text-[10px]">
@@ -503,24 +503,24 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
               {/* DAY VIEW */}
               {viewMode === 'day' && (
                 <div className="space-y-4 max-w-2xl mx-auto">
-                  <div className="p-4 bg-orange-50/40 border border-orange-200 rounded-2xl flex items-center justify-between">
+                  <div className="p-4 bg-orange-50/40 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/60 rounded-2xl flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-orange-600 uppercase">Visão Diária</p>
-                      <h3 className="font-bold text-base text-neutral-900">
+                      <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase">Visão Diária</p>
+                      <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">
                         {currentDate.toLocaleDateString('pt-BR', { dateStyle: 'full' })}
                       </h3>
                     </div>
-                    <span className="text-xs font-bold text-neutral-600 bg-white px-3 py-1.5 rounded-xl border border-neutral-200 shadow-2xs">
+                    <span className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5] bg-white dark:bg-[#282A2C] px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-[#313335] shadow-2xs">
                       {getEventsForDate(currentDate).length} evento(s)
                     </span>
                   </div>
 
                   <div className="space-y-3 pt-2">
                     {getEventsForDate(currentDate).length === 0 ? (
-                      <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-                        <CalendarIcon size={36} className="mx-auto text-neutral-300 mb-2" />
-                        <p className="text-xs font-bold text-neutral-600">Nenhum evento marcado para este dia</p>
-                        <p className="text-[11px] text-neutral-400 mt-1">Aproveite para descansar ou agendar um cuidado para o seu pet!</p>
+                      <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+                        <CalendarIcon size={36} className="mx-auto text-neutral-300 dark:text-[#313335] mb-2" />
+                        <p className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5]">Nenhum evento marcado para este dia</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1">Aproveite para descansar ou agendar um cuidado para o seu pet!</p>
                       </div>
                     ) : (
                       getEventsForDate(currentDate).map((ev) => (
@@ -528,8 +528,8 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                           key={ev.id}
                           className={`p-4 rounded-2xl border flex items-start justify-between gap-4 transition-all ${
                             ev.isPetHub
-                              ? 'bg-orange-50/50 border-orange-200'
-                              : 'bg-white border-neutral-200 hover:border-neutral-300'
+                              ? 'bg-orange-50/50 dark:bg-[#282A2C] border-orange-200 dark:border-orange-800/60'
+                              : 'bg-white dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] hover:border-neutral-300 dark:hover:border-[#444746]'
                           }`}
                         >
                           <div className="space-y-1.5">
@@ -543,7 +543,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                 {ev.isPetHub ? 'Agendamento PetHub' : 'Google Calendar'}
                               </span>
                               {ev.start && (
-                                <div className="flex items-center gap-1 text-xs font-mono font-bold text-neutral-600">
+                                <div className="flex items-center gap-1 text-xs font-mono font-bold text-neutral-600 dark:text-[#C4C7C5]">
                                   <Clock size={12} />
                                   <span>
                                     {new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -551,12 +551,12 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                 </div>
                               )}
                             </div>
-                            <h4 className="font-bold text-sm text-neutral-900">{ev.summary}</h4>
+                            <h4 className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3]">{ev.summary}</h4>
                             {ev.description && (
-                              <p className="text-xs text-neutral-500 leading-relaxed">{ev.description}</p>
+                              <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] leading-relaxed">{ev.description}</p>
                             )}
                             {ev.location && (
-                              <p className="text-xs text-neutral-400 flex items-center gap-1">
+                              <p className="text-xs text-neutral-400 dark:text-[#8E918F] flex items-center gap-1">
                                 <MapPin size={12} /> {ev.location}
                               </p>
                             )}
@@ -567,7 +567,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                               href={ev.htmlLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-neutral-400 hover:text-blue-600 p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+                              className="text-neutral-400 dark:text-[#8E918F] hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#313335] transition-colors"
                               title="Abrir no Google Calendar"
                             >
                               <ExternalLink size={16} />
@@ -584,17 +584,17 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
         </div>
 
         {/* Footer Legend */}
-        <div className="p-3 sm:p-4 bg-neutral-50 border-t border-neutral-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-3 sm:p-4 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-200/80 dark:border-[#313335] flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 font-semibold text-neutral-700">
+            <span className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-[#C4C7C5]">
               <span className="w-3 h-3 rounded-full bg-orange-500 inline-block" /> 🐶 Agendamentos PetHub (Principal)
             </span>
-            <span className="flex items-center gap-1.5 font-semibold text-neutral-700">
+            <span className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-[#C4C7C5]">
               <span className="w-3 h-3 rounded-full bg-blue-600 inline-block" /> 📅 Google Calendar
             </span>
           </div>
 
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
             A fonte da verdade oficial para atendimentos veterinários e de pet shop é o <strong>PetHub</strong>.
           </p>
         </div>

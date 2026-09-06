@@ -334,11 +334,11 @@ export default function SelectRolePage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4 sm:p-6 lg:p-12">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#131314] flex items-center justify-center p-4 sm:p-6 lg:p-12 transition-colors">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-white rounded-3xl border border-neutral-200/80 shadow-sm p-6 sm:p-10 space-y-8"
+        className="w-full max-w-2xl bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200/80 dark:border-[#313335] shadow-sm p-6 sm:p-10 space-y-8"
       >
         {/* Top Branding & User Pill */}
         <div className="flex items-center justify-between">
@@ -346,12 +346,12 @@ export default function SelectRolePage() {
             <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-xs">
               <PawPrint size={20} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-neutral-900">
+            <span className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
               Pet<span className="text-orange-500">Hub</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-neutral-100/80 rounded-full border border-neutral-200/60">
+          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-neutral-100/80 dark:bg-[#282A2C] rounded-full border border-neutral-200/60 dark:border-[#313335]">
             {avatar ? (
               <img src={avatar} alt={fullName || 'Avatar'} className="w-6 h-6 rounded-full object-cover" />
             ) : (
@@ -360,35 +360,35 @@ export default function SelectRolePage() {
               </div>
             )}
             <div className="text-left">
-              <p className="text-xs font-semibold text-neutral-800 leading-none">
+              <p className="text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] leading-none">
                 {fullName || (source === 'otp' ? 'Novo Usuário' : 'Usuário Google')}
               </p>
-              <p className="text-[10px] text-neutral-400 leading-none mt-0.5">{email}</p>
+              <p className="text-[10px] text-neutral-400 dark:text-[#8E918F] leading-none mt-0.5">{email}</p>
             </div>
           </div>
         </div>
 
         {/* 4-Step Stepper Bar */}
-        <div className="grid grid-cols-4 gap-2 pt-1 pb-2 border-b border-neutral-100">
+        <div className="grid grid-cols-4 gap-2 pt-1 pb-2 border-b border-neutral-100 dark:border-[#313335]">
           <div className="text-center">
             <div className="h-1.5 rounded-full bg-green-500 mb-1.5" />
-            <span className="text-[11px] font-bold text-green-700">1. Método ✓</span>
+            <span className="text-[11px] font-bold text-green-700 dark:text-green-400">1. Método ✓</span>
           </div>
           <div className="text-center">
             <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'role' ? 'bg-orange-500' : 'bg-green-500'}`} />
-            <span className={`text-[11px] font-bold ${stage === 'role' ? 'text-orange-600' : 'text-green-700'}`}>
+            <span className={`text-[11px] font-bold ${stage === 'role' ? 'text-orange-600 dark:text-orange-400' : 'text-green-700 dark:text-green-400'}`}>
               2. Perfil {stage !== 'role' ? '✓' : ''}
             </span>
           </div>
           <div className="text-center">
-            <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'profile' ? 'bg-orange-500' : stage === 'success' ? 'bg-green-500' : 'bg-neutral-200'}`} />
-            <span className={`text-[11px] font-bold ${stage === 'profile' ? 'text-orange-600' : stage === 'success' ? 'text-green-700' : 'text-neutral-400'}`}>
+            <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'profile' ? 'bg-orange-500' : stage === 'success' ? 'bg-green-500' : 'bg-neutral-200 dark:bg-[#313335]'}`} />
+            <span className={`text-[11px] font-bold ${stage === 'profile' ? 'text-orange-600 dark:text-orange-400' : stage === 'success' ? 'text-green-700 dark:text-green-400' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
               3. Dados {stage === 'success' ? '✓' : ''}
             </span>
           </div>
           <div className="text-center">
-            <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'success' ? 'bg-green-500' : 'bg-neutral-200'}`} />
-            <span className={`text-[11px] font-bold ${stage === 'success' ? 'text-green-700' : 'text-neutral-400'}`}>
+            <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'success' ? 'bg-green-500' : 'bg-neutral-200 dark:bg-[#313335]'}`} />
+            <span className={`text-[11px] font-bold ${stage === 'success' ? 'text-green-700 dark:text-green-400' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
               4. Conclusão
             </span>
           </div>
@@ -407,10 +407,10 @@ export default function SelectRolePage() {
               className="space-y-6"
             >
               <div className="space-y-1.5 text-center sm:text-left">
-                <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">
+                <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                   Como você deseja utilizar o PetHub?
                 </h1>
-                <p className="text-sm text-neutral-500">
+                <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
                   Selecione o perfil que melhor descreve sua atuação na plataforma:
                 </p>
               </div>
@@ -425,29 +425,29 @@ export default function SelectRolePage() {
                       onClick={() => setSelectedRole(card.role)}
                       className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                         isSelected
-                          ? 'border-orange-500 bg-orange-50/40 shadow-xs'
-                          : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          ? 'border-orange-500 bg-orange-50/40 dark:bg-orange-950/20 shadow-xs'
+                          : 'border-neutral-200 dark:border-[#313335] hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-[#1E1F20]'
                       }`}
                     >
                       <div className="flex items-start gap-4">
-                        <span className="text-3xl sm:text-4xl shrink-0 p-2 bg-neutral-100 rounded-2xl">
+                        <span className="text-3xl sm:text-4xl shrink-0 p-2 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl">
                           {card.emoji}
                         </span>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-neutral-900 text-base">{card.title}</h3>
-                            <span className="text-[11px] font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                            <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{card.title}</h3>
+                            <span className="text-[11px] font-medium text-neutral-500 dark:text-[#8E918F] bg-neutral-100 dark:bg-[#282A2C] px-2 py-0.5 rounded-md">
                               {card.subtitle}
                             </span>
                           </div>
-                          <p className="text-xs text-neutral-500 max-w-md leading-relaxed">
+                          <p className="text-xs text-neutral-500 dark:text-[#8E918F] max-w-md leading-relaxed">
                             {card.description}
                           </p>
                           <div className="flex flex-wrap gap-2 pt-1.5">
                             {card.features.map((f, i) => (
                               <span
                                 key={i}
-                                className="text-[10px] text-neutral-600 bg-neutral-100/80 px-2 py-0.5 rounded-md font-medium"
+                                className="text-[10px] text-neutral-600 dark:text-[#C4C7C5] bg-neutral-100/80 dark:bg-[#282A2C] px-2 py-0.5 rounded-md font-medium"
                               >
                                 ✓ {f}
                               </span>
@@ -461,7 +461,7 @@ export default function SelectRolePage() {
                           className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
                             isSelected
                               ? 'border-orange-500 bg-orange-500 text-white shadow-xs'
-                              : 'border-neutral-300 bg-white'
+                              : 'border-neutral-300 dark:border-[#313335] bg-white dark:bg-[#282A2C]'
                           }`}
                         >
                           {isSelected && <Check size={14} strokeWidth={3} />}
@@ -501,11 +501,11 @@ export default function SelectRolePage() {
                 <button
                   type="button"
                   onClick={() => setStage('role')}
-                  className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800 font-semibold cursor-pointer transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3] font-semibold cursor-pointer transition-colors"
                 >
                   <ArrowLeft size={16} /> Voltar para seleção de perfil
                 </button>
-                <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200">
+                <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-900/50">
                   {selectedRole === 'TUTOR' && '🐶 Perfil Tutor'}
                   {selectedRole === 'ESTABLISHMENT' && '🏢 Perfil Estabelecimento'}
                   {selectedRole === 'PROFESSIONAL' && '👨‍⚕️ Perfil Profissional'}
@@ -513,12 +513,12 @@ export default function SelectRolePage() {
               </div>
 
               <div className="space-y-1">
-                <h2 className="text-2xl font-bold text-neutral-900">
+                <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                   {selectedRole === 'TUTOR' && 'Dados Pessoais do Tutor'}
                   {selectedRole === 'ESTABLISHMENT' && 'Dados do Estabelecimento'}
                   {selectedRole === 'PROFESSIONAL' && 'Dados do Profissional'}
                 </h2>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
                   Preencha os dados abaixo. O telefone/WhatsApp é obrigatório para notificações e agendamentos.
                 </p>
               </div>
@@ -546,17 +546,17 @@ export default function SelectRolePage() {
                     leftIcon={<Phone size={16} />}
                     required
                   />
-                  <p className="text-[11px] text-neutral-400 mt-1 pl-1">
+                  <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1 pl-1">
                     Utilizaremos para confirmação de agendamentos e contato com a plataforma.
                   </p>
                 </div>
 
                 {/* ================= ESTABELECIMENTO ================= */}
                 {selectedRole === 'ESTABLISHMENT' && (
-                  <div className="space-y-4 pt-2 border-t border-neutral-100">
-                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-900 leading-relaxed">
+                  <div className="space-y-4 pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                    <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
                         Estabelecimentos devem ser sediados em <strong>Ourinhos - SP</strong> e passam por análise administrativa antes da publicação no catálogo.
                       </p>
                     </div>
@@ -571,16 +571,16 @@ export default function SelectRolePage() {
                     />
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Tipo de Estabelecimento *
                       </label>
                       <select
                         value={establishmentType}
                         onChange={(e) => setEstablishmentType(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
                       >
                         {establishmentTypes.map((t) => (
-                          <option key={t} value={t}>
+                          <option key={t} value={t} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">
                             {t}
                           </option>
                         ))}
@@ -610,7 +610,7 @@ export default function SelectRolePage() {
                     </div>
 
                     {cityError && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-red-700 dark:text-red-400 text-xs font-medium">
                         {cityError}
                       </div>
                     )}
@@ -654,31 +654,31 @@ export default function SelectRolePage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Cidade</label>
-                        <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-700 text-sm font-bold">
+                        <label className="block text-xs font-semibold text-neutral-500 dark:text-[#8E918F] uppercase mb-1">Cidade</label>
+                        <div className="p-3 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-700 dark:text-[#E3E3E3] text-sm font-bold">
                           {city}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Estado</label>
-                        <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-700 text-sm font-bold">
+                        <label className="block text-xs font-semibold text-neutral-500 dark:text-[#8E918F] uppercase mb-1">Estado</label>
+                        <div className="p-3 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-700 dark:text-[#E3E3E3] text-sm font-bold">
                           {state}
                         </div>
                       </div>
                     </div>
 
                     {/* Fotos do Estabelecimento */}
-                    <div className="p-4 bg-orange-50/60 border border-orange-200 rounded-2xl space-y-3">
+                    <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-2xl space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <label className="block text-sm font-bold text-neutral-900">
+                          <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
                             Fotos do Estabelecimento / Fachada *
                           </label>
-                          <p className="text-xs text-neutral-500 mt-0.5">
+                          <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
                             Obrigatório enviar pelo menos 1 foto real para aprovação
                           </p>
                         </div>
-                        <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/50 px-2 py-0.5 rounded-full">
                           {establishmentPhotos.length} foto(s)
                         </span>
                       </div>
@@ -696,15 +696,15 @@ export default function SelectRolePage() {
                         type="button"
                         onClick={() => photoInputRef.current?.click()}
                         disabled={isUploadingPhoto}
-                        className="w-full border-2 border-dashed border-orange-300 hover:border-orange-500 bg-white rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-neutral-600 transition-all cursor-pointer"
+                        className="w-full border-2 border-dashed border-orange-300 dark:border-orange-700/60 hover:border-orange-500 dark:hover:border-orange-500 bg-white dark:bg-[#282A2C] rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-neutral-600 dark:text-[#C4C7C5] transition-all cursor-pointer"
                       >
-                        <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
                           <Camera size={20} />
                         </div>
-                        <span className="text-sm font-bold text-neutral-800">
+                        <span className="text-sm font-bold text-neutral-800 dark:text-[#E3E3E3]">
                           {isUploadingPhoto ? 'Enviando foto...' : 'Adicionar foto do estabelecimento'}
                         </span>
-                        <span className="text-xs text-neutral-400">Clique para selecionar fotos (PNG, JPG)</span>
+                        <span className="text-xs text-neutral-400 dark:text-[#8E918F]">Clique para selecionar fotos (PNG, JPG)</span>
                       </button>
 
                       {establishmentPhotos.length > 0 && (
@@ -712,7 +712,7 @@ export default function SelectRolePage() {
                           {establishmentPhotos.map((url, idx) => (
                             <div
                               key={idx}
-                              className="relative group rounded-xl overflow-hidden border border-neutral-200 aspect-video bg-neutral-100"
+                              className="relative group rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] aspect-video bg-neutral-100 dark:bg-[#282A2C]"
                             >
                               <img
                                 src={getFullImageUrl(url)}
@@ -734,13 +734,13 @@ export default function SelectRolePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Descrição do Estabelecimento (Opcional)
                       </label>
                       <textarea
                         value={estabDescription}
                         onChange={(e) => setEstabDescription(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                         rows={3}
                         placeholder="Descreva seus serviços e diferenciais..."
                       />
@@ -750,10 +750,10 @@ export default function SelectRolePage() {
 
                 {/* ================= PROFISSIONAL ================= */}
                 {selectedRole === 'PROFESSIONAL' && (
-                  <div className="space-y-4 pt-2 border-t border-neutral-100">
-                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-                      <Stethoscope className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-900 leading-relaxed">
+                  <div className="space-y-4 pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                    <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl flex items-start gap-3">
+                      <Stethoscope className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
                         Profissionais passam por análise administrativa antes da liberação pública do perfil e agenda.
                       </p>
                     </div>
@@ -767,16 +767,16 @@ export default function SelectRolePage() {
                     />
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Especialidade / Atuação Principal *
                       </label>
                       <select
                         value={profSpecialty}
                         onChange={(e) => setProfSpecialty(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
                       >
                         {professionalSpecialties.map((s) => (
-                          <option key={s} value={s}>
+                          <option key={s} value={s} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">
                             {s}
                           </option>
                         ))}
@@ -784,13 +784,13 @@ export default function SelectRolePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Biografia / Sobre Você (Opcional)
                       </label>
                       <textarea
                         value={profBio}
                         onChange={(e) => setProfBio(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                         rows={3}
                         placeholder="Fale sobre sua formação, experiência e atendimento..."
                       />
@@ -826,64 +826,64 @@ export default function SelectRolePage() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-6"
             >
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-4xl shadow-xs">
+              <div className="w-20 h-20 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 rounded-full flex items-center justify-center mx-auto text-4xl shadow-xs">
                 {selectedRole === 'TUTOR' ? '🎉' : '⏳'}
               </div>
 
               {selectedRole === 'TUTOR' ? (
                 <div className="space-y-2">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                     Conta criada com sucesso!
                   </h2>
-                  <p className="text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
+                  <p className="text-sm text-neutral-500 dark:text-[#8E918F] max-w-md mx-auto leading-relaxed">
                     Bem-vindo ao <strong>PetHub</strong>! Sua conta de tutor está ativa e pronta para uso.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                     Cadastro enviado para análise!
                   </h2>
-                  <p className="text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
+                  <p className="text-sm text-neutral-500 dark:text-[#8E918F] max-w-md mx-auto leading-relaxed">
                     Seus dados foram registrados com sucesso. Nossa equipe administrativa analisará as informações cadastradas.
                   </p>
                 </div>
               )}
 
               {/* Status Box */}
-              <div className="bg-neutral-50 rounded-2xl p-5 text-left space-y-3.5 border border-neutral-200/80">
+              <div className="bg-neutral-50 dark:bg-[#282A2C] rounded-2xl p-5 text-left space-y-3.5 border border-neutral-200/80 dark:border-[#313335]">
                 <div className="flex gap-3 items-start">
-                  <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-neutral-900">Conta registrada no PetHub</p>
-                    <p className="text-xs text-neutral-500">
-                      Autenticado como: <strong>{email}</strong>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Conta registrada no PetHub</p>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+                      Autenticado como: <strong className="text-neutral-800 dark:text-[#E3E3E3]">{email}</strong>
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 items-start">
-                  <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-neutral-900">Telefone verificado</p>
-                    <p className="text-xs text-neutral-500">
-                      Contato principal: <strong>{phone}</strong>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Telefone verificado</p>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+                      Contato principal: <strong className="text-neutral-800 dark:text-[#E3E3E3]">{phone}</strong>
                     </p>
                   </div>
                 </div>
 
                 {selectedRole !== 'TUTOR' && (
                   <div className="flex gap-3 items-start">
-                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                       ⏳
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-neutral-900">Aprovação em andamento</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Aprovação em andamento</p>
+                      <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
                         Você já pode acessar o painel para gerenciar produtos, serviços e conferir suas configurações.
                       </p>
                     </div>
@@ -909,7 +909,7 @@ export default function SelectRolePage() {
                       size="lg"
                       variant="outline"
                       onClick={() => navigate('/tutor')}
-                      className="text-neutral-700"
+                      className="text-neutral-700 dark:text-[#E3E3E3] dark:border-[#313335]"
                     >
                       Ir para o Início
                     </Button>

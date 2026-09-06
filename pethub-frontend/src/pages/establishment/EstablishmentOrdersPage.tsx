@@ -95,23 +95,23 @@ export default function EstablishmentOrdersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Pedidos de Clientes</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Pedidos de Clientes</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Acompanhe e despache compras de produtos realizadas pelos tutores
           </p>
         </div>
         <div className="flex gap-2 text-xs font-semibold">
-          <span className="px-3 py-1.5 bg-neutral-100 rounded-xl text-neutral-700">
+          <span className="px-3 py-1.5 bg-neutral-100 dark:bg-[#282A2C] rounded-xl text-neutral-700 dark:text-[#C4C7C5] border border-neutral-200/50 dark:border-[#313335]">
             Total: {orders.length}
           </span>
-          <span className="px-3 py-1.5 bg-amber-50 text-amber-800 rounded-xl border border-amber-200">
+          <span className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-xl border border-amber-200 dark:border-amber-800/50">
             Pendentes: {orders.filter(o => o.status === 'PENDING').length}
           </span>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
           <Input
             placeholder="Buscar por nº do pedido, cliente ou produto..."
@@ -135,8 +135,8 @@ export default function EstablishmentOrdersPage() {
               onClick={() => setStatusFilter(f.id)}
               className={`px-3.5 py-2 rounded-xl transition-all font-medium ${
                 statusFilter === f.id
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  ? 'bg-neutral-900 dark:bg-orange-500 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]'
               }`}
             >
               {f.label}
@@ -147,15 +147,15 @@ export default function EstablishmentOrdersPage() {
 
       {/* Orders List */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando pedidos do banco...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <ClipboardList size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum pedido encontrado</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <ClipboardList size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum pedido encontrado</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto">
             Quando os tutores comprarem produtos do seu catálogo, os pedidos com dados do cliente e itens aparecerão aqui.
           </p>
         </div>
@@ -166,14 +166,14 @@ export default function EstablishmentOrdersPage() {
             const StatusIcon = statusConfig.icon;
 
             return (
-              <div key={order.id} className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-xs space-y-4">
+              <div key={order.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-5 shadow-xs space-y-4">
                 {/* Order Top Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-[#313335]">
                   <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-base text-neutral-900">
+                    <span className="font-mono font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">
                       #{order.orderNumber}
                     </span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
                       {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -189,7 +189,7 @@ export default function EstablishmentOrdersPage() {
                       value={order.status}
                       disabled={updatingId === order.id}
                       onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                      className="text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-lg px-2.5 py-1 text-neutral-700 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                      className="text-xs font-semibold bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-lg px-2.5 py-1 text-neutral-700 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                     >
                       <option value="PENDING">Pendente</option>
                       <option value="PAID">Confirmado</option>
@@ -203,41 +203,41 @@ export default function EstablishmentOrdersPage() {
                 {/* Customer & Items Details Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Customer Info */}
-                  <div className="p-3.5 bg-neutral-50/70 rounded-xl border border-neutral-100 space-y-2">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                  <div className="p-3.5 bg-neutral-50/70 dark:bg-[#282A2C] rounded-xl border border-neutral-100 dark:border-[#313335] space-y-2">
+                    <span className="text-[10px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider block">
                       Dados do Cliente
                     </span>
                     <div className="flex items-center gap-3">
                       <Avatar src={order.tutor.avatar || '/user.jpg'} name={order.tutor.name} size="sm" />
                       <div className="min-w-0">
-                        <p className="font-bold text-neutral-900 text-xs truncate">{order.tutor.name}</p>
-                        <p className="text-[11px] text-neutral-500 truncate">{order.tutor.email}</p>
-                        <p className="text-[11px] text-neutral-500">{order.tutor.phone || 'Sem telefone'}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{order.tutor.name}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] truncate">{order.tutor.email}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">{order.tutor.phone || 'Sem telefone'}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Items List */}
                   <div className="lg:col-span-2 space-y-2">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider block">
                       Produtos do Pedido ({order.items.length})
                     </span>
-                    <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-xl overflow-hidden">
+                    <div className="divide-y divide-neutral-100 dark:divide-[#313335] border border-neutral-100 dark:border-[#313335] rounded-xl overflow-hidden">
                       {order.items.map((it) => (
-                        <div key={it.id} className="p-2.5 flex items-center justify-between gap-3 text-xs bg-white">
+                        <div key={it.id} className="p-2.5 flex items-center justify-between gap-3 text-xs bg-white dark:bg-[#1E1F20]">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/50 dark:border-[#313335]">
                               {it.photo ? (
                                 <img src={it.photo} alt={it.productName} className="w-full h-full object-cover" />
                               ) : (
-                                <Package size={14} className="text-neutral-400" />
+                                <Package size={14} className="text-neutral-400 dark:text-[#8E918F]" />
                               )}
                             </div>
-                            <span className="font-medium text-neutral-800 truncate">{it.productName}</span>
+                            <span className="font-medium text-neutral-800 dark:text-[#E3E3E3] truncate">{it.productName}</span>
                           </div>
-                          <div className="flex items-center gap-4 shrink-0 text-neutral-600">
+                          <div className="flex items-center gap-4 shrink-0 text-neutral-600 dark:text-[#C4C7C5]">
                             <span>{it.quantity}x R$ {it.priceAtTime.toFixed(2).replace('.', ',')}</span>
-                            <span className="font-bold text-neutral-900 min-w-[70px] text-right">
+                            <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] min-w-[70px] text-right">
                               R$ {it.subtotal.toFixed(2).replace('.', ',')}
                             </span>
                           </div>
@@ -249,8 +249,8 @@ export default function EstablishmentOrdersPage() {
 
                 {/* Total Footer */}
                 <div className="pt-2 flex justify-end items-center gap-3">
-                  <span className="text-xs text-neutral-500">Total do Pedido:</span>
-                  <span className="text-lg font-black text-neutral-900">
+                  <span className="text-xs text-neutral-500 dark:text-[#8E918F]">Total do Pedido:</span>
+                  <span className="text-lg font-black text-neutral-900 dark:text-[#E3E3E3]">
                     R$ {order.totalAmount.toFixed(2).replace('.', ',')}
                   </span>
                 </div>

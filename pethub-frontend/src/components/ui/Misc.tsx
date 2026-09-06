@@ -47,13 +47,13 @@ export const Rating: React.FC<RatingProps> = ({
             className={
               star <= displayValue
                 ? 'fill-amber-400 text-amber-400'
-                : 'fill-neutral-200 text-neutral-200'
+                : 'fill-neutral-200 dark:fill-neutral-700 text-neutral-200 dark:text-neutral-700'
             }
           />
         </button>
       ))}
       {showValue && (
-        <span className="ml-1 text-sm font-medium text-neutral-600">{value.toFixed(1)}</span>
+        <span className="ml-1 text-sm font-medium text-neutral-600 dark:text-neutral-300">{value.toFixed(1)}</span>
       )}
     </div>
   );
@@ -94,11 +94,11 @@ export const Progress: React.FC<ProgressProps> = ({
     <div className={`w-full ${className}`}>
       {(label || showValue) && (
         <div className="flex justify-between items-center mb-1.5">
-          {label && <span className="text-sm text-neutral-600">{label}</span>}
-          {showValue && <span className="text-sm font-medium text-neutral-700">{Math.round(value)}%</span>}
+          {label && <span className="text-sm text-neutral-600 dark:text-[#C4C7C5]">{label}</span>}
+          {showValue && <span className="text-sm font-medium text-neutral-700 dark:text-[#E3E3E3]">{Math.round(value)}%</span>}
         </div>
       )}
-      <div className={`w-full bg-neutral-100 rounded-full ${progressSizes[size]}`}>
+      <div className={`w-full bg-neutral-100 dark:bg-[#282A2C] rounded-full ${progressSizes[size]}`}>
         <div
           className={`${progressColors[color]} ${progressSizes[size]} rounded-full transition-all duration-500`}
           style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
@@ -132,7 +132,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 );
 
 export const SkeletonCard: React.FC = () => (
-  <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
+  <div className="bg-white dark:bg-[#1E1F20] rounded-2xl p-4 shadow-sm border border-neutral-100 dark:border-[#313335]">
     <Skeleton height={180} rounded="rounded-xl" className="mb-4 w-full" />
     <Skeleton height={20} width="60%" className="mb-2" />
     <Skeleton height={16} width="40%" className="mb-4" />
@@ -146,7 +146,7 @@ export const SkeletonCard: React.FC = () => (
 export const SkeletonList: React.FC<{ count?: number }> = ({ count = 3 }) => (
   <div className="space-y-3">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3">
+      <div key={i} className="bg-white dark:bg-[#1E1F20] rounded-xl p-4 shadow-sm flex items-center gap-3 border border-neutral-100 dark:border-[#313335]">
         <Skeleton height={48} width={48} rounded="rounded-full" />
         <div className="flex-1">
           <Skeleton height={16} width="60%" className="mb-2" />
@@ -182,16 +182,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => (
   <div className={`flex flex-col items-center justify-center py-16 px-8 text-center ${className}`}>
     {imageUrl && (
-      <img src={imageUrl} alt={title} className="w-32 h-32 object-cover rounded-full shadow-lg border-4 border-white mb-6" />
+      <img src={imageUrl} alt={title} className="w-32 h-32 object-cover rounded-full shadow-lg border-4 border-white dark:border-[#1E1F20] mb-6" />
     )}
     {!imageUrl && emoji && <div className="text-6xl mb-4">{emoji}</div>}
-    {!imageUrl && !emoji && icon && <div className="mb-4 text-neutral-300">{icon}</div>}
-    <h3 className="text-lg font-semibold text-neutral-700 mb-2">{title}</h3>
-    {description && <p className="text-sm text-neutral-400 max-w-xs mb-6">{description}</p>}
+    {!imageUrl && !emoji && icon && <div className="mb-4 text-neutral-300 dark:text-neutral-600">{icon}</div>}
+    <h3 className="text-lg font-semibold text-neutral-700 dark:text-[#E3E3E3] mb-2">{title}</h3>
+    {description && <p className="text-sm text-neutral-400 dark:text-[#C4C7C5] max-w-xs mb-6">{description}</p>}
     {action && (
       <button
         onClick={action.onClick}
-        className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors"
+        className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors cursor-pointer"
       >
         {action.label}
       </button>
@@ -214,7 +214,7 @@ export const Stepper: React.FC<StepperProps> = ({
   if (variant === 'compact') {
     return (
       <div className="flex items-center justify-center gap-2 py-2">
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-neutral-500 dark:text-[#C4C7C5]">
           Etapa {currentStep} de {steps.length}
         </span>
         <div className="flex gap-1">
@@ -226,8 +226,8 @@ export const Stepper: React.FC<StepperProps> = ({
                 step.id === currentStep
                   ? 'w-6 bg-orange-500'
                   : step.id < currentStep
-                  ? 'w-3 bg-orange-300'
-                  : 'w-3 bg-neutral-200',
+                  ? 'w-3 bg-orange-300 dark:bg-orange-600'
+                  : 'w-3 bg-neutral-200 dark:bg-neutral-700',
               ].join(' ')}
             />
           ))}
@@ -247,8 +247,8 @@ export const Stepper: React.FC<StepperProps> = ({
                 step.id < currentStep
                   ? 'bg-orange-500 text-white'
                   : step.id === currentStep
-                  ? 'bg-orange-500 text-white ring-4 ring-orange-100'
-                  : 'bg-neutral-100 text-neutral-400',
+                  ? 'bg-orange-500 text-white ring-4 ring-orange-100 dark:ring-orange-950/40'
+                  : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-400 dark:text-[#8E918F]',
               ].join(' ')}
             >
               {step.id < currentStep ? '✓' : step.id}
@@ -256,7 +256,7 @@ export const Stepper: React.FC<StepperProps> = ({
             <span
               className={[
                 'text-xs mt-1 font-medium hidden sm:block text-center',
-                step.id <= currentStep ? 'text-neutral-700' : 'text-neutral-400',
+                step.id <= currentStep ? 'text-neutral-700 dark:text-[#E3E3E3]' : 'text-neutral-400 dark:text-[#8E918F]',
               ].join(' ')}
             >
               {step.label}
@@ -266,7 +266,7 @@ export const Stepper: React.FC<StepperProps> = ({
             <div
               className={[
                 'flex-1 h-0.5 mx-2 transition-all duration-300',
-                step.id < currentStep ? 'bg-orange-500' : 'bg-neutral-200',
+                step.id < currentStep ? 'bg-orange-500' : 'bg-neutral-200 dark:bg-neutral-700',
               ].join(' ')}
             />
           )}
@@ -294,7 +294,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-[#8E918F] pointer-events-none">
         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <circle cx="11" cy="11" r="8" />
           <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
@@ -305,12 +305,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-10 py-3 rounded-2xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 transition-all"
+        className="w-full pl-10 pr-10 py-3 rounded-2xl border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#1E1F20] text-sm text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F] focus:outline-none focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-950/40 focus:border-orange-400 dark:focus:border-orange-500 transition-all"
       />
       {value && onClear && (
         <button
           onClick={onClear}
-          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
         >
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" />
@@ -334,11 +334,11 @@ export interface StatCardProps {
 }
 
 const statColors = {
-  orange: { iconBg: 'bg-orange-100', icon: 'text-orange-500' },
-  green: { iconBg: 'bg-green-100', icon: 'text-green-500' },
-  blue: { iconBg: 'bg-blue-100', icon: 'text-blue-500' },
-  purple: { iconBg: 'bg-purple-100', icon: 'text-purple-500' },
-  red: { iconBg: 'bg-red-100', icon: 'text-red-500' },
+  orange: { iconBg: 'bg-orange-100 dark:bg-orange-950/40', icon: 'text-orange-500' },
+  green: { iconBg: 'bg-green-100 dark:bg-green-950/40', icon: 'text-green-500' },
+  blue: { iconBg: 'bg-blue-100 dark:bg-blue-950/40', icon: 'text-blue-500' },
+  purple: { iconBg: 'bg-purple-100 dark:bg-purple-950/40', icon: 'text-purple-500' },
+  red: { iconBg: 'bg-red-100 dark:bg-red-950/40', icon: 'text-red-500' },
 };
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -354,7 +354,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   const colors = statColors[color];
 
   return (
-    <div className={`bg-white rounded-2xl p-5 shadow-sm border border-neutral-100 ${className}`}>
+    <div className={`bg-white dark:bg-[#1E1F20] rounded-2xl p-5 shadow-sm border border-neutral-100 dark:border-[#313335] ${className}`}>
       <div className="flex items-start justify-between mb-4">
         <div className={`p-2.5 rounded-xl ${colors.iconBg}`}>
           <div className={colors.icon}>{icon}</div>
@@ -363,16 +363,18 @@ export const StatCard: React.FC<StatCardProps> = ({
           <span
             className={[
               'text-xs font-medium px-2 py-0.5 rounded-full',
-              trend === 'up' || change > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+              trend === 'up' || change > 0
+                ? 'bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-300'
+                : 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300',
             ].join(' ')}
           >
             {change > 0 ? '+' : ''}{change}%
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-neutral-900 mb-1">{value}</p>
-      <p className="text-sm text-neutral-500">{title}</p>
-      {changeLabel && <p className="text-xs text-neutral-400 mt-1">{changeLabel}</p>}
+      <p className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">{value}</p>
+      <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{title}</p>
+      {changeLabel && <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-1">{changeLabel}</p>}
     </div>
   );
 };
@@ -408,17 +410,17 @@ export const Tabs: React.FC<TabsProps> = ({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={[
-              'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
+              'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer',
               activeTab === tab.id
                 ? 'bg-orange-500 text-white shadow-sm'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
+                : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]',
             ].join(' ')}
           >
             {tab.icon}
             {tab.label}
             {tab.badge !== undefined && tab.badge > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                activeTab === tab.id ? 'bg-white/30 text-white' : 'bg-orange-100 text-orange-700'
+                activeTab === tab.id ? 'bg-white/30 text-white' : 'bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300'
               }`}>
                 {tab.badge}
               </span>
@@ -430,23 +432,23 @@ export const Tabs: React.FC<TabsProps> = ({
   }
 
   return (
-    <div className={`border-b border-neutral-200 ${className}`}>
+    <div className={`border-b border-neutral-200 dark:border-[#313335] ${className}`}>
       <div className="flex gap-0 overflow-x-auto scrollbar-hide -mb-px">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={[
-              'flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2',
+              'flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 cursor-pointer',
               activeTab === tab.id
-                ? 'border-orange-500 text-orange-600'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300',
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                : 'border-transparent text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-700 dark:hover:text-[#E3E3E3] hover:border-neutral-300 dark:hover:border-[#313335]',
             ].join(' ')}
           >
             {tab.icon}
             {tab.label}
             {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-bold">
+              <span className="text-xs bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-full font-bold">
                 {tab.badge}
               </span>
             )}

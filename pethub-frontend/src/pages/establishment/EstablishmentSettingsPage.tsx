@@ -72,8 +72,8 @@ export default function EstablishmentSettingsPage() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Configurações da Conta</h1>
-        <p className="text-neutral-500 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Configurações da Conta</h1>
+        <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
           Gerencie a segurança da sua conta, notificações e atalhos operacionais
         </p>
       </div>
@@ -82,27 +82,27 @@ export default function EstablishmentSettingsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link
           to="/estabelecimento/perfil"
-          className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-xs flex items-center gap-3 hover:border-orange-300 transition-colors"
+          className="p-4 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs flex items-center gap-3 hover:border-orange-300 dark:hover:border-orange-500/40 transition-colors"
         >
-          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
             <Building2 size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-neutral-900 text-sm">Dados e Horários</h3>
-            <p className="text-xs text-neutral-500">Alterar nome, endereço, fotos e horários</p>
+            <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm">Dados e Horários</h3>
+            <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Alterar nome, endereço, fotos e horários</p>
           </div>
         </Link>
 
         <Link
           to="/estabelecimento/funcionarios"
-          className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-xs flex items-center gap-3 hover:border-orange-300 transition-colors"
+          className="p-4 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs flex items-center gap-3 hover:border-orange-300 dark:hover:border-orange-500/40 transition-colors"
         >
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <Clock size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-neutral-900 text-sm">Equipe de Atendimento</h3>
-            <p className="text-xs text-neutral-500">Gerenciar funcionários e serviços atribuídos</p>
+            <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm">Equipe de Atendimento</h3>
+            <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Gerenciar funcionários e serviços atribuídos</p>
           </div>
         </Link>
       </div>
@@ -114,17 +114,17 @@ export default function EstablishmentSettingsPage() {
       />
 
       {/* Notifications */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
           <Bell size={18} className="text-orange-500" />
           <span>Notificações e Avisos</span>
         </div>
 
         <div className="space-y-3">
-          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 hover:bg-neutral-100/80 cursor-pointer transition-colors">
+          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-[#282A2C] hover:bg-neutral-100/80 dark:hover:bg-[#313335] cursor-pointer transition-colors">
             <div>
-              <p className="font-bold text-neutral-800 text-xs">Novos Agendamentos</p>
-              <p className="text-[11px] text-neutral-500">Avisar sempre que um tutor agendar um novo serviço</p>
+              <p className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-xs">Novos Agendamentos</p>
+              <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">Avisar sempre que um tutor agendar um novo serviço</p>
             </div>
             <input
               type="checkbox"
@@ -134,10 +134,10 @@ export default function EstablishmentSettingsPage() {
             />
           </label>
 
-          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 hover:bg-neutral-100/80 cursor-pointer transition-colors">
+          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-[#282A2C] hover:bg-neutral-100/80 dark:hover:bg-[#313335] cursor-pointer transition-colors">
             <div>
-              <p className="font-bold text-neutral-800 text-xs">Novos Pedidos de Produtos</p>
-              <p className="text-[11px] text-neutral-500">Avisar quando houver compra confirmada na loja</p>
+              <p className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-xs">Novos Pedidos de Produtos</p>
+              <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">Avisar quando houver compra confirmada na loja</p>
             </div>
             <input
               type="checkbox"
@@ -147,10 +147,10 @@ export default function EstablishmentSettingsPage() {
             />
           </label>
 
-          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 hover:bg-neutral-100/80 cursor-pointer transition-colors">
+          <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-[#282A2C] hover:bg-neutral-100/80 dark:hover:bg-[#313335] cursor-pointer transition-colors">
             <div>
-              <p className="font-bold text-neutral-800 text-xs">Cancelamentos</p>
-              <p className="text-[11px] text-neutral-500">Avisar imediatamente caso um agendamento seja cancelado</p>
+              <p className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-xs">Cancelamentos</p>
+              <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">Avisar imediatamente caso um agendamento seja cancelado</p>
             </div>
             <input
               type="checkbox"
@@ -169,8 +169,8 @@ export default function EstablishmentSettingsPage() {
       </div>
 
       {/* Security - Password Change */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
           <Lock size={18} className="text-orange-500" />
           <span>Segurança & Alteração de Senha</span>
         </div>
@@ -200,7 +200,7 @@ export default function EstablishmentSettingsPage() {
             required
           />
 
-          <Button type="submit" isLoading={passwordLoading} className="bg-neutral-900 hover:bg-black text-white">
+          <Button type="submit" isLoading={passwordLoading} className="bg-neutral-900 dark:bg-orange-500 hover:bg-black dark:hover:bg-orange-600 text-white">
             Atualizar Senha
           </Button>
         </form>

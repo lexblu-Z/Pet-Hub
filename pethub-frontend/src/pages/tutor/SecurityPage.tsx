@@ -94,44 +94,44 @@ export default function SecurityPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/tutor/profile')}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
         >
-          <ArrowLeft size={18} className="text-neutral-600" />
+          <ArrowLeft size={18} className="text-neutral-600 dark:text-[#E3E3E3]" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
             <Lock className="w-5 h-5 text-orange-500" />
             Segurança da Conta
           </h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
             {hasPassword ? 'Atualize sua senha de acesso' : 'Cadastre uma senha para sua conta'}
           </p>
         </div>
       </div>
 
-      <Card padding="lg" className="border border-neutral-100">
+      <Card padding="lg" className="border border-neutral-100 dark:border-[#313335]">
         {success && (
-          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl mb-6 border border-green-200">
-            <CheckCircle className="text-green-500 shrink-0" size={20} />
-            <p className="text-sm text-green-800 font-medium">
+          <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-emerald-950/30 rounded-xl mb-6 border border-green-200 dark:border-emerald-900/50">
+            <CheckCircle className="text-green-500 dark:text-emerald-400 shrink-0" size={20} />
+            <p className="text-sm text-green-800 dark:text-emerald-300 font-medium">
               {hasPassword ? 'Senha atualizada com sucesso!' : 'Senha cadastrada com sucesso!'}
             </p>
           </div>
         )}
 
         {!hasPassword && (
-          <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-2xl mb-6 border border-orange-200/80 text-xs text-orange-950">
-            <ShieldCheck className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-950/30 rounded-2xl mb-6 border border-orange-200/80 dark:border-orange-900/50 text-xs text-orange-950 dark:text-orange-200">
+            <ShieldCheck className="w-5 h-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="font-bold text-orange-900">Você ainda não tem uma senha cadastrada</p>
-              <p className="text-orange-800/90 leading-relaxed">
+              <p className="font-bold text-orange-900 dark:text-orange-300">Você ainda não tem uma senha cadastrada</p>
+              <p className="text-orange-800/90 dark:text-orange-200/80 leading-relaxed">
                 Sua conta foi criada através do Google ou Código por E-mail. Crie uma senha abaixo para poder entrar também utilizando seu e-mail e senha com total praticidade.
               </p>
             </div>
           </div>
         )}
 
-        <h2 className="text-base font-bold text-neutral-900 mb-5">
+        <h2 className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3] mb-5">
           {hasPassword ? 'Alterar senha' : 'Cadastrar senha de acesso'}
         </h2>
 

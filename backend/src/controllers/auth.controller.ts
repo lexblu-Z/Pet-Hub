@@ -11,6 +11,28 @@ const REDIRECT_URI = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || 'http://localh
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export const DEFAULT_AVATARS = [
+  '/user.jpg',
+  '/user2.jpg',
+  '/user3.jpg',
+  '/user4.jpg',
+  '/user5.jpg',
+  '/user6.jpg',
+];
+
+export function getStableAvatar(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return DEFAULT_AVATARS[Math.abs(hash) % DEFAULT_AVATARS.length];
+}
+
+export function getRandomDefaultAvatar(): string {
+  return DEFAULT_AVATARS[Math.floor(Math.random() * DEFAULT_AVATARS.length)];
+}
+
 export function validateAndNormalizePhone(phone?: string | null): { isValid: boolean; normalized?: string; error?: string } {
   if (!phone || !phone.trim()) {
     return { isValid: false, error: 'Informe seu telefone/WhatsApp.' };
@@ -231,6 +253,7 @@ export const authController = {
             hasPassword: true,
             phone: normalizedPhone,
             role: data.role,
+            defaultAvatar: getRandomDefaultAvatar(),
           },
         });
 
@@ -423,6 +446,7 @@ export const authController = {
         phone: user.phone,
         role: user.role,
         avatar: user.avatar,
+        defaultAvatar: user.defaultAvatar || getStableAvatar(user.id),
         hasPassword: user.hasPassword,
         createdAt: user.createdAt,
       };
@@ -471,6 +495,7 @@ export const authController = {
           phone: true,
           role: true,
           avatar: true,
+          defaultAvatar: true,
           hasPassword: true,
           createdAt: true,
           preferences: true,
@@ -514,6 +539,10 @@ export const authController = {
           });
           user = { ...user, professionalProfile: reactivated };
         }
+      }
+
+      if (!user.defaultAvatar) {
+        user = { ...user, defaultAvatar: getStableAvatar(user.id) };
       }
 
       return reply.send(user);
@@ -695,6 +724,7 @@ export const authController = {
               password: randomPassword,
               hasPassword: false,
               avatar: googleAvatar || null,
+              defaultAvatar: getRandomDefaultAvatar(),
               phone: normalizedPhone,
               role,
               establishmentProfile:
@@ -1048,6 +1078,7 @@ export const authController = {
               hasPassword,
               phone: normalizedPhone,
               role,
+              defaultAvatar: getRandomDefaultAvatar(),
               establishmentProfile:
                 role === Role.ESTABLISHMENT
                   ? {

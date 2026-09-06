@@ -181,8 +181,8 @@ export default function EstablishmentProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Catálogo de Produtos</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Catálogo de Produtos</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Gerencie o estoque, preços e fotos dos produtos comercializados na plataforma
           </p>
         </div>
@@ -193,21 +193,21 @@ export default function EstablishmentProductsPage() {
 
       {/* Low Stock Warning Banner */}
       {lowStockCount > 0 && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-amber-900 shadow-xs">
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl flex items-center justify-between gap-3 text-amber-900 dark:text-amber-300 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <AlertCircle size={20} className="text-amber-600 shrink-0" />
+            <AlertCircle size={20} className="text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-xs font-semibold">
               Atenção: <strong>{lowStockCount} produto(s)</strong> estão com estoque baixo (3 unidades ou menos).
             </p>
           </div>
-          <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2.5 py-1 rounded-lg">
+          <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-900/50 px-2.5 py-1 rounded-lg">
             Repor Estoque
           </span>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="bg-white p-3.5 rounded-2xl border border-neutral-100 shadow-xs max-w-md">
+      <div className="bg-white dark:bg-[#1E1F20] p-3.5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs max-w-md">
         <Input
           placeholder="Buscar produto por nome ou categoria..."
           value={search}
@@ -218,15 +218,15 @@ export default function EstablishmentProductsPage() {
 
       {/* Products Grid */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando produtos do banco...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <Package size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum produto cadastrado</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto mb-4">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <Package size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum produto cadastrado</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto mb-4">
             Cadastre rações, petiscos e acessórios para que os tutores possam comprar diretamente pela loja online.
           </p>
           <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
@@ -240,13 +240,13 @@ export default function EstablishmentProductsPage() {
             const isOutOfStock = p.stock === 0;
 
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
+              <div key={p.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
                 {/* Product Photo */}
-                <div className="h-40 bg-neutral-100 relative overflow-hidden flex items-center justify-center">
+                <div className="h-40 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden flex items-center justify-center">
                   {p.photo ? (
                     <img src={getFullImageUrl(p.photo)} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
-                    <Package size={40} className="text-neutral-300" />
+                    <Package size={40} className="text-neutral-300 dark:text-neutral-600" />
                   )}
 
                   {/* Stock Badge */}
@@ -270,30 +270,30 @@ export default function EstablishmentProductsPage() {
                 {/* Info */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-[#8E918F]">
                       {p.category || 'Geral'}
                     </span>
-                    <h3 className="font-bold text-neutral-900 text-sm line-clamp-1">{p.name}</h3>
-                    <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">
+                    <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm line-clamp-1">{p.name}</h3>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F] line-clamp-2 leading-relaxed">
                       {p.description || 'Sem descrição.'}
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-neutral-50 flex items-center justify-between">
-                    <span className="font-extrabold text-neutral-900 text-base">
+                  <div className="pt-2 border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between">
+                    <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">
                       R$ {p.price.toFixed(2).replace('.', ',')}
                     </span>
                     <div className="flex gap-1">
                       <button
                         onClick={() => openEditModal(p)}
-                        className="p-1.5 hover:bg-neutral-100 text-neutral-600 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] rounded-lg transition-colors cursor-pointer"
                         title="Editar"
                       >
                         <Edit2 size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg transition-colors cursor-pointer"
                         title="Excluir"
                       >
                         <Trash2 size={15} />
@@ -344,32 +344,32 @@ export default function EstablishmentProductsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Categoria</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Categoria</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white"
+                className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3]"
               >
                 {productCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">{cat}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Descrição</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Descrição</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Detalhes sobre o produto, indicações, peso, validade..."
-                className="w-full border border-neutral-200 rounded-xl p-2.5 text-xs text-neutral-800 resize-none"
+                className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl p-2.5 text-xs text-neutral-800 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] resize-none"
               />
             </div>
 
             {/* Real Product Image Upload */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-neutral-700 uppercase">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase">
                 Foto do Produto
               </label>
               <input
@@ -381,20 +381,20 @@ export default function EstablishmentProductsPage() {
               />
               
               {photo ? (
-                <div className="relative rounded-xl overflow-hidden border border-neutral-200 h-36 bg-neutral-50 group">
+                <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] h-36 bg-neutral-50 dark:bg-[#282A2C] group">
                   <img src={getFullImageUrl(photo)} alt="Preview do produto" className="w-full h-full object-contain" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => productFileRef.current?.click()}
-                      className="px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold shadow hover:bg-neutral-100"
+                      className="px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold shadow hover:bg-neutral-100 cursor-pointer"
                     >
                       Alterar foto
                     </button>
                     <button
                       type="button"
                       onClick={() => setPhoto('')}
-                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow hover:bg-red-700"
+                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow hover:bg-red-700 cursor-pointer"
                     >
                       Remover
                     </button>
@@ -405,15 +405,15 @@ export default function EstablishmentProductsPage() {
                   type="button"
                   onClick={() => productFileRef.current?.click()}
                   disabled={isUploadingPhoto}
-                  className="w-full border-2 border-dashed border-neutral-300 hover:border-orange-500 bg-neutral-50 hover:bg-orange-50/40 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 text-neutral-600 transition-all cursor-pointer"
+                  className="w-full border-2 border-dashed border-neutral-300 dark:border-[#313335] hover:border-orange-500 dark:hover:border-orange-500 bg-neutral-50 dark:bg-[#282A2C] hover:bg-orange-50/40 dark:hover:bg-orange-950/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5] transition-all cursor-pointer"
                 >
-                  <div className="w-9 h-9 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                  <div className="w-9 h-9 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
                     <Upload size={18} className={isUploadingPhoto ? "animate-bounce" : ""} />
                   </div>
-                  <span className="text-xs font-bold text-neutral-800">
+                  <span className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3]">
                     {isUploadingPhoto ? 'Enviando imagem...' : 'Adicionar foto do produto'}
                   </span>
-                  <span className="text-[11px] text-neutral-400">
+                  <span className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
                     Selecione do computador ou celular (PNG, JPG)
                   </span>
                 </button>

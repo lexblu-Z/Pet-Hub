@@ -195,7 +195,7 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-3xl p-6 border border-neutral-200/80 shadow-xs flex items-center justify-center text-neutral-400 gap-3">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-3xl p-6 border border-neutral-200/80 dark:border-[#313335] shadow-xs flex items-center justify-center text-neutral-400 dark:text-[#8E918F] gap-3">
         <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
         <span className="text-xs">Verificando status do Google Calendar...</span>
       </div>
@@ -203,26 +203,26 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-neutral-200/80 shadow-xs overflow-hidden font-sans">
+    <div className="bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200/80 dark:border-[#313335] shadow-xs overflow-hidden font-sans">
       {/* Top Header */}
-      <div className="p-6 sm:p-7 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 sm:p-7 border-b border-neutral-100 dark:border-[#313335] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Official Google Calendar icon style */}
-          <div className="w-12 h-12 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center shrink-0 shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] flex items-center justify-center shrink-0 shadow-2xs">
             <Calendar size={24} className="text-orange-500" />
           </div>
           <div>
             <div className="flex items-center gap-2.5">
-              <h3 className="font-bold text-neutral-900 text-base">Google Calendar</h3>
+              <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Google Calendar</h3>
               {status?.isConnected ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/60">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Conectado
                 </span>
               ) : (
                 <Badge variant="default">Desconectado</Badge>
               )}
             </div>
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] mt-1">
               Sincronize {roleTitle} automaticamente com sua agenda do Google.
             </p>
           </div>
@@ -253,7 +253,7 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
               size="xs"
               variant="ghost"
               onClick={() => setShowDisconnectModal(true)}
-              className="text-neutral-400 hover:text-red-600 hover:bg-red-50 text-xs"
+              className="text-neutral-400 dark:text-[#8E918F] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs"
             >
               <LogOut size={14} className="mr-1" /> Desconectar
             </Button>
@@ -263,21 +263,21 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
 
       {/* Connected State Content */}
       {status?.isConnected ? (
-        <div className="p-6 sm:p-7 space-y-6 bg-neutral-50/50">
+        <div className="p-6 sm:p-7 space-y-6 bg-neutral-50/50 dark:bg-[#1E1F20]">
           {/* Account Details & Calendar Selector */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Account Info */}
-            <div className="bg-white p-4 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-2">
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+            <div className="bg-white dark:bg-[#282A2C] p-4 rounded-2xl border border-neutral-200/80 dark:border-[#313335] shadow-2xs space-y-2">
+              <span className="text-[11px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider block">
                 Conta Google Conectada
               </span>
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-xs flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 font-bold text-xs flex items-center justify-center shrink-0">
                   {status.googleEmail?.slice(0, 1).toUpperCase() || 'G'}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-bold text-neutral-900 text-sm truncate">{status.googleEmail}</p>
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm truncate">{status.googleEmail}</p>
+                  <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
                     Última sincronização:{' '}
                     {status.lastSyncAt
                       ? new Date(status.lastSyncAt).toLocaleString('pt-BR', {
@@ -293,15 +293,15 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
             </div>
 
             {/* Target Calendar Selector */}
-            <div className="bg-white p-4 rounded-2xl border border-neutral-200/80 shadow-2xs space-y-2">
+            <div className="bg-white dark:bg-[#282A2C] p-4 rounded-2xl border border-neutral-200/80 dark:border-[#313335] shadow-2xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+                <span className="text-[11px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider block">
                   Agenda de Destino
                 </span>
                 <button
                   onClick={handleCreatePetHubCalendar}
                   disabled={creatingCal}
-                  className="text-xs text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1 transition-colors"
+                  className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold flex items-center gap-1 transition-colors"
                   title="Criar uma agenda exclusiva no Google"
                 >
                   <PlusCircle size={13} />
@@ -313,7 +313,7 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
                 <select
                   value={status.calendarId || 'primary'}
                   onChange={(e) => handleSelectCalendar(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full bg-neutral-50 dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 >
                   <option value="primary">Agenda Principal ({status.googleEmail})</option>
                   {calendars
@@ -329,39 +329,39 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
           </div>
 
           {/* Sync History / Logs Toggle */}
-          <div className="border border-neutral-200/80 rounded-2xl bg-white overflow-hidden shadow-2xs">
+          <div className="border border-neutral-200/80 dark:border-[#313335] rounded-2xl bg-white dark:bg-[#282A2C] overflow-hidden shadow-2xs">
             <button
               onClick={() => setShowLogs(!showLogs)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-50/80 transition-colors"
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-neutral-50/80 dark:hover:bg-[#313335] transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-neutral-400" />
-                <span className="text-xs font-bold text-neutral-800">
+                <Clock size={16} className="text-neutral-400 dark:text-[#8E918F]" />
+                <span className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3]">
                   Histórico de Sincronizações Recentes ({logs.length})
                 </span>
               </div>
-              {showLogs ? <ChevronUp size={16} className="text-neutral-400" /> : <ChevronDown size={16} className="text-neutral-400" />}
+              {showLogs ? <ChevronUp size={16} className="text-neutral-400 dark:text-[#8E918F]" /> : <ChevronDown size={16} className="text-neutral-400 dark:text-[#8E918F]" />}
             </button>
 
             {showLogs && (
-              <div className="p-4 border-t border-neutral-100 max-h-60 overflow-y-auto divide-y divide-neutral-100 text-xs">
+              <div className="p-4 border-t border-neutral-100 dark:border-[#313335] max-h-60 overflow-y-auto divide-y divide-neutral-100 dark:divide-[#313335] text-xs">
                 {logs.length === 0 ? (
-                  <p className="text-neutral-400 text-center py-4">Nenhum registro de sincronização ainda.</p>
+                  <p className="text-neutral-400 dark:text-[#8E918F] text-center py-4">Nenhum registro de sincronização ainda.</p>
                 ) : (
                   logs.map((log) => (
                     <div key={log.id} className="py-2.5 flex items-start justify-between gap-3">
                       <div className="flex items-start gap-2.5">
                         {log.status === 'SUCCESS' ? (
-                          <CheckCircle2 size={16} className="text-green-600 mt-0.5 shrink-0" />
+                          <CheckCircle2 size={16} className="text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                         ) : (
                           <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
                         )}
                         <div>
-                          <p className="font-bold text-neutral-900">{log.title}</p>
-                          {log.details && <p className="text-neutral-500 text-[11px] mt-0.5">{log.details}</p>}
+                          <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{log.title}</p>
+                          {log.details && <p className="text-neutral-500 dark:text-[#C4C7C5] text-[11px] mt-0.5">{log.details}</p>}
                         </div>
                       </div>
-                      <span className="text-[10px] text-neutral-400 whitespace-nowrap">
+                      <span className="text-[10px] text-neutral-400 dark:text-[#8E918F] whitespace-nowrap">
                         {new Date(log.createdAt).toLocaleDateString('pt-BR', {
                           day: '2-digit',
                           month: '2-digit',
@@ -378,19 +378,19 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
         </div>
       ) : (
         /* Disconnected State Benefits List */
-        <div className="p-6 sm:p-7 bg-neutral-50/50 space-y-3">
-          <p className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Como funciona:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-neutral-600">
-            <div className="p-3 bg-white rounded-xl border border-neutral-200/60 shadow-2xs">
-              <span className="font-bold text-neutral-900 block mb-1">🐾 100% Automático</span>
+        <div className="p-6 sm:p-7 bg-neutral-50/50 dark:bg-[#1E1F20] space-y-3">
+          <p className="text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase tracking-wider">Como funciona:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-neutral-600 dark:text-[#C4C7C5]">
+            <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">🐾 100% Automático</span>
               Agendamentos confirmados ou alterados no PetHub refletem no seu calendário.
             </div>
-            <div className="p-3 bg-white rounded-xl border border-neutral-200/60 shadow-2xs">
-              <span className="font-bold text-neutral-900 block mb-1">🔒 Seguro & Privado</span>
+            <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">🔒 Seguro & Privado</span>
               Seus dados pessoais permanecem protegidos com autenticação oficial Google OAuth 2.0.
             </div>
-            <div className="p-3 bg-white rounded-xl border border-neutral-200/60 shadow-2xs">
-              <span className="font-bold text-neutral-900 block mb-1">📅 Total Flexibilidade</span>
+            <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">📅 Total Flexibilidade</span>
               Use sua agenda principal ou crie uma agenda exclusiva "🐾 PetHub" com 1 clique.
             </div>
           </div>
@@ -406,10 +406,10 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
           size="sm"
         >
           <div className="space-y-4 text-sm font-sans">
-            <p className="text-neutral-600 text-xs sm:text-sm leading-relaxed">
+            <p className="text-neutral-600 dark:text-[#C4C7C5] text-xs sm:text-sm leading-relaxed">
               Tem certeza que deseja desconectar sua conta Google?
             </p>
-            <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs space-y-1">
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs space-y-1">
               <p className="font-bold">Atenção:</p>
               <p>• Os próximos agendamentos deixarão de ser sincronizados automaticamente.</p>
               <p>• Os eventos já criados no seu Google Calendar serão mantidos para seu histórico.</p>

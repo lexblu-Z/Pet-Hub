@@ -46,11 +46,11 @@ export default function FavoritesPage() {
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
             <Heart size={24} className="text-red-500 fill-red-500" />
             Meus Favoritos
           </h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Estabelecimentos e pet shops que você salvou
           </p>
         </div>
@@ -67,18 +67,18 @@ export default function FavoritesPage() {
       {loading ? (
         <div className="grid sm:grid-cols-2 gap-4">
           {[1, 2].map(i => (
-            <div key={i} className="h-44 bg-neutral-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-44 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : favorites.length === 0 ? (
-        <Card padding="lg" className="text-center py-16 border border-neutral-100 shadow-sm">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+        <Card padding="lg" className="text-center py-16 border border-neutral-100 dark:border-[#313335] shadow-sm">
+          <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
             ❤️
           </div>
-          <h2 className="text-lg font-bold text-neutral-800 mb-1">
+          <h2 className="text-lg font-bold text-neutral-800 dark:text-[#E3E3E3] mb-1">
             Você ainda não favoritou nenhum estabelecimento
           </h2>
-          <p className="text-neutral-500 text-sm max-w-md mx-auto mb-6">
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm max-w-md mx-auto mb-6">
             Explore estabelecimentos, pet shops e veterinários e toque no coração para salvar seus favoritos aqui.
           </p>
           <Button
@@ -96,7 +96,7 @@ export default function FavoritesPage() {
               key={est.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
+              className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
               onClick={() => navigate(`/tutor/estabelecimentos/${est.id}`)}
             >
               <div className="relative h-28 bg-neutral-900 overflow-hidden">
@@ -118,14 +118,14 @@ export default function FavoritesPage() {
                 )}
                 <button
                   onClick={(e) => handleRemoveFavorite(est.id, e)}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-white shadow transition-transform hover:scale-110"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-[#1E1F20]/90 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-white dark:hover:bg-[#282A2C] shadow transition-transform hover:scale-110 cursor-pointer"
                   title="Remover dos favoritos"
                 >
                   <Heart size={16} className="fill-red-500" />
                 </button>
               </div>
               <div className="p-4 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl overflow-hidden border border-neutral-100 shrink-0 bg-neutral-900 relative">
+                <div className="w-12 h-12 rounded-xl overflow-hidden border border-neutral-100 dark:border-[#313335] shrink-0 bg-neutral-900 relative">
                   {est.logo ? (
                     <img
                       src={est.logo}
@@ -144,8 +144,8 @@ export default function FavoritesPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-sm text-neutral-900 truncate">{est.name}</h3>
-                  <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5 truncate">
+                  <h3 className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] truncate">{est.name}</h3>
+                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] flex items-center gap-1 mt-0.5 truncate">
                     <MapPin size={12} className="shrink-0" />
                     {est.address || 'Endereço disponível no perfil'}
                   </p>

@@ -20,11 +20,11 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow-md border border-orange-500 hover:border-orange-600',
   secondary:
-    'bg-neutral-900 hover:bg-neutral-800 text-white shadow-sm border border-neutral-900',
+    'bg-neutral-900 hover:bg-neutral-800 text-white shadow-sm border border-neutral-900 dark:bg-[#282A2C] dark:hover:bg-[#313335] dark:border-[#313335] dark:text-[#E3E3E3]',
   outline:
-    'border-2 border-orange-500 text-orange-600 hover:bg-orange-50 bg-transparent',
+    'border-2 border-orange-500 text-orange-600 hover:bg-orange-50 bg-transparent dark:hover:bg-orange-950/20 dark:text-orange-400',
   ghost:
-    'bg-transparent hover:bg-neutral-100 text-neutral-700 border border-transparent',
+    'bg-transparent hover:bg-neutral-100 text-neutral-700 border border-transparent dark:hover:bg-[#282A2C] dark:text-[#C4C7C5] dark:hover:text-[#E3E3E3]',
   danger:
     'bg-red-500 hover:bg-red-600 text-white shadow-sm border border-red-500',
   success:

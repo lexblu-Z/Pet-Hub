@@ -56,6 +56,7 @@ import ProfessionalSchedulePage from '@/pages/professional/ProfessionalScheduleP
 import ProfessionalWorkOrdersPage from '@/pages/professional/ProfessionalWorkOrdersPage';
 import ProfessionalReviewsPage from '@/pages/professional/ProfessionalReviewsPage';
 import ProfessionalProfilePage from '@/pages/professional/ProfessionalProfilePage';
+import ProfessionalServicesPage from '@/pages/professional/ProfessionalServicesPage';
 
 // Admin Pages
 import AdminDashboard from '@/pages/admin/AdminDashboard';
@@ -162,6 +163,7 @@ export default function App() {
           <Route path="agenda" element={<ProfessionalSchedulePage />} />
           <Route path="ordens" element={<ProfessionalWorkOrdersPage />} />
           <Route path="avaliacoes" element={<ProfessionalReviewsPage />} />
+          <Route path="prestar-servicos" element={<ProfessionalServicesPage />} />
           <Route path="perfil" element={<ProfessionalProfilePage />} />
           <Route path="*" element={<Navigate to="/profissional" replace />} />
         </Route>

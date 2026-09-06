@@ -341,22 +341,22 @@ export default function RegisterPage() {
 
   if (regMethod === 'choose') {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-neutral-200/80 shadow-sm p-8 sm:p-10 space-y-6">
+      <div className="min-h-screen bg-neutral-50 dark:bg-[#131314] flex items-center justify-center px-4 py-12 transition-colors">
+        <div className="w-full max-w-md bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200/80 dark:border-[#313335] shadow-sm p-8 sm:p-10 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-center gap-2.5">
             <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-xs">
               <PawPrint size={20} className="text-white" />
             </div>
-            <span className="text-2xl font-bold text-neutral-900">
+            <span className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
               Pet<span className="text-orange-500">Hub</span>
             </span>
           </div>
 
           {/* Title */}
           <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-bold text-neutral-900">Crie sua conta no PetHub</h1>
-            <p className="text-sm text-neutral-500">
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Crie sua conta no PetHub</h1>
+            <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
               Escolha como prefere começar sua experiência:
             </p>
           </div>
@@ -367,7 +367,7 @@ export default function RegisterPage() {
               type="button"
               onClick={handleGoogleRegister}
               disabled={isGoogleLoading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 border border-neutral-300 hover:border-neutral-400 rounded-2xl text-sm font-semibold text-neutral-700 transition-all shadow-xs cursor-pointer disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-white hover:bg-neutral-50 active:bg-neutral-100 dark:bg-[#282A2C] dark:hover:bg-[#313335] border border-neutral-300 hover:border-neutral-400 dark:border-[#313335] rounded-2xl text-sm font-semibold text-neutral-700 dark:text-[#E3E3E3] transition-all shadow-xs cursor-pointer disabled:opacity-60"
             >
               {isGoogleLoading ? (
                 <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin shrink-0" />
@@ -394,15 +394,15 @@ export default function RegisterPage() {
               <span>{isGoogleLoading ? 'Conectando ao Google...' : 'Continuar com Google'}</span>
             </button>
 
-            <p className="text-[11px] text-neutral-400 text-center">
+            <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] text-center">
               Você poderá conectar o Google Calendar separadamente depois.
             </p>
 
             <div className="relative flex items-center justify-center my-3">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-200" />
+                <div className="w-full border-t border-neutral-200 dark:border-[#313335]" />
               </div>
-              <span className="relative bg-white px-3 text-xs text-neutral-400 font-medium">
+              <span className="relative bg-white dark:bg-[#1E1F20] px-3 text-xs text-neutral-400 dark:text-[#8E918F] font-medium">
                 ou
               </span>
             </div>
@@ -414,15 +414,15 @@ export default function RegisterPage() {
               variant="outline"
               leftIcon={<Mail size={18} />}
               onClick={() => setRegMethod('email')}
-              className="font-bold border-2 border-neutral-300 hover:border-orange-500 text-neutral-800 hover:text-orange-600 rounded-2xl py-3.5"
+              className="font-bold border-2 border-neutral-300 dark:border-[#313335] hover:border-orange-500 text-neutral-800 dark:text-[#E3E3E3] hover:text-orange-600 dark:hover:text-orange-500 rounded-2xl py-3.5"
             >
               Continuar com e-mail
             </Button>
           </div>
 
-          <div className="pt-4 border-t border-neutral-100 text-center text-sm text-neutral-500">
+          <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] text-center text-sm text-neutral-500 dark:text-[#8E918F]">
             Já possui uma conta?{' '}
-            <Link to="/auth/login" className="font-bold text-orange-600 hover:text-orange-700 hover:underline">
+            <Link to="/auth/login" className="font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:underline">
               Entrar
             </Link>
           </div>
@@ -432,7 +432,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#131314] flex items-center justify-center px-4 py-12 transition-colors">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -440,7 +440,7 @@ export default function RegisterPage() {
             <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
               <PawPrint size={18} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-neutral-900">
+            <span className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
               Pet<span className="text-orange-500">Hub</span>
             </span>
           </div>
@@ -449,7 +449,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setRegMethod('choose')}
-              className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 font-medium cursor-pointer"
+              className="text-xs text-neutral-500 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-[#E3E3E3] flex items-center gap-1 font-medium cursor-pointer"
             >
               <ArrowLeft size={14} /> Outras opções
             </button>
@@ -459,7 +459,7 @@ export default function RegisterPage() {
         {/* Progress Bar */}
         <div className="mb-8">
           <Progress value={progressValue} size="sm" color="orange" />
-          <p className="text-xs text-neutral-400 mt-2 text-right">
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-2 text-right">
             Etapa {step} de {totalSteps}
           </p>
         </div>
@@ -474,8 +474,8 @@ export default function RegisterPage() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Como você quer usar o PetHub?</h2>
-              <p className="text-neutral-500 mb-6">Selecione o perfil que melhor descreve você</p>
+              <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Como você quer usar o PetHub?</h2>
+              <p className="text-neutral-500 dark:text-[#8E918F] mb-6">Selecione o perfil que melhor descreve você</p>
 
               <div className="space-y-3 mb-8">
                 {roleOptions.map((opt) => (
@@ -484,14 +484,14 @@ export default function RegisterPage() {
                     onClick={() => setSelectedRole(opt.role)}
                     className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
                       selectedRole === opt.role
-                        ? 'border-orange-500 bg-orange-50/50 shadow-sm'
-                        : 'border-neutral-200 bg-white hover:border-neutral-300'
+                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm'
+                        : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-neutral-300 dark:hover:border-neutral-600'
                     }`}
                   >
                     <span className="text-3xl">{opt.emoji}</span>
                     <div className="flex-1">
-                      <p className="font-bold text-neutral-900">{opt.title}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">{opt.desc}</p>
+                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{opt.title}</p>
+                      <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">{opt.desc}</p>
                     </div>
                     {selectedRole === opt.role && (
                       <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
@@ -520,17 +520,17 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-600 mb-6 transition-colors"
+                className="flex items-center gap-1 text-sm text-neutral-400 dark:text-[#8E918F] hover:text-neutral-600 dark:hover:text-[#E3E3E3] mb-6 transition-colors"
               >
                 <ArrowLeft size={16} /> Voltar
               </button>
-              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Dados da Conta</h2>
-              <p className="text-neutral-500 mb-6">Preencha suas informações para criar a conta</p>
+              <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Dados da Conta</h2>
+              <p className="text-neutral-500 dark:text-[#8E918F] mb-6">Preencha suas informações para criar a conta</p>
 
               {selectedRole !== 'tutor' && (
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl mb-6 flex items-start gap-3">
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl mb-6 flex items-start gap-3">
                   <span className="text-xl">⏳</span>
-                  <p className="text-xs text-amber-900 leading-relaxed">
+                  <p className="text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
                     Após o cadastro, a sua conta passará por uma análise administrativa antes de ter suas funcionalidades liberadas publicamente.
                   </p>
                 </div>
@@ -586,26 +586,26 @@ export default function RegisterPage() {
                     />
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Especialidade / Atuação Principal *
                       </label>
                       <select
                         value={profSpecialty}
                         onChange={(e) => setProfSpecialty(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
                       >
-                        {professionalSpecialties.map(s => <option key={s} value={s}>{s}</option>)}
+                        {professionalSpecialties.map(s => <option key={s} value={s} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">{s}</option>)}
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                      <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                         Biografia / Sobre Você (Opcional)
                       </label>
                       <textarea
                         value={profBio}
                         onChange={(e) => setProfBio(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm"
+                        className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                         rows={3}
                         placeholder="Fale um pouco sobre sua formação, experiência com animais e especialidades..."
                       />
@@ -623,9 +623,9 @@ export default function RegisterPage() {
                   required
                 />
                 {password === '12345678' && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 animate-fade-in">
-                    <p className="font-bold text-amber-900">Que senha merda (●'◡'●) 💩</p>
-                    <p className="text-amber-800 font-medium">Faz uma senha boa aí man!</p>
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl text-xs space-y-1 animate-fade-in">
+                    <p className="font-bold text-amber-900 dark:text-amber-300">Que senha merda (●'◡'●) 💩</p>
+                    <p className="text-amber-800 dark:text-amber-400 font-medium">Faz uma senha boa aí man!</p>
                   </div>
                 )}
                 <Input
@@ -657,12 +657,12 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="flex items-center gap-1 text-sm text-neutral-400 hover:text-neutral-600 mb-6 transition-colors"
+                className="flex items-center gap-1 text-sm text-neutral-400 dark:text-[#8E918F] hover:text-neutral-600 dark:hover:text-[#E3E3E3] mb-6 transition-colors"
               >
                 <ArrowLeft size={16} /> Voltar
               </button>
-              <h2 className="text-2xl font-bold text-neutral-900 mb-2">Dados do Estabelecimento</h2>
-              <p className="text-neutral-500 mb-6">Informe os dados e fotos do seu negócio em Ourinhos - SP</p>
+              <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Dados do Estabelecimento</h2>
+              <p className="text-neutral-500 dark:text-[#8E918F] mb-6">Informe os dados e fotos do seu negócio em Ourinhos - SP</p>
 
               <div className="space-y-4 mb-8">
                 <Input
@@ -675,30 +675,30 @@ export default function RegisterPage() {
                 />
 
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                  <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                     Tipo de estabelecimento *
                   </label>
                   <select
                     value={establishmentType}
                     onChange={(e) => setEstablishmentType(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
+                    className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-sm font-medium"
                   >
-                    {establishmentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    {establishmentTypes.map(t => <option key={t} value={t} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">{t}</option>)}
                   </select>
                 </div>
 
                 {/* Mandatory Photos Section */}
-                <div className="p-4 bg-orange-50/60 border border-orange-200 rounded-2xl space-y-3">
+                <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="block text-sm font-bold text-neutral-900">
+                      <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
                         Fotos do Estabelecimento / Fachada *
                       </label>
-                      <p className="text-xs text-neutral-500 mt-0.5">
+                      <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
                         Obrigatório enviar pelo menos 1 foto real para aprovação administrativa
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/50 px-2 py-0.5 rounded-full">
                       {establishmentPhotos.length} foto(s)
                     </span>
                   </div>
@@ -716,15 +716,15 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => photoInputRef.current?.click()}
                     disabled={isUploadingPhoto}
-                    className="w-full border-2 border-dashed border-orange-300 hover:border-orange-500 bg-white rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-neutral-600 transition-all cursor-pointer"
+                    className="w-full border-2 border-dashed border-orange-300 dark:border-orange-700/60 hover:border-orange-500 dark:hover:border-orange-500 bg-white dark:bg-[#282A2C] rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-neutral-600 dark:text-[#C4C7C5] transition-all cursor-pointer"
                   >
-                    <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
                       <Camera size={20} />
                     </div>
-                    <span className="text-sm font-bold text-neutral-800">
+                    <span className="text-sm font-bold text-neutral-800 dark:text-[#E3E3E3]">
                       {isUploadingPhoto ? 'Enviando foto...' : 'Adicionar foto do estabelecimento'}
                     </span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
                       Clique para abrir o explorador de arquivos (PNG, JPG, JPEG)
                     </span>
                   </button>
@@ -733,7 +733,7 @@ export default function RegisterPage() {
                   {establishmentPhotos.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 pt-2">
                       {establishmentPhotos.map((url, idx) => (
-                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-neutral-200 aspect-video bg-neutral-100">
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] aspect-video bg-neutral-100 dark:bg-[#282A2C]">
                           <img src={getFullImageUrl(url)} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
@@ -769,7 +769,7 @@ export default function RegisterPage() {
                 </div>
 
                 {cityError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                  <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-red-700 dark:text-red-400 text-xs font-medium">
                     {cityError}
                   </div>
                 )}
@@ -813,27 +813,27 @@ export default function RegisterPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Cidade</label>
-                    <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-700 text-sm font-bold">
+                    <label className="block text-xs font-semibold text-neutral-500 dark:text-[#8E918F] uppercase mb-1">Cidade</label>
+                    <div className="p-3 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-700 dark:text-[#E3E3E3] text-sm font-bold">
                       {city}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1">Estado</label>
-                    <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-700 text-sm font-bold">
+                    <label className="block text-xs font-semibold text-neutral-500 dark:text-[#8E918F] uppercase mb-1">Estado</label>
+                    <div className="p-3 bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-700 dark:text-[#E3E3E3] text-sm font-bold">
                       {state}
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
+                  <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                     Descrição do Estabelecimento (Opcional)
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm"
+                    className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-4 py-3 text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all resize-none text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
                     rows={3}
                     placeholder="Conte sobre os serviços, especialidades e diferenciais do seu pet shop ou clínica..."
                   />
@@ -869,36 +869,36 @@ export default function RegisterPage() {
 
               {selectedRole === 'tutor' ? (
                 <>
-                  <h2 className="text-2xl font-bold text-neutral-900 mb-2">Conta criada!</h2>
-                  <p className="text-neutral-500 mb-8">Bem-vindo ao PetHub! Sua conta de tutor está pronta.</p>
+                  <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Conta criada!</h2>
+                  <p className="text-neutral-500 dark:text-[#8E918F] mb-8">Bem-vindo ao PetHub! Sua conta de tutor está pronta.</p>
                 </>
               ) : (
                 <>
-                  <h2 className="text-2xl font-bold text-neutral-900 mb-2">Cadastro recebido!</h2>
-                  <p className="text-neutral-500 mb-6 text-sm">
+                  <h2 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Cadastro recebido!</h2>
+                  <p className="text-neutral-500 dark:text-[#8E918F] mb-6 text-sm">
                     {selectedRole === 'estabelecimento'
                       ? 'Seu cadastro de estabelecimento foi enviado para análise da equipe PetHub.'
                       : 'Seu cadastro profissional foi enviado para análise da equipe PetHub.'}
                   </p>
                   
-                  <div className="bg-neutral-50 rounded-2xl p-5 mb-8 text-left space-y-3.5 border border-neutral-100">
+                  <div className="bg-neutral-50 dark:bg-[#282A2C] rounded-2xl p-5 mb-8 text-left space-y-3.5 border border-neutral-100 dark:border-[#313335]">
                     <div className="flex gap-3 items-start">
-                      <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                         ✓
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-neutral-900">Conta criada com sucesso</p>
-                        <p className="text-xs text-neutral-500">Seus dados de acesso foram registrados no sistema.</p>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Conta criada com sucesso</p>
+                        <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Seus dados de acesso foram registrados no sistema.</p>
                       </div>
                     </div>
 
                     <div className="flex gap-3 items-start">
-                      <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                         ⏳
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-neutral-900">Aguardando aprovação</p>
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Aguardando aprovação</p>
+                        <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
                           Um administrador irá analisar as informações cadastradas. Enquanto isso, você poderá acessar sua conta para conferir seus dados.
                         </p>
                       </div>
@@ -914,9 +914,9 @@ export default function RegisterPage() {
           )}
         </AnimatePresence>
 
-        <p className="text-center mt-6 text-sm text-neutral-500">
+        <p className="text-center mt-6 text-sm text-neutral-500 dark:text-[#8E918F]">
           Já tem conta?{' '}
-          <Link to="/auth/login" className="text-orange-500 font-semibold hover:text-orange-600">
+          <Link to="/auth/login" className="text-orange-500 font-semibold hover:text-orange-600 dark:hover:text-orange-400">
             Fazer login
           </Link>
         </p>
@@ -928,22 +928,22 @@ export default function RegisterPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-neutral-100 space-y-6"
+            className="w-full max-w-md bg-white dark:bg-[#1E1F20] rounded-3xl p-6 sm:p-8 shadow-xl border border-neutral-100 dark:border-[#313335] space-y-6"
           >
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
                 <Mail size={24} />
               </div>
-              <h3 className="text-xl font-bold text-neutral-900">Confirme seu E-mail</h3>
-              <p className="text-xs text-neutral-500 leading-relaxed">
+              <h3 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Confirme seu E-mail</h3>
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F] leading-relaxed">
                 Enviamos um código de verificação de 6 dígitos para:
                 <br />
-                <strong className="text-neutral-800">{email}</strong>
+                <strong className="text-neutral-800 dark:text-[#E3E3E3]">{email}</strong>
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 mb-2 text-center">
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-[#C4C7C5] mb-2 text-center">
                 Digite o código de 6 dígitos:
               </label>
               <input
@@ -954,7 +954,7 @@ export default function RegisterPage() {
                 value={regOtpCode}
                 onChange={(e) => setRegOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="••••••"
-                className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white border-2 border-neutral-300 focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 shadow-xs"
+                className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white dark:bg-[#282A2C] border-2 border-neutral-300 dark:border-[#313335] focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 dark:text-[#E3E3E3] shadow-xs"
                 autoFocus
               />
             </div>
@@ -975,13 +975,13 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowOtpModal(false)}
-                className="text-neutral-500 hover:text-neutral-800 font-medium cursor-pointer"
+                className="text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3] font-medium cursor-pointer"
               >
                 Voltar e editar
               </button>
 
               {regOtpCooldown > 0 ? (
-                <span className="text-neutral-400 font-medium">
+                <span className="text-neutral-400 dark:text-[#8E918F] font-medium">
                   Reenviar em <strong>{regOtpCooldown}s</strong>
                 </span>
               ) : (
@@ -989,7 +989,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleRequestVerification}
                   disabled={isSendingRegOtp}
-                  className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
+                  className="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold cursor-pointer"
                 >
                   Reenviar código
                 </button>

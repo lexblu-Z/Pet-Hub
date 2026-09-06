@@ -187,7 +187,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#131314] flex transition-colors duration-150">
       {/* Left panel - branding */}
       <div className="hidden lg:flex w-1/2 bg-neutral-900 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0">
@@ -259,7 +259,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right panel - form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-neutral-50 dark:bg-[#131314] transition-colors duration-150">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -271,22 +271,22 @@ export default function LoginPage() {
             <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
               <PawPrint size={18} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-neutral-900">Pet<span className="text-orange-500">Hub</span></span>
+            <span className="text-xl font-bold text-neutral-900 dark:text-white">Pet<span className="text-orange-500">Hub</span></span>
           </div>
 
-          <h2 className="text-3xl font-bold text-neutral-900 mb-2">Bem-vindo de volta! 👋</h2>
-          <p className="text-neutral-500 mb-6">Entre na sua conta para continuar</p>
+          <h2 className="text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Bem-vindo de volta! 👋</h2>
+          <p className="text-neutral-500 dark:text-[#C4C7C5] mb-6">Entre na sua conta para continuar</p>
 
 
           {/* Auth Method Selector */}
-          <div className="flex items-center p-1 bg-neutral-100 rounded-2xl border border-neutral-200/70 mb-6">
+          <div className="flex items-center p-1 bg-neutral-100 dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/70 dark:border-[#313335] mb-6">
             <button
               type="button"
               onClick={() => setAuthMethod('password')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 authMethod === 'password'
-                  ? 'bg-white text-orange-600 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
+                  ? 'bg-white dark:bg-[#282A2C] text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
               }`}
             >
               <Lock size={14} />
@@ -297,8 +297,8 @@ export default function LoginPage() {
               onClick={() => { setAuthMethod('otp'); setOtpStep('email'); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 authMethod === 'otp'
-                  ? 'bg-white text-orange-600 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
+                  ? 'bg-white dark:bg-[#282A2C] text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
               }`}
             >
               <Mail size={14} />
@@ -310,7 +310,7 @@ export default function LoginPage() {
           {authMethod === 'password' && (
             <form onSubmit={handleLogin} noValidate className="space-y-4">
               {noPasswordAlert && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-2xl text-xs text-amber-900 dark:text-amber-200 space-y-2">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <p className="font-medium leading-relaxed">{noPasswordAlert}</p>
@@ -379,7 +379,7 @@ export default function LoginPage() {
               <div className="flex justify-end">
                 <Link
                   to={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                  className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                  className="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
                 >
                   Esqueci minha senha
                 </Link>
@@ -416,7 +416,7 @@ export default function LoginPage() {
                     leftIcon={<Mail size={16} />}
                     required
                   />
-                  <p className="text-xs text-neutral-400 leading-relaxed">
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] leading-relaxed">
                     Enviaremos um código de verificação temporário de 6 dígitos para o seu e-mail. Sem complicação com senhas.
                   </p>
                   <Button
@@ -432,16 +432,16 @@ export default function LoginPage() {
                 </form>
               ) : (
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
-                  <div className="text-center space-y-1.5 p-3 bg-neutral-50 border border-neutral-200/80 rounded-2xl">
-                    <p className="text-xs text-neutral-500">
+                  <div className="text-center space-y-1.5 p-3 bg-neutral-50 dark:bg-[#1E1F20] border border-neutral-200/80 dark:border-[#313335] rounded-2xl">
+                    <p className="text-xs text-neutral-500 dark:text-[#C4C7C5]">
                       Código de 6 dígitos enviado para:
                     </p>
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-xs font-bold text-neutral-900">{email}</span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3]">{email}</span>
                       <button
                         type="button"
                         onClick={() => { setOtpStep('email'); setOtpCode(''); }}
-                        className="text-[11px] text-orange-600 hover:text-orange-700 font-bold underline cursor-pointer"
+                        className="text-[11px] text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-bold underline cursor-pointer"
                       >
                         Alterar
                       </button>
@@ -449,7 +449,7 @@ export default function LoginPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-2 text-center">
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-[#E3E3E3] mb-2 text-center">
                       Digite o código de 6 dígitos recebido:
                     </label>
                     <input
@@ -460,7 +460,7 @@ export default function LoginPage() {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="••••••"
-                      className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white border-2 border-neutral-300 focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 shadow-xs"
+                      className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white dark:bg-[#1E1F20] border-2 border-neutral-300 dark:border-[#313335] focus:border-orange-500 dark:focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 dark:text-[#E3E3E3] shadow-xs"
                       autoFocus
                     />
                   </div>
@@ -481,13 +481,13 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => { setOtpStep('email'); setOtpCode(''); }}
-                      className="text-neutral-500 hover:text-neutral-800 flex items-center gap-1 cursor-pointer font-medium"
+                      className="text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-800 dark:hover:text-[#E3E3E3] flex items-center gap-1 cursor-pointer font-medium"
                     >
                       <ArrowLeft size={14} /> Voltar
                     </button>
 
                     {otpCooldown > 0 ? (
-                      <span className="text-neutral-400 font-medium">
+                      <span className="text-neutral-400 dark:text-[#8E918F] font-medium">
                         Reenviar código em <strong>{otpCooldown}s</strong>
                       </span>
                     ) : (
@@ -495,7 +495,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={handleSendOtp}
                         disabled={isOtpSending}
-                        className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
+                        className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-bold cursor-pointer"
                       >
                         Reenviar código
                       </button>
@@ -511,7 +511,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading}
-            className="w-full mt-[18px] flex items-center justify-center gap-3 px-4 py-3 border border-neutral-200 rounded-xl bg-white hover:bg-neutral-50 text-neutral-800 font-semibold text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer disabled:opacity-50"
+            className="w-full mt-[18px] flex items-center justify-center gap-3 px-4 py-3 border border-neutral-200 dark:border-[#313335] rounded-xl bg-white dark:bg-[#1E1F20] hover:bg-neutral-50 dark:hover:bg-[#282A2C] text-neutral-800 dark:text-[#E3E3E3] font-semibold text-sm transition-all shadow-xs hover:shadow-sm cursor-pointer disabled:opacity-50"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
@@ -534,9 +534,9 @@ export default function LoginPage() {
             <span>{isGoogleLoading ? 'Conectando ao Google...' : 'Continuar com Google'}</span>
           </button>
 
-          <p className="text-center mt-6 text-sm text-neutral-500">
+          <p className="text-center mt-6 text-sm text-neutral-500 dark:text-[#C4C7C5]">
             Não tem conta?{' '}
-            <Link to="/auth/register" className="text-orange-500 font-semibold hover:text-orange-600 transition-colors">
+            <Link to="/auth/register" className="text-orange-500 font-semibold hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300 transition-colors">
               Criar conta grátis
             </Link>
           </p>

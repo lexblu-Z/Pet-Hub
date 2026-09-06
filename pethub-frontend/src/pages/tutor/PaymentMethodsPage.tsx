@@ -131,16 +131,16 @@ export default function PaymentMethodsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/tutor/profile')}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
           >
-            <ArrowLeft size={18} className="text-neutral-600" />
+            <ArrowLeft size={18} className="text-neutral-600 dark:text-[#E3E3E3]" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-orange-500" />
               Formas de pagamento
             </h1>
-            <p className="text-sm text-neutral-500">Cartões e métodos salvos</p>
+            <p className="text-sm text-neutral-500 dark:text-[#8E918F]">Cartões e métodos salvos</p>
           </div>
         </div>
         {!showAddForm && (
@@ -157,9 +157,9 @@ export default function PaymentMethodsPage() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
           >
-            <Card padding="lg" className="border border-orange-200">
-              <h2 className="font-bold text-neutral-900 mb-4">Novo cartão</h2>
-              <div className="flex items-center gap-2 text-xs text-neutral-500 mb-4 bg-neutral-50 rounded-xl p-3">
+            <Card padding="lg" className="border border-orange-200 dark:border-orange-900/50">
+              <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Novo cartão</h2>
+              <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-[#8E918F] mb-4 bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] rounded-xl p-3">
                 <Shield size={14} className="text-green-500 shrink-0" />
                 <span>Apenas os 4 últimos dígitos são armazenados. CVV nunca é salvo.</span>
               </div>
@@ -201,14 +201,14 @@ export default function PaymentMethodsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map(i => (
-            <div key={i} className="h-20 bg-neutral-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : methods.length === 0 ? (
-        <Card padding="lg" className="text-center border border-neutral-100">
-          <CreditCard size={40} className="text-neutral-300 mx-auto mb-3" />
-          <p className="font-semibold text-neutral-700">Nenhum cartão salvo</p>
-          <p className="text-sm text-neutral-400 mt-1 mb-4">Adicione um cartão para agilizar suas compras</p>
+        <Card padding="lg" className="text-center border border-neutral-100 dark:border-[#313335]">
+          <CreditCard size={40} className="text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
+          <p className="font-semibold text-neutral-700 dark:text-[#E3E3E3]">Nenhum cartão salvo</p>
+          <p className="text-sm text-neutral-400 dark:text-[#8E918F] mt-1 mb-4">Adicione um cartão para agilizar suas compras</p>
           <Button size="sm" leftIcon={<Plus size={15} />} onClick={() => setShowAddForm(true)}>
             Adicionar cartão
           </Button>
@@ -220,31 +220,31 @@ export default function PaymentMethodsPage() {
               key={method.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-4 flex items-center gap-4"
+              className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm p-4 flex items-center gap-4"
             >
               <div className={`w-12 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${brandColors[method.brand] || 'bg-neutral-400'}`}>
                 {method.brand.slice(0, 4).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-neutral-900">{method.brand} •••• {method.lastFour}</p>
-                <p className="text-xs text-neutral-500">{method.holder}</p>
+                <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{method.brand} •••• {method.lastFour}</p>
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F]">{method.holder}</p>
               </div>
               <div className="flex items-center gap-2">
                 {method.isDefault ? (
-                  <span className="flex items-center gap-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
+                  <span className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-1 rounded-lg">
                     <Star size={11} fill="currentColor" /> Padrão
                   </span>
                 ) : (
                   <button
                     onClick={() => handleSetDefault(method.id)}
-                    className="text-xs text-neutral-400 hover:text-orange-500 transition-colors px-2 py-1"
+                    className="text-xs text-neutral-400 dark:text-[#8E918F] hover:text-orange-500 dark:hover:text-orange-400 transition-colors px-2 py-1 cursor-pointer"
                   >
                     Definir padrão
                   </button>
                 )}
                 <button
                   onClick={() => setDeletingId(method.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-neutral-400 dark:text-[#8E918F] hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -262,7 +262,7 @@ export default function PaymentMethodsPage() {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-neutral-600">Para confirmar a remoção, informe sua senha de acesso:</p>
+          <p className="text-sm text-neutral-600 dark:text-[#C4C7C5]">Para confirmar a remoção, informe sua senha de acesso:</p>
           <Input
             label="Sua senha"
             type="password"

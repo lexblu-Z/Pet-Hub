@@ -115,18 +115,18 @@ export function ForgotPasswordPage() {
       : '';
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#131314] flex items-center justify-center px-4 py-12 transition-colors">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-3xl border border-neutral-200/80 shadow-sm p-8 sm:p-10"
+        className="w-full max-w-md bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200/80 dark:border-[#313335] shadow-sm p-8 sm:p-10"
       >
         {/* Header */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
           <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-xs">
             <PawPrint size={20} className="text-white" />
           </div>
-          <span className="text-2xl font-bold text-neutral-900">
+          <span className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
             Pet<span className="text-orange-500">Hub</span>
           </span>
         </div>
@@ -142,8 +142,8 @@ export function ForgotPasswordPage() {
               className="space-y-6"
             >
               <div className="text-center space-y-1.5">
-                <h1 className="text-2xl font-bold text-neutral-900">Esqueceu a senha? 🔐</h1>
-                <p className="text-sm text-neutral-500">
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Esqueceu a senha? 🔐</h1>
+                <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
                   Informe o e-mail da sua conta para receber um código seguro de 6 dígitos via Resend.
                 </p>
               </div>
@@ -174,7 +174,7 @@ export function ForgotPasswordPage() {
               <div className="pt-2 text-center">
                 <Link
                   to="/auth/login"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3] transition-colors"
                 >
                   <ArrowLeft size={14} /> Voltar para o login
                 </Link>
@@ -192,11 +192,11 @@ export function ForgotPasswordPage() {
               className="space-y-5"
             >
               <div className="text-center space-y-1.5">
-                <h1 className="text-2xl font-bold text-neutral-900">Redefinir senha</h1>
-                <p className="text-sm text-neutral-500">
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Redefinir senha</h1>
+                <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
                   Código de 6 dígitos enviado para:
                 </p>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold text-neutral-800">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 dark:bg-[#282A2C] rounded-full text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3]">
                   <span>{email}</span>
                   <button
                     type="button"
@@ -204,7 +204,7 @@ export function ForgotPasswordPage() {
                       setStep('email');
                       setCode('');
                     }}
-                    className="text-orange-600 hover:text-orange-700 font-bold underline cursor-pointer"
+                    className="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold underline cursor-pointer"
                   >
                     Alterar
                   </button>
@@ -213,7 +213,7 @@ export function ForgotPasswordPage() {
 
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 mb-2 text-center">
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-[#C4C7C5] mb-2 text-center">
                     Digite o código de 6 dígitos recebido por e-mail:
                   </label>
                   <input
@@ -224,7 +224,7 @@ export function ForgotPasswordPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="••••••"
-                    className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3 px-4 bg-white border-2 border-neutral-300 focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 shadow-xs"
+                    className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3 px-4 bg-white dark:bg-[#282A2C] border-2 border-neutral-300 dark:border-[#313335] focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 dark:text-[#E3E3E3] shadow-xs"
                     autoFocus
                     required
                   />
@@ -242,9 +242,9 @@ export function ForgotPasswordPage() {
                   />
 
                   {newPassword === '12345678' && (
-                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 animate-fade-in">
-                      <p className="font-bold text-amber-900">Que senha merda (●'◡'●) 💩</p>
-                      <p className="text-amber-800 font-medium">Faz uma senha boa aí man!</p>
+                    <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl text-xs space-y-1 animate-fade-in">
+                      <p className="font-bold text-amber-900 dark:text-amber-300">Que senha merda (●'◡'●) 💩</p>
+                      <p className="text-amber-800 dark:text-amber-400 font-medium">Faz uma senha boa aí man!</p>
                     </div>
                   )}
 
@@ -261,7 +261,7 @@ export function ForgotPasswordPage() {
                                 ? 'bg-amber-400'
                                 : strength === 'strong'
                                 ? 'bg-green-500'
-                                : 'bg-neutral-200'
+                                : 'bg-neutral-200 dark:bg-[#313335]'
                             }`}
                           />
                         ))}
@@ -272,7 +272,7 @@ export function ForgotPasswordPage() {
                             ? 'text-red-500'
                             : strength === 'medium'
                             ? 'text-amber-500'
-                            : 'text-green-600'
+                            : 'text-green-600 dark:text-green-400'
                         }`}
                       >
                         {strength === 'weak' ? 'Fraca' : strength === 'medium' ? 'Média' : 'Forte'}
@@ -309,13 +309,13 @@ export function ForgotPasswordPage() {
                       setStep('email');
                       setCode('');
                     }}
-                    className="text-neutral-500 hover:text-neutral-800 flex items-center gap-1 cursor-pointer font-medium"
+                    className="text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3] flex items-center gap-1 cursor-pointer font-medium"
                   >
                     <ArrowLeft size={14} /> Voltar
                   </button>
 
                   {cooldown > 0 ? (
-                    <span className="text-neutral-400 font-medium">
+                    <span className="text-neutral-400 dark:text-[#8E918F] font-medium">
                       Reenviar código em <strong>{cooldown}s</strong>
                     </span>
                   ) : (
@@ -323,7 +323,7 @@ export function ForgotPasswordPage() {
                       type="button"
                       onClick={() => handleRequestCode()}
                       disabled={isLoading}
-                      className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
+                      className="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold cursor-pointer"
                     >
                       Reenviar código
                     </button>
@@ -341,13 +341,13 @@ export function ForgotPasswordPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-6"
             >
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-950/60 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto shadow-xs">
                 <CheckCircle2 size={36} />
               </div>
 
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-neutral-900">Senha alterada com sucesso! 🎉</h1>
-                <p className="text-sm text-neutral-500 leading-relaxed">
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Senha alterada com sucesso! 🎉</h1>
+                <p className="text-sm text-neutral-500 dark:text-[#8E918F] leading-relaxed">
                   Sua conta foi atualizada e sua nova senha já está ativa. Agora você pode entrar com total segurança.
                 </p>
               </div>

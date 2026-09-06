@@ -101,44 +101,101 @@ export default function PreferencesPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/tutor/profile')}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] hover:bg-neutral-50 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] transition-colors cursor-pointer"
         >
-          <ArrowLeft size={18} className="text-neutral-600" />
+          <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
             <Settings className="w-5 h-5 text-orange-500" />
             Preferências
           </h1>
-          <p className="text-sm text-neutral-500">Tema, idioma e integrações da conta</p>
+          <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">Tema, idioma e integrações da conta</p>
         </div>
       </div>
 
+      {/* Aparência (Tema) Section */}
+      <Card padding="lg" className="border border-neutral-100 dark:border-[#313335] shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
+            <Sun className="w-4 h-4 text-orange-500" />
+            Aparência
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] mt-0.5">
+            Escolha como o PetHub deve aparecer.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleThemeChange('light')}
+            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+              theme === 'light'
+                ? 'border-orange-500 bg-orange-50/70 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 shadow-sm'
+                : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] hover:border-neutral-300 dark:hover:border-[#444746]'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+              theme === 'light' ? 'border-orange-500 bg-orange-500' : 'border-neutral-300 dark:border-[#444746]'
+            }`}>
+              {theme === 'light' && <span className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <Sun size={22} className={theme === 'light' ? 'text-orange-500 shrink-0' : 'text-neutral-500 dark:text-[#C4C7C5] shrink-0'} />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold block text-neutral-900 dark:text-[#E3E3E3]">Claro</span>
+              <span className="text-[11px] text-neutral-500 dark:text-[#C4C7C5]">Interface clássica e luminosa</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleThemeChange('dark')}
+            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+              theme === 'dark'
+                ? 'border-orange-500 bg-orange-50/70 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 shadow-sm'
+                : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] hover:border-neutral-300 dark:hover:border-[#444746]'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+              theme === 'dark' ? 'border-orange-500 bg-orange-500' : 'border-neutral-300 dark:border-[#444746]'
+            }`}>
+              {theme === 'dark' && <span className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <Moon size={22} className={theme === 'dark' ? 'text-orange-500 shrink-0' : 'text-neutral-500 dark:text-[#C4C7C5] shrink-0'} />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold block text-neutral-900 dark:text-[#E3E3E3]">Escuro</span>
+              <span className="text-[11px] text-neutral-500 dark:text-[#C4C7C5]">Confortável para baixa luminosidade</span>
+            </div>
+          </button>
+        </div>
+      </Card>
+
       {/* Google Calendar Section */}
-      <Card padding="lg" className="border border-neutral-100 shadow-sm">
+      <Card padding="lg" className="border border-neutral-100 dark:border-[#313335] shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
               <Calendar size={18} className="text-orange-500" />
               Integração Google Calendar
             </h2>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] mt-0.5">
               Sincronize agendamentos com a sua agenda pessoal
             </p>
           </div>
           {googleStatus?.isConnected && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Conectado
             </span>
           )}
         </div>
 
-        {/* Toggle Switch */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-100/80 mb-4">
+        {/* Toggle Switch inside Sub-card */}
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#282A2C] border border-neutral-100/80 dark:border-[#313335] mb-4">
           <div className="pr-3">
-            <p className="text-sm font-bold text-neutral-800">Oferecer integração com Google Calendar</p>
-            <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+            <p className="text-sm font-bold text-neutral-800 dark:text-[#E3E3E3]">Oferecer integração com Google Calendar</p>
+            <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] mt-0.5 leading-relaxed">
               Exibir sugestões opcionais na sua agenda para sincronizar consultas e procedimentos.
             </p>
           </div>
@@ -148,7 +205,7 @@ export default function PreferencesPage() {
             aria-checked={googlePromptEnabled}
             onClick={handleToggleGooglePrompt}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              googlePromptEnabled ? 'bg-orange-500' : 'bg-neutral-300'
+              googlePromptEnabled ? 'bg-orange-500' : 'bg-neutral-300 dark:bg-[#313335]'
             }`}
           >
             <span
@@ -160,17 +217,17 @@ export default function PreferencesPage() {
         </div>
 
         {/* Expand / Manage Calendar connection */}
-        <div className="border-t border-neutral-100 pt-3">
+        <div className="border-t border-neutral-100 dark:border-[#313335] pt-3">
           <button
             onClick={() => setShowCalendarDetails(!showCalendarDetails)}
-            className="w-full flex items-center justify-between text-xs font-bold text-neutral-700 hover:text-orange-600 transition-colors py-1 cursor-pointer"
+            className="w-full flex items-center justify-between text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] hover:text-orange-600 dark:hover:text-orange-400 transition-colors py-1 cursor-pointer"
           >
             <span>{googleStatus?.isConnected ? 'Gerenciar conexão e histórico' : 'Configurar conexão agora'}</span>
             <ChevronRight size={16} className={`transform transition-transform ${showCalendarDetails ? 'rotate-90' : ''}`} />
           </button>
 
           {showCalendarDetails && (
-            <div className="mt-4 pt-3 border-t border-neutral-100">
+            <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-[#313335]">
               <GoogleCalendarCard
                 returnTo="/tutor/preferences"
                 roleTitle="as consultas e procedimentos dos seus pets"
@@ -180,30 +237,9 @@ export default function PreferencesPage() {
         </div>
       </Card>
 
-      {/* Theme Section */}
-      <Card padding="lg" className="border border-neutral-100 shadow-sm">
-        <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-4">Tema</h2>
-        <div className="grid grid-cols-3 gap-3">
-          {themeOptions.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => handleThemeChange(value)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                theme === value
-                  ? 'border-orange-500 bg-orange-50 text-orange-600'
-                  : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'
-              }`}
-            >
-              <Icon size={22} />
-              <span className="text-xs font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-      </Card>
-
       {/* Language Section */}
-      <Card padding="lg" className="border border-neutral-100 shadow-sm">
-        <h2 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-4">
+      <Card padding="lg" className="border border-neutral-100 dark:border-[#313335] shadow-sm">
+        <h2 className="text-sm font-bold text-neutral-500 dark:text-[#C4C7C5] uppercase tracking-wider mb-4">
           <span className="flex items-center gap-2"><Globe size={14} /> Idioma</span>
         </h2>
         <div className="space-y-2">
@@ -213,12 +249,12 @@ export default function PreferencesPage() {
               onClick={() => handleLanguageChange(val)}
               className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 text-sm font-medium transition-all cursor-pointer ${
                 language === val
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-neutral-200 text-neutral-700 hover:border-neutral-300'
+                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 font-bold'
+                  : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] hover:border-neutral-300 dark:hover:border-[#444746]'
               }`}
             >
-              {label}
-              {language === val && <span className="w-2 h-2 rounded-full bg-orange-500" />}
+              <span>{label}</span>
+              {language === val && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />}
             </button>
           ))}
         </div>

@@ -6,31 +6,31 @@ import { useToastStore } from '@/store/toastStore';
 const toastConfig = {
   success: {
     icon: CheckCircle2,
-    bg: 'bg-green-50 border-green-200',
-    iconColor: 'text-green-500',
-    titleColor: 'text-green-800',
-    msgColor: 'text-green-600',
+    bg: 'bg-green-50 dark:bg-[#15231c] border-green-200 dark:border-green-800/60',
+    iconColor: 'text-green-500 dark:text-green-400',
+    titleColor: 'text-green-800 dark:text-green-200',
+    msgColor: 'text-green-600 dark:text-green-300',
   },
   error: {
     icon: XCircle,
-    bg: 'bg-red-50 border-red-200',
-    iconColor: 'text-red-500',
-    titleColor: 'text-red-800',
-    msgColor: 'text-red-600',
+    bg: 'bg-red-50 dark:bg-[#25171a] border-red-200 dark:border-red-800/60',
+    iconColor: 'text-red-500 dark:text-red-400',
+    titleColor: 'text-red-800 dark:text-red-200',
+    msgColor: 'text-red-600 dark:text-red-300',
   },
   warning: {
     icon: AlertTriangle,
-    bg: 'bg-amber-50 border-amber-200',
-    iconColor: 'text-amber-500',
-    titleColor: 'text-amber-800',
-    msgColor: 'text-amber-600',
+    bg: 'bg-amber-50 dark:bg-[#261d15] border-amber-200 dark:border-amber-800/60',
+    iconColor: 'text-amber-500 dark:text-amber-400',
+    titleColor: 'text-amber-800 dark:text-amber-200',
+    msgColor: 'text-amber-600 dark:text-amber-300',
   },
   info: {
     icon: Info,
-    bg: 'bg-blue-50 border-blue-200',
-    iconColor: 'text-blue-500',
-    titleColor: 'text-blue-800',
-    msgColor: 'text-blue-600',
+    bg: 'bg-blue-50 dark:bg-[#151d2c] border-blue-200 dark:border-blue-800/60',
+    iconColor: 'text-blue-500 dark:text-blue-400',
+    titleColor: 'text-blue-800 dark:text-blue-200',
+    msgColor: 'text-blue-600 dark:text-blue-300',
   },
 };
 
@@ -66,7 +66,7 @@ export const ToastContainer: React.FC = () => {
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="text-neutral-400 hover:text-neutral-600 transition-colors shrink-0"
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
               >
                 <X size={14} />
               </button>

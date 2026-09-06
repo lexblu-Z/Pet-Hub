@@ -57,6 +57,176 @@ export const appointmentsController = {
     return reply.send(appointments);
   },
 
+  async getAvailableSlots(request: FastifyRequest<{ Querystring: { date?: string; professionalId?: string; establishmentId?: string; serviceId?: string } }>, reply: FastifyReply) {
+    const { date, professionalId, establishmentId, serviceId } = request.query;
+
+    if (!date) {
+      return reply.status(400).send({ error: 'Data é obrigatória (formato YYYY-MM-DD).' });
+    }
+
+    const dateParts = date.split('-');
+    if (dateParts.length !== 3) {
+      return reply.status(400).send({ error: 'Formato de data inválido. Use YYYY-MM-DD.' });
+    }
+
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1;
+    const day = parseInt(dateParts[2], 10);
+    const targetDate = new Date(Date.UTC(year, month, day, 12, 0, 0));
+    const dayOfWeek = targetDate.getUTCDay();
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const ptDayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const dayKey = dayKeys[dayOfWeek];
+    const ptDayKey = ptDayKeys[dayOfWeek];
+
+    let openTime = '09:00';
+    let closeTime = '18:00';
+    let hasBreak = false;
+    let breakStart = '12:00';
+    let breakEnd = '13:30';
+    let isOpen = true;
+    let stepMinutes = 60;
+    let minAdvanceHours = 2;
+
+    if (serviceId) {
+      const svc = await prisma.service.findUnique({ where: { id: serviceId } });
+      if (svc && svc.duration) {
+        stepMinutes = svc.duration;
+      }
+    }
+
+    if (professionalId) {
+      const prof = await prisma.user.findUnique({
+        where: { id: professionalId },
+        include: { professionalProfile: true },
+      });
+
+      if (!prof || prof.professionalProfile?.status !== 'ACTIVE') {
+        return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
+      }
+
+      const bookingSettings = prof.professionalProfile.bookingSettings as any;
+      if (bookingSettings) {
+        if (bookingSettings.acceptOnlineBooking === false || bookingSettings.allowOnlineBooking === false) {
+          return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Agendamentos online desabilitados.' });
+        }
+        if (bookingSettings.minAdvanceHours) {
+          minAdvanceHours = bookingSettings.minAdvanceHours;
+        } else if (bookingSettings.minAdvanceNoticeHours) {
+          minAdvanceHours = bookingSettings.minAdvanceNoticeHours;
+        }
+        if (Array.isArray(bookingSettings.unavailableDays) && bookingSettings.unavailableDays.includes(date)) {
+          return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
+        }
+        if (bookingSettings.vacationStart && bookingSettings.vacationEnd) {
+          if (date >= bookingSettings.vacationStart && date <= bookingSettings.vacationEnd) {
+            return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
+          }
+        }
+      }
+
+      const workingHours = prof.professionalProfile.workingHours as any;
+      if (workingHours) {
+        const dayConfig = workingHours[dayKey] || workingHours[ptDayKey];
+        if (dayConfig) {
+          isOpen = dayConfig.enabled !== undefined ? Boolean(dayConfig.enabled) : Boolean(dayConfig.isOpen);
+          if (dayConfig.open) openTime = dayConfig.open;
+          if (dayConfig.close) closeTime = dayConfig.close;
+          if (dayConfig.hasBreak) {
+            hasBreak = true;
+            breakStart = dayConfig.breakStart || '12:00';
+            breakEnd = dayConfig.breakEnd || '13:30';
+          }
+        }
+      }
+    } else if (establishmentId) {
+      const est = await prisma.user.findUnique({
+        where: { id: establishmentId },
+        include: { establishmentProfile: true },
+      });
+      if (!est || est.establishmentProfile?.status !== 'ACTIVE') {
+        return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
+      }
+      const workingHours = est.establishmentProfile.workingHours as any;
+      if (workingHours) {
+        const dayConfig = workingHours[dayKey] || workingHours[ptDayKey];
+        if (dayConfig) {
+          isOpen = dayConfig.enabled !== undefined ? Boolean(dayConfig.enabled) : Boolean(dayConfig.isOpen);
+          if (dayConfig.open) openTime = dayConfig.open;
+          if (dayConfig.close) closeTime = dayConfig.close;
+        }
+      }
+    }
+
+    if (!isOpen) {
+      return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Fechado neste dia.' });
+    }
+
+    // Generate candidate slot times
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+    const openTotalMin = openH * 60 + openM;
+    const closeTotalMin = closeH * 60 + closeM;
+
+    const candidateSlots: string[] = [];
+    for (let m = openTotalMin; m + stepMinutes <= closeTotalMin; m += stepMinutes) {
+      const hh = String(Math.floor(m / 60)).padStart(2, '0');
+      const mm = String(m % 60).padStart(2, '0');
+      const slotStr = `${hh}:${mm}`;
+
+      if (hasBreak && breakStart && breakEnd) {
+        if (slotStr >= breakStart && slotStr < breakEnd) {
+          continue;
+        }
+      }
+
+      candidateSlots.push(slotStr);
+    }
+
+    // Query existing appointments on that date
+    const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0));
+    const dayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+
+    const existingAppts = await prisma.appointment.findMany({
+      where: {
+        OR: [
+          ...(professionalId ? [{ professionalId }] : []),
+          ...(establishmentId ? [{ establishmentId }] : []),
+        ],
+        date: { gte: dayStart, lte: dayEnd },
+        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
+      },
+    });
+
+    const busyTimes = new Set(
+      existingAppts.map(a => {
+        const d = new Date(a.date);
+        return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+      })
+    );
+
+    const now = new Date();
+    const isToday = now.toISOString().split('T')[0] === date;
+    const minTimeForToday = new Date(now.getTime() + minAdvanceHours * 60 * 60 * 1000);
+    const minTimeStr = `${String(minTimeForToday.getHours()).padStart(2, '0')}:${String(minTimeForToday.getMinutes()).padStart(2, '0')}`;
+
+    const availableSlots = candidateSlots.filter(slot => {
+      if (busyTimes.has(slot)) return false;
+      if (isToday && slot < minTimeStr) return false;
+      return true;
+    });
+
+    return reply.send({
+      date,
+      isOpen,
+      openTime,
+      closeTime,
+      slots: availableSlots,
+      availableSlots: availableSlots,
+      isClosed: !isOpen,
+    });
+  },
+
   async create(request: FastifyRequest, reply: FastifyReply) {
     try {
       const user = request.user as any;
@@ -76,7 +246,7 @@ export const appointmentsController = {
         return reply.status(403).send({ error: 'Estabelecimento indisponível para agendamentos.' });
       }
 
-      // Check if professional is ACTIVE (if provided)
+      // Check if professional is ACTIVE and available
       if (data.professionalId) {
         const profUser = await prisma.user.findUnique({
           where: { id: data.professionalId },
@@ -85,20 +255,47 @@ export const appointmentsController = {
         if (!profUser || profUser.professionalProfile?.status !== 'ACTIVE') {
           return reply.status(403).send({ error: 'Profissional indisponível para agendamentos.' });
         }
+
+        const bookingSettings = profUser.professionalProfile.bookingSettings as any;
+        if (bookingSettings?.acceptOnlineBooking === false) {
+          return reply.status(403).send({ error: 'Este profissional não está aceitando agendamentos online no momento.' });
+        }
+
+        const dateObj = new Date(data.date);
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayKey = dayKeys[dateObj.getUTCDay()];
+        const workingHours = profUser.professionalProfile.workingHours as any;
+
+        if (workingHours && workingHours[dayKey]) {
+          const config = workingHours[dayKey];
+          if (!config.isOpen) {
+            return reply.status(409).send({ error: 'O profissional não atende neste dia da semana.' });
+          }
+          const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+          if (timeStr < config.open || timeStr >= config.close) {
+            return reply.status(409).send({ error: `Horário fora do expediente do profissional (${config.open} às ${config.close}).` });
+          }
+          if (config.hasBreak && config.breakStart && config.breakEnd) {
+            if (timeStr >= config.breakStart && timeStr < config.breakEnd) {
+              return reply.status(409).send({ error: 'Horário coincide com o intervalo de atendimento do profissional.' });
+            }
+          }
+        }
       }
 
-      // Check conflicts (simulated basic check)
+      // Check appointment conflicts
       const existing = await prisma.appointment.findFirst({
         where: {
-          establishmentId: data.establishmentId,
-          professionalId: data.professionalId,
-          date: data.date,
-          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] }
+          OR: [
+            ...(data.professionalId ? [{ professionalId: data.professionalId, date: data.date }] : []),
+            { establishmentId: data.establishmentId, date: data.date },
+          ],
+          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] }
         }
       });
 
       if (existing) {
-        return reply.status(409).send({ error: 'Horário não disponível.' });
+        return reply.status(409).send({ error: 'Horário já ocupado por outro agendamento.' });
       }
       
       const appointment = await prisma.appointment.create({

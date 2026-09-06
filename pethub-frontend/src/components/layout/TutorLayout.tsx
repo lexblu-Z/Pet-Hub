@@ -71,15 +71,15 @@ export const TutorLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-neutral-50 overflow-hidden">
+    <div className="flex h-screen bg-neutral-50 dark:bg-[#131314] overflow-hidden">
       {/* ---- Desktop Sidebar ---- */}
       <motion.aside
         animate={{ width: sidebarCollapsed ? 72 : 256 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="hidden lg:flex flex-col bg-white border-r border-neutral-100 shadow-sm overflow-hidden shrink-0 z-10"
+        className="hidden lg:flex flex-col bg-white dark:bg-[#1E1F20] border-r border-neutral-100 dark:border-[#313335] shadow-sm overflow-hidden shrink-0 z-10"
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-neutral-100 shrink-0">
+        <div className="h-16 flex items-center px-4 border-b border-neutral-100 dark:border-[#313335] shrink-0">
           <Link to="/tutor" className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shrink-0">
               <PawPrint size={18} className="text-white" />
@@ -91,7 +91,7 @@ export const TutorLayout: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="text-xl font-bold text-neutral-900 whitespace-nowrap overflow-hidden"
+                  className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] whitespace-nowrap overflow-hidden"
                 >
                   Pet<span className="text-orange-500">Hub</span>
                 </motion.span>
@@ -100,7 +100,7 @@ export const TutorLayout: React.FC = () => {
           </Link>
           <button
             onClick={() => setSidebarCollapsed((c) => !c)}
-            className="ml-auto p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors shrink-0"
+            className="ml-auto p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-400 hover:text-neutral-600 dark:hover:text-[#E3E3E3] transition-colors shrink-0"
           >
             {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
@@ -117,8 +117,8 @@ export const TutorLayout: React.FC = () => {
                 [
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative',
                   isActive
-                    ? 'bg-orange-50 text-orange-600'
-                    : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900',
+                    ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 font-semibold'
+                    : 'text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#282A2C] hover:text-neutral-900 dark:hover:text-[#E3E3E3]',
                 ].join(' ')
               }
             >
@@ -158,8 +158,8 @@ export const TutorLayout: React.FC = () => {
         </nav>
 
         {/* User section */}
-        <div className="p-3 border-t border-neutral-100 shrink-0">
-          <div className={`flex items-center gap-3 p-2 rounded-xl hover:bg-neutral-50 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className="p-3 border-t border-neutral-100 dark:border-[#313335] shrink-0">
+          <div className={`flex items-center gap-3 p-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
             <Avatar
               src={currentUser?.avatar}
               name={currentUser?.name || ''}
@@ -174,10 +174,10 @@ export const TutorLayout: React.FC = () => {
                   exit={{ opacity: 0 }}
                   className="flex-1 min-w-0"
                 >
-                  <p className="text-sm font-semibold text-neutral-800 truncate">
+                  <p className="text-sm font-semibold text-neutral-800 dark:text-[#E3E3E3] truncate">
                     {currentUser?.name}
                   </p>
-                  <p className="text-xs text-neutral-400 truncate">{currentUser?.email}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] truncate">{currentUser?.email}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -189,13 +189,13 @@ export const TutorLayout: React.FC = () => {
                 type="button"
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 rounded-xl transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-neutral-600 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-[#E3E3E3] hover:bg-neutral-50 dark:hover:bg-[#282A2C] rounded-xl transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   {theme === 'dark' ? <Moon size={15} className="text-orange-500" /> : <Sun size={15} className="text-orange-500" />}
                   <span>{theme === 'dark' ? 'Tema Escuro' : 'Tema Claro'}</span>
                 </span>
-                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                <span className="text-[10px] text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider font-mono">
                   {theme}
                 </span>
               </button>
@@ -204,7 +204,7 @@ export const TutorLayout: React.FC = () => {
                 type="button"
                 onClick={toggleTheme}
                 title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-                className="w-full flex items-center justify-center p-2 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 rounded-xl transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center p-2 text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-800 dark:hover:text-[#E3E3E3] hover:bg-neutral-50 dark:hover:bg-[#282A2C] rounded-xl transition-colors cursor-pointer"
               >
                 {theme === 'dark' ? <Moon size={16} className="text-orange-500" /> : <Sun size={16} className="text-orange-500" />}
               </button>
@@ -218,7 +218,7 @@ export const TutorLayout: React.FC = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 mt-1 text-sm text-neutral-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
+                className="w-full flex items-center gap-2 px-3 py-2 mt-1 text-sm text-neutral-500 dark:text-[#C4C7C5] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all duration-200"
               >
                 <LogOut size={16} />
                 Sair
@@ -244,20 +244,20 @@ export const TutorLayout: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 lg:hidden flex flex-col shadow-2xl"
+              className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#1E1F20] z-50 lg:hidden flex flex-col shadow-2xl border-r border-neutral-100 dark:border-[#313335]"
             >
-              <div className="h-16 flex items-center px-4 border-b border-neutral-100">
+              <div className="h-16 flex items-center px-4 border-b border-neutral-100 dark:border-[#313335]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
                     <PawPrint size={18} className="text-white" />
                   </div>
-                  <span className="text-xl font-bold text-neutral-900">
+                  <span className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                     Pet<span className="text-orange-500">Hub</span>
                   </span>
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="ml-auto p-2 rounded-xl hover:bg-neutral-100"
+                  className="ml-auto p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-500 dark:text-[#C4C7C5]"
                 >
                   <X size={20} />
                 </button>
@@ -273,8 +273,8 @@ export const TutorLayout: React.FC = () => {
                       [
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                         isActive
-                          ? 'bg-orange-50 text-orange-600'
-                          : 'text-neutral-600 hover:bg-neutral-50',
+                          ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                          : 'text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#282A2C]',
                       ].join(' ')
                     }
                   >
@@ -292,17 +292,17 @@ export const TutorLayout: React.FC = () => {
                   </NavLink>
                 ))}
               </nav>
-              <div className="p-4 border-t border-neutral-100">
+              <div className="p-4 border-t border-neutral-100 dark:border-[#313335]">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar src={currentUser?.avatar} name={currentUser?.name || ''} size="md" />
                   <div>
-                    <p className="text-sm font-semibold">{currentUser?.name}</p>
-                    <p className="text-xs text-neutral-400">{currentUser?.email}</p>
+                    <p className="text-sm font-semibold text-neutral-800 dark:text-[#E3E3E3]">{currentUser?.name}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{currentUser?.email}</p>
                   </div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
                 >
                   <LogOut size={16} />
                   Sair da conta
@@ -316,10 +316,10 @@ export const TutorLayout: React.FC = () => {
       {/* ---- Main Content ---- */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Top Header */}
-        <header className="lg:hidden h-14 bg-white border-b border-neutral-100 flex items-center px-4 gap-3 shrink-0 z-30">
+        <header className="lg:hidden h-14 bg-white dark:bg-[#1E1F20] border-b border-neutral-100 dark:border-[#313335] flex items-center px-4 gap-3 shrink-0 z-30">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-600"
+            className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]"
           >
             <Menu size={20} />
           </button>
@@ -327,7 +327,7 @@ export const TutorLayout: React.FC = () => {
             <div className="w-7 h-7 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center">
               <PawPrint size={14} className="text-white" />
             </div>
-            <span className="text-lg font-bold text-neutral-900">
+            <span className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">
               Pet<span className="text-orange-500">Hub</span>
             </span>
           </Link>
@@ -336,13 +336,13 @@ export const TutorLayout: React.FC = () => {
               type="button"
               onClick={toggleTheme}
               title="Alternar tema"
-              className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-600 transition-colors cursor-pointer"
+              className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] transition-colors cursor-pointer"
             >
               {theme === 'dark' ? <Moon size={18} className="text-orange-500" /> : <Sun size={18} className="text-orange-500" />}
             </button>
             <NavLink
               to="/tutor/notifications"
-              className="relative p-2 rounded-xl hover:bg-neutral-100 text-neutral-600"
+              className="relative p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]"
             >
               <Bell size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
@@ -359,7 +359,7 @@ export const TutorLayout: React.FC = () => {
         </main>
 
         {/* ---- Mobile Bottom Navigation ---- */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-100 z-30 safe-bottom">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] z-30 safe-bottom">
           <div className="flex items-center justify-around px-2 py-1.5">
             {bottomNavItems.map((item) => (
               <NavLink

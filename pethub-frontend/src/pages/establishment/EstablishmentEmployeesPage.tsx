@@ -172,8 +172,8 @@ export default function EstablishmentEmployeesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Equipe & Funcionários</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Equipe & Funcionários</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Cadastre veterinários, tosadores e atendentes da sua equipe para atribuição de agendamentos
           </p>
         </div>
@@ -184,15 +184,15 @@ export default function EstablishmentEmployeesPage() {
 
       {/* Employees Grid */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando equipe...</p>
         </div>
       ) : employees.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <Users size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum funcionário cadastrado</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto mb-4">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <Users size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum funcionário cadastrado</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto mb-4">
             Cadastre sua equipe para distribuir atendimentos de banho, tosa e clínica veterinária de forma profissional.
           </p>
           <Button onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white">
@@ -202,15 +202,15 @@ export default function EstablishmentEmployeesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {employees.map((emp) => (
-            <div key={emp.id} className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-xs flex flex-col justify-between space-y-4 hover:border-orange-200 transition-all">
+            <div key={emp.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-5 shadow-xs flex flex-col justify-between space-y-4 hover:border-orange-200 dark:hover:border-orange-500/40 transition-all">
               <div className="space-y-3">
                 {/* Avatar & Role Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <Avatar src={emp.avatar ? getFullImageUrl(emp.avatar) : '/user.jpg'} name={emp.name} size="md" />
                     <div>
-                      <h3 className="font-bold text-neutral-900 text-base">{emp.name}</h3>
-                      <span className="text-xs font-semibold text-orange-600">{emp.role}</span>
+                      <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{emp.name}</h3>
+                      <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">{emp.role}</span>
                     </div>
                   </div>
                   <Badge variant={emp.active ? 'success' : 'default'}>
@@ -219,29 +219,29 @@ export default function EstablishmentEmployeesPage() {
                 </div>
 
                 {emp.phone && (
-                  <p className="text-xs text-neutral-500 flex items-center gap-1.5">
-                    <Phone size={13} className="text-neutral-400" />
+                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] flex items-center gap-1.5">
+                    <Phone size={13} className="text-neutral-400 dark:text-[#8E918F]" />
                     {emp.phone}
                   </p>
                 )}
 
                 {emp.description && (
-                  <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed bg-neutral-50 p-2.5 rounded-xl">
+                  <p className="text-xs text-neutral-600 dark:text-[#C4C7C5] line-clamp-2 leading-relaxed bg-neutral-50 dark:bg-[#282A2C] p-2.5 rounded-xl">
                     {emp.description}
                   </p>
                 )}
 
                 {/* Assigned Services */}
-                <div className="pt-2 border-t border-neutral-100">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1.5">
+                <div className="pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-[#8E918F] block mb-1.5">
                     Serviços Habilitados ({emp.services.length})
                   </span>
                   {emp.services.length === 0 ? (
-                    <span className="text-[11px] text-neutral-400 italic">Nenhum serviço vinculado</span>
+                    <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] italic">Nenhum serviço vinculado</span>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {emp.services.map(s => (
-                        <span key={s.service.id} className="text-[10px] font-semibold bg-orange-50 text-orange-800 px-2 py-0.5 rounded-md border border-orange-100">
+                        <span key={s.service.id} className="text-[10px] font-semibold bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 px-2 py-0.5 rounded-md border border-orange-100 dark:border-orange-800/50">
                           {s.service.name}
                         </span>
                       ))}
@@ -251,17 +251,17 @@ export default function EstablishmentEmployeesPage() {
               </div>
 
               {/* Actions */}
-              <div className="pt-3 border-t border-neutral-100 flex gap-2 justify-end">
+              <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
                 <button
                   onClick={() => openEditModal(emp)}
-                  className="p-2 hover:bg-neutral-100 text-neutral-600 rounded-lg transition-colors"
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] rounded-lg transition-colors"
                   title="Editar funcionário"
                 >
                   <Edit2 size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(emp.id)}
-                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                  className="p-2 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 rounded-lg transition-colors"
                   title="Excluir funcionário"
                 >
                   <Trash2 size={16} />
@@ -291,11 +291,11 @@ export default function EstablishmentEmployeesPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Função / Cargo *</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Função / Cargo *</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white"
+                  className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 >
                   <option value="Tosador">Tosador</option>
                   <option value="Banhista">Banhista</option>
@@ -316,7 +316,7 @@ export default function EstablishmentEmployeesPage() {
 
             {/* Real Employee Photo Upload */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-neutral-700 uppercase">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase">
                 Foto do Colaborador
               </label>
               <input
@@ -338,12 +338,12 @@ export default function EstablishmentEmployeesPage() {
                     type="button"
                     onClick={() => empFileRef.current?.click()}
                     disabled={isUploadingPhoto}
-                    className="px-4 py-2 border border-neutral-300 hover:border-orange-500 rounded-xl text-xs font-bold text-neutral-700 hover:bg-orange-50/50 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 border border-neutral-300 dark:border-[#313335] hover:border-orange-500 dark:hover:border-orange-500 rounded-xl text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] hover:bg-orange-50/50 dark:hover:bg-[#282A2C] transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Upload size={14} className={isUploadingPhoto ? "animate-bounce" : ""} />
                     {isUploadingPhoto ? 'Enviando...' : (avatar ? 'Alterar foto do dispositivo' : 'Selecionar foto do dispositivo')}
                   </button>
-                  <p className="text-[11px] text-neutral-400 mt-1">
+                  <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1">
                     Formatos aceitos: JPG, PNG, WebP do computador ou celular
                   </p>
                 </div>
@@ -351,13 +351,13 @@ export default function EstablishmentEmployeesPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Biografia / Observações</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Biografia / Observações</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 placeholder="Especialidade em felinos, certificados, etc..."
-                className="w-full border border-neutral-200 rounded-xl p-2.5 text-xs text-neutral-800 resize-none"
+                className="w-full border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-xl p-2.5 text-xs text-neutral-800 dark:text-[#E3E3E3] resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               />
             </div>
 
@@ -370,7 +370,7 @@ export default function EstablishmentEmployeesPage() {
                 onChange={(e) => setActive(e.target.checked)}
                 className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 cursor-pointer"
               />
-              <label htmlFor="emp-active" className="text-xs font-bold text-neutral-800 cursor-pointer">
+              <label htmlFor="emp-active" className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3] cursor-pointer">
                 Colaborador ativo para agendamentos
               </label>
             </div>
@@ -378,10 +378,10 @@ export default function EstablishmentEmployeesPage() {
             {/* Assign Services */}
             {allServices.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1.5">
                   Serviços que este colaborador realiza:
                 </label>
-                <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1 bg-neutral-50 rounded-xl border border-neutral-200">
+                <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1 bg-neutral-50 dark:bg-[#1E1F20] rounded-xl border border-neutral-200 dark:border-[#313335]">
                   {allServices.map((srv) => {
                     const selected = selectedServiceIds.includes(srv.id);
                     return (
@@ -390,11 +390,11 @@ export default function EstablishmentEmployeesPage() {
                         type="button"
                         onClick={() => toggleService(srv.id)}
                         className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs ${
-                          selected ? 'bg-orange-500 text-white font-bold' : 'bg-white hover:bg-neutral-100 text-neutral-800'
+                          selected ? 'bg-orange-500 text-white font-bold' : 'bg-white dark:bg-[#282A2C] hover:bg-neutral-100 dark:hover:bg-[#313335] text-neutral-800 dark:text-[#E3E3E3]'
                         }`}
                       >
                         <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                          selected ? 'bg-white text-orange-500 border-white' : 'border-neutral-300'
+                          selected ? 'bg-white text-orange-500 border-white' : 'border-neutral-300 dark:border-neutral-600'
                         }`}>
                           {selected && <Check size={12} />}
                         </div>
@@ -406,7 +406,7 @@ export default function EstablishmentEmployeesPage() {
               </div>
             )}
 
-            <div className="pt-3 border-t border-neutral-100 flex gap-2 justify-end">
+            <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>

@@ -32,12 +32,12 @@ const statusConfig: Record<string, { label: string; variant: 'success' | 'warnin
 };
 
 const quickActions = [
-  { icon: '📅', label: 'Agendar', to: '/tutor/booking', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200' },
-  { icon: '💉', label: 'Vacinas', to: '/tutor/pets', color: 'bg-blue-50 hover:bg-blue-100 border-blue-200' },
-  { icon: '🏡', label: 'Hospedagem', to: '/tutor/explore?cat=hospedagem', color: 'bg-green-50 hover:bg-green-100 border-green-200' },
-  { icon: '🛍️', label: 'Loja', to: '/tutor/shop', color: 'bg-purple-50 hover:bg-purple-100 border-purple-200' },
-  { icon: '💬', label: 'Chat', to: '/tutor/chat', color: 'bg-pink-50 hover:bg-pink-100 border-pink-200' },
-  { icon: '⭐', label: 'Planos', to: '/tutor/plans', color: 'bg-amber-50 hover:bg-amber-100 border-amber-200' },
+  { icon: '📅', label: 'Agendar', to: '/tutor/booking', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200 dark:bg-orange-950/25 dark:hover:bg-orange-950/40 dark:border-orange-900/40' },
+  { icon: '💉', label: 'Vacinas', to: '/tutor/pets', color: 'bg-blue-50 hover:bg-blue-100 border-blue-200 dark:bg-blue-950/25 dark:hover:bg-blue-950/40 dark:border-blue-900/40' },
+  { icon: '🏡', label: 'Hospedagem', to: '/tutor/explore?cat=hospedagem', color: 'bg-green-50 hover:bg-green-100 border-green-200 dark:bg-green-950/25 dark:hover:bg-green-950/40 dark:border-green-900/40' },
+  { icon: '🛍️', label: 'Loja', to: '/tutor/shop', color: 'bg-purple-50 hover:bg-purple-100 border-purple-200 dark:bg-purple-950/25 dark:hover:bg-purple-950/40 dark:border-purple-900/40' },
+  { icon: '💬', label: 'Chat', to: '/tutor/chat', color: 'bg-pink-50 hover:bg-pink-100 border-pink-200 dark:bg-pink-950/25 dark:hover:bg-pink-950/40 dark:border-pink-900/40' },
+  { icon: '⭐', label: 'Planos', to: '/tutor/plans', color: 'bg-amber-50 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/25 dark:hover:bg-amber-950/40 dark:border-amber-900/40' },
 ];
 
 function getGreeting(): string {
@@ -120,12 +120,12 @@ export default function TutorDashboard() {
         <motion.div variants={fadeUp} className="flex items-start justify-between mb-6">
           <div>
             <p className="text-neutral-400 text-sm capitalize">{today}</p>
-            <h1 className="text-2xl font-bold text-neutral-900">
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
               {getGreeting()}, {firstName}! 👋
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/tutor/notifications" className="relative p-2.5 bg-white rounded-xl shadow-sm border border-neutral-100 text-neutral-400 hover:text-orange-500 transition-colors">
+            <Link to="/tutor/notifications" className="relative p-2.5 bg-white dark:bg-[#1E1F20] rounded-xl shadow-sm border border-neutral-100 dark:border-[#313335] text-neutral-400 dark:text-[#C4C7C5] hover:text-orange-500 dark:hover:text-orange-400 dark:hover:bg-[#282A2C] transition-colors">
               <Bell size={20} />
             </Link>
           </div>
@@ -167,7 +167,7 @@ export default function TutorDashboard() {
             { label: `R$ ${cashbackBalance.toFixed(2)} cashback`, icon: '💰', to: '/tutor/cashback' },
             { label: 'Explorar Serviços', icon: '⭐', to: '/tutor/explore' },
           ].map((stat) => (
-            <Link key={stat.label} to={stat.to} className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl shadow-sm border border-neutral-100 whitespace-nowrap text-sm font-medium text-neutral-700 hover:border-orange-200 hover:text-orange-600 transition-all shrink-0">
+            <Link key={stat.label} to={stat.to} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#282A2C] rounded-2xl shadow-sm border border-neutral-100 dark:border-[#313335] whitespace-nowrap text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] hover:border-orange-200 dark:hover:border-orange-500/30 hover:text-orange-600 dark:hover:text-orange-400 dark:hover:bg-[#333538] transition-all shrink-0">
               <span>{stat.icon}</span>
               {stat.label}
             </Link>
@@ -183,7 +183,7 @@ export default function TutorDashboard() {
         className="mb-8"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-900">Meus pets</h2>
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">Meus pets</h2>
           {myPets.length > 0 && (
             <Link to="/tutor/pets" className="text-sm text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1">
               Ver todos <ChevronRight size={16} />
@@ -198,12 +198,12 @@ export default function TutorDashboard() {
             ))}
           </div>
         ) : myPets.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 text-center shadow-sm">
-            <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3 text-orange-500 text-xl font-bold">
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl p-6 border border-neutral-100 dark:border-[#313335] text-center shadow-sm">
+            <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/40 rounded-full flex items-center justify-center mx-auto mb-3 text-orange-500 text-xl font-bold">
               🐾
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm mb-1">Você ainda não possui pets cadastrados</h3>
-            <p className="text-neutral-400 text-xs max-w-sm mx-auto mb-4">
+            <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm mb-1">Você ainda não possui pets cadastrados</h3>
+            <p className="text-neutral-400 dark:text-[#C4C7C5] text-xs max-w-sm mx-auto mb-4">
               Cadastre seu pet para agendar consultas, banhos e controlar o histórico de saúde com facilidade.
             </p>
             <button
@@ -220,10 +220,10 @@ export default function TutorDashboard() {
                 key={pet.id}
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.97 }}
-                className="shrink-0 w-40 bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all duration-300"
+                className="shrink-0 w-40 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 dark:hover:border-orange-500/30 transition-all duration-300"
                 onClick={() => navigate(`/tutor/pets/${pet.id}`)}
               >
-                <div className="h-28 overflow-hidden bg-neutral-100">
+                <div className="h-28 overflow-hidden bg-neutral-100 dark:bg-[#282A2C]">
                   <img
                     src={pet.photo || '/user.jpg'}
                     alt={pet.name}
@@ -232,12 +232,12 @@ export default function TutorDashboard() {
                   />
                 </div>
                 <div className="p-3">
-                  <p className="font-semibold text-neutral-900 text-sm truncate">
+                  <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm truncate">
                     {speciesEmoji[pet.species?.toLowerCase()] || '🐾'} {pet.name}
                   </p>
-                  <p className="text-xs text-neutral-400 truncate">{pet.breed || pet.species || 'PetHub'}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#C4C7C5] truncate">{pet.breed || pet.species || 'PetHub'}</p>
                   <div className="mt-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-transparent dark:border-green-800/40 font-medium">
                       ✓ Ativo
                     </span>
                   </div>
@@ -249,13 +249,13 @@ export default function TutorDashboard() {
             <motion.div
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.97 }}
-              className="shrink-0 w-40 bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-2xl flex flex-col items-center justify-center gap-2 p-4 cursor-pointer hover:border-orange-300 hover:bg-orange-50 transition-all duration-300"
+              className="shrink-0 w-40 bg-neutral-50 dark:bg-[#1E1F20] border-2 border-dashed border-neutral-200 dark:border-[rgba(255,255,255,0.18)] rounded-2xl flex flex-col items-center justify-center gap-2 p-4 cursor-pointer hover:border-orange-300 dark:hover:border-orange-500/50 hover:bg-orange-50 dark:hover:bg-[#282A2C] transition-all duration-300"
               onClick={() => navigate('/tutor/pets/novo')}
             >
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-500 text-xl font-bold">
+              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/40 rounded-full flex items-center justify-center text-orange-500 text-xl font-bold">
                 +
               </div>
-              <p className="text-xs text-neutral-500 text-center font-medium">Adicionar pet</p>
+              <p className="text-xs text-neutral-500 dark:text-[#E3E3E3] text-center font-medium">Adicionar pet</p>
             </motion.div>
           </div>
         )}
@@ -269,7 +269,7 @@ export default function TutorDashboard() {
         className="mb-8"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-900">Próximo agendamento</h2>
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">Próximo agendamento</h2>
           {upcomingApts.length > 0 && (
             <Link to="/tutor/appointments" className="text-sm text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1">
               Ver agenda <ChevronRight size={16} />
@@ -331,14 +331,14 @@ export default function TutorDashboard() {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl p-6 border border-neutral-100 dark:border-[#313335] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shrink-0">
+              <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/40 rounded-2xl flex items-center justify-center text-orange-500 shrink-0">
                 <Calendar size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-neutral-900 text-sm">Você ainda não possui próximos agendamentos</h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Agende banho, tosa, consulta ou hospedagem com estabelecimentos parceiros.</p>
+                <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm">Você ainda não possui próximos agendamentos</h3>
+                <p className="text-xs text-neutral-400 dark:text-[#C4C7C5] mt-0.5">Agende banho, tosa, consulta ou hospedagem com estabelecimentos parceiros.</p>
               </div>
             </div>
             <Link
@@ -358,7 +358,7 @@ export default function TutorDashboard() {
         transition={{ delay: 0.25 }}
         className="mb-8"
       >
-        <h2 className="text-lg font-bold text-neutral-900 mb-4">Ações rápidas</h2>
+        <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Ações rápidas</h2>
         <div className="grid grid-cols-3 gap-3">
           {quickActions.map((action) => (
             <Link
@@ -367,7 +367,7 @@ export default function TutorDashboard() {
               className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 ${action.color} transition-all duration-200 text-center`}
             >
               <span className="text-3xl">{action.icon}</span>
-              <span className="text-xs font-semibold text-neutral-700">{action.label}</span>
+              <span className="text-xs font-semibold text-neutral-700 dark:text-[#E3E3E3]">{action.label}</span>
             </Link>
           ))}
         </div>
@@ -381,16 +381,16 @@ export default function TutorDashboard() {
         className="mb-8"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-900">Estabelecimentos parceiros</h2>
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">Estabelecimentos parceiros</h2>
           <Link to="/tutor/explore" className="text-sm text-orange-500 font-medium flex items-center gap-1">
             Ver todos <ChevronRight size={16} />
           </Link>
         </div>
 
         {approvedEstablishments.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 shadow-sm text-center">
-            <Store size={28} className="mx-auto text-neutral-300 mb-2" />
-            <p className="text-xs text-neutral-500 font-medium">Novos estabelecimentos parceiros estão sendo credenciados na sua região.</p>
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl p-6 border border-neutral-100 dark:border-[#313335] shadow-sm text-center">
+            <Store size={28} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+            <p className="text-xs text-neutral-500 dark:text-[#C4C7C5] font-medium">Novos estabelecimentos parceiros estão sendo credenciados na sua região.</p>
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
@@ -398,10 +398,10 @@ export default function TutorDashboard() {
               <motion.div
                 key={est.id}
                 whileHover={{ y: -4 }}
-                className="shrink-0 w-64 bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 transition-all duration-300"
+                className="shrink-0 w-64 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-orange-200 dark:hover:border-orange-500/30 transition-all duration-300"
                 onClick={() => navigate(`/tutor/estabelecimentos/${est.id}`)}
               >
-                <div className="h-32 overflow-hidden relative bg-neutral-100">
+                <div className="h-32 overflow-hidden relative bg-neutral-100 dark:bg-[#282A2C]">
                   <img
                     src={est.photos?.[0] || est.avatar || '/user.jpg'}
                     alt={est.businessName || est.name}
@@ -415,8 +415,8 @@ export default function TutorDashboard() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="font-bold text-neutral-900 truncate">{est.businessName || est.name}</p>
-                  <div className="flex items-center gap-1 text-xs text-neutral-400 mt-1">
+                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{est.businessName || est.name}</p>
+                  <div className="flex items-center gap-1 text-xs text-neutral-400 dark:text-[#8E918F] mt-1">
                     <MapPin size={12} />
                     <span className="truncate">{est.city ? `${est.city}, ${est.state || 'SP'}` : est.address || 'Brasil'}</span>
                   </div>

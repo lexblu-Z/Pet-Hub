@@ -29,6 +29,37 @@ async function main() {
   } else {
     console.log(`⚠️ Conta ADMIN já existe no banco de dados.`);
   }
+
+  // Ensure all users have a deterministic defaultAvatar if not set
+  const defaultAvatars = [
+    '/user.jpg',
+    '/user2.jpg',
+    '/user3.jpg',
+    '/user4.jpg',
+    '/user5.jpg',
+    '/user6.jpg',
+  ];
+
+  function getStableAvatar(id: string): string {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i);
+      hash |= 0;
+    }
+    return defaultAvatars[Math.abs(hash) % defaultAvatars.length];
+  }
+
+  const users = await prisma.user.findMany();
+  for (const user of users) {
+    if (!user.defaultAvatar) {
+      const assigned = getStableAvatar(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { defaultAvatar: assigned },
+      });
+      console.log(`✅ Assigned ${assigned} to ${user.name} (${user.email})`);
+    }
+  }
 }
 
 main()

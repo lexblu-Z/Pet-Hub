@@ -159,15 +159,15 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:h-[calc(100vh-theme(spacing.16))] bg-white lg:border-x border-neutral-100 relative overflow-hidden rounded-2xl shadow-sm my-2">
+    <div className="max-w-6xl mx-auto flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:h-[calc(100vh-theme(spacing.16))] bg-white dark:bg-[#1E1F20] lg:border-x border-neutral-100 dark:border-[#313335] relative overflow-hidden rounded-2xl shadow-sm my-2">
       {/* Sidebar - Contacts List */}
-      <div className={`w-full lg:w-80 flex flex-col border-r border-neutral-100 bg-white ${activeContactId ? 'hidden lg:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-neutral-100 space-y-3">
+      <div className={`w-full lg:w-80 flex flex-col border-r border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] ${activeContactId ? 'hidden lg:flex' : 'flex'}`}>
+        <div className="p-4 border-b border-neutral-100 dark:border-[#313335] space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-neutral-900">Mensagens</h1>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Mensagens</h1>
             <button
               onClick={() => setNewChatModalOpen(true)}
-              className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-xl transition-colors shadow-2xs"
+              className="flex items-center gap-1 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-950/60 px-3 py-1.5 rounded-xl transition-colors shadow-2xs"
               title="Iniciar nova conversa"
             >
               <Plus size={14} />
@@ -176,25 +176,25 @@ export default function ChatPage() {
           </div>
 
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-[#8E918F]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar conversas..."
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all border border-neutral-200"
+              className="w-full pl-9 pr-4 py-2 bg-neutral-50 dark:bg-[#282A2C] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all border border-neutral-200 dark:border-[#313335] text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F]"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {filteredContacts.length === 0 ? (
-            <div className="p-6 text-center text-neutral-400 text-sm">
+            <div className="p-6 text-center text-neutral-400 dark:text-[#8E918F] text-sm">
               <MessageSquare size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="font-semibold text-neutral-600">Nenhuma conversa encontrada</p>
+              <p className="font-semibold text-neutral-600 dark:text-[#C4C7C5]">Nenhuma conversa encontrada</p>
               <button
                 onClick={() => setNewChatModalOpen(true)}
-                className="mt-3 text-xs text-orange-600 font-bold hover:underline"
+                className="mt-3 text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline"
               >
                 + Iniciar nova conversa
               </button>
@@ -206,21 +206,21 @@ export default function ChatPage() {
                 <button
                   key={contact.id}
                   onClick={() => setActiveContactId(contact.id)}
-                  className={`w-full flex items-center gap-3 p-3.5 border-b border-neutral-50 transition-colors text-left ${
-                    isSelected ? 'bg-orange-50/70 border-l-4 border-l-orange-500' : 'hover:bg-neutral-50'
+                  className={`w-full flex items-center gap-3 p-3.5 border-b border-neutral-50 dark:border-[#313335] transition-colors text-left ${
+                    isSelected ? 'bg-orange-50/70 dark:bg-orange-950/30 border-l-4 border-l-orange-500' : 'hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
                   }`}
                 >
                   <div className="relative shrink-0">
                     <Avatar src={contact.logo || contact.avatar} name={contact.businessName} size="md" isEstablishment={true} />
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#1E1F20] rounded-full" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className={`text-sm font-semibold truncate ${isSelected ? 'text-orange-950' : 'text-neutral-800'}`}>
+                      <p className={`text-sm font-semibold truncate ${isSelected ? 'text-orange-950 dark:text-orange-300' : 'text-neutral-800 dark:text-[#E3E3E3]'}`}>
                         {contact.businessName}
                       </p>
                     </div>
-                    <p className="text-xs text-neutral-400 truncate mt-0.5">
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] truncate mt-0.5">
                       {contact.type} {contact.city ? `· ${contact.city}` : ''}
                     </p>
                   </div>
@@ -232,14 +232,14 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col bg-[#F8F9FA] ${!activeContactId ? 'hidden lg:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-[#F8F9FA] dark:bg-[#131314] ${!activeContactId ? 'hidden lg:flex' : 'flex'}`}>
         {!activeContact ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 text-3xl">
+            <div className="w-20 h-20 bg-white dark:bg-[#1E1F20] rounded-full shadow-sm flex items-center justify-center mb-4 text-3xl">
               💬
             </div>
-            <h2 className="text-lg font-bold text-neutral-800 mb-1">Suas mensagens</h2>
-            <p className="text-neutral-400 text-xs max-w-sm mb-4">
+            <h2 className="text-lg font-bold text-neutral-800 dark:text-[#E3E3E3] mb-1">Suas mensagens</h2>
+            <p className="text-neutral-400 dark:text-[#8E918F] text-xs max-w-sm mb-4">
               Selecione um estabelecimento ou profissional ao lado para conversar em tempo real.
             </p>
             <Button size="sm" onClick={() => setNewChatModalOpen(true)} leftIcon={<Plus size={15} />}>
@@ -249,7 +249,7 @@ export default function ChatPage() {
         ) : (
           <>
             {/* Chat Header */}
-            <div className="h-16 px-4 bg-white border-b border-neutral-100 flex items-center justify-between shrink-0 shadow-sm z-10">
+            <div className="h-16 px-4 bg-white dark:bg-[#1E1F20] border-b border-neutral-100 dark:border-[#313335] flex items-center justify-between shrink-0 shadow-sm z-10">
               <div
                 onClick={() => setContactModalOpen(true)}
                 className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
@@ -261,17 +261,17 @@ export default function ChatPage() {
                     e.stopPropagation();
                     setActiveContactId(null);
                   }}
-                  className="lg:hidden p-1.5 -ml-1 text-neutral-500 hover:text-neutral-900"
+                  className="lg:hidden p-1.5 -ml-1 text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-white"
                 >
                   <ArrowLeft size={18} />
                 </button>
                 <Avatar src={activeContact.logo || activeContact.avatar} name={activeContact.businessName} size="md" isEstablishment={true} />
                 <div>
-                  <h2 className="font-bold text-sm text-neutral-900 flex items-center gap-1.5">
+                  <h2 className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5">
                     {activeContact.businessName}
-                    <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">Ver detalhes</span>
+                    <span className="text-[10px] text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-1.5 py-0.5 rounded font-medium">Ver detalhes</span>
                   </h2>
-                  <p className="text-[11px] text-green-600 font-medium flex items-center gap-1">
+                  <p className="text-[11px] text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                     Online para atendimento
                   </p>
@@ -282,7 +282,7 @@ export default function ChatPage() {
               {activeContact.phone && (
                 <button
                   onClick={() => handleOpenWhatsApp(activeContact.phone)}
-                  className="flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+                  className="flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/60 text-green-700 dark:text-green-300 text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
                 >
                   <span>💬 WhatsApp</span>
                 </button>
@@ -292,7 +292,7 @@ export default function ChatPage() {
             {/* Messages Stream with Strict Left/Right Alignment */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               <div className="text-center my-2">
-                <span className="text-[11px] text-neutral-400 bg-white px-3 py-1 rounded-full font-medium shadow-2xs border border-neutral-100">
+                <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] bg-white dark:bg-[#1E1F20] px-3 py-1 rounded-full font-medium shadow-2xs border border-neutral-100 dark:border-[#313335]">
                   Início da conversa com {activeContact.businessName}
                 </span>
               </div>
@@ -308,13 +308,13 @@ export default function ChatPage() {
                       className={`max-w-[78%] sm:max-w-[65%] rounded-2xl px-4 py-2.5 shadow-sm ${
                         isMe
                           ? 'bg-orange-500 text-white rounded-br-xs'
-                          : 'bg-white text-neutral-800 rounded-bl-xs border border-neutral-100'
+                          : 'bg-white dark:bg-[#282A2C] text-neutral-800 dark:text-[#E3E3E3] rounded-bl-xs border border-neutral-100 dark:border-[#313335]'
                       }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                         {msg.content}
                       </p>
-                      <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-white/70' : 'text-neutral-400'}`}>
+                      <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-white/70' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -325,18 +325,18 @@ export default function ChatPage() {
             </div>
 
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-3.5 bg-white border-t border-neutral-100 flex items-center gap-2">
+            <form onSubmit={handleSendMessage} className="p-3.5 bg-white dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] flex items-center gap-2">
               <input
                 type="text"
                 value={msgText}
                 onChange={(e) => setMsgText(e.target.value)}
                 placeholder="Digite sua mensagem..."
-                className="flex-1 bg-neutral-100 text-sm rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all border border-transparent"
+                className="flex-1 bg-neutral-100 dark:bg-[#282A2C] text-sm text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F] rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all border border-transparent dark:border-[#313335]"
               />
               <button
                 type="submit"
                 disabled={!msgText.trim()}
-                className="p-2.5 bg-orange-500 disabled:bg-neutral-200 text-white rounded-full transition-colors shrink-0 shadow-sm hover:bg-orange-600"
+                className="p-2.5 bg-orange-500 disabled:bg-neutral-200 dark:disabled:bg-[#282A2C] disabled:text-neutral-400 text-white rounded-full transition-colors shrink-0 shadow-sm hover:bg-orange-600"
               >
                 <Send size={16} />
               </button>
@@ -353,18 +353,18 @@ export default function ChatPage() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-neutral-500 dark:text-[#C4C7C5]">
             Selecione um pet shop, clínica ou profissional veterinário ativo para iniciar o atendimento:
           </p>
 
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-[#8E918F]" />
             <input
               type="text"
               value={newChatSearch}
               onChange={(e) => setNewChatSearch(e.target.value)}
               placeholder="Buscar por nome, especialidade ou cidade..."
-              className="w-full pl-9 pr-4 py-2 bg-neutral-50 rounded-xl text-sm border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              className="w-full pl-9 pr-4 py-2 bg-neutral-50 dark:bg-[#282A2C] rounded-xl text-sm border border-neutral-200 dark:border-[#313335] text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             />
           </div>
 
@@ -381,7 +381,7 @@ export default function ChatPage() {
                 className={`px-3 py-1.5 rounded-lg transition-colors ${
                   newChatFilter === f.id
                     ? 'bg-orange-500 text-white'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                    : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]'
                 }`}
               >
                 {f.label}
@@ -391,30 +391,30 @@ export default function ChatPage() {
 
           <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
             {availableForNewChat.length === 0 ? (
-              <div className="p-8 text-center text-neutral-400 text-sm">
+              <div className="p-8 text-center text-neutral-400 dark:text-[#8E918F] text-sm">
                 <Store size={36} className="mx-auto mb-2 opacity-30" />
-                <p className="font-semibold text-neutral-600">Nenhum estabelecimento ou profissional encontrado</p>
+                <p className="font-semibold text-neutral-600 dark:text-[#C4C7C5]">Nenhum estabelecimento ou profissional encontrado</p>
               </div>
             ) : (
               availableForNewChat.map(c => (
                 <div
                   key={c.id}
                   onClick={() => handleSelectNewChat(c)}
-                  className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 hover:border-orange-200 hover:bg-orange-50/50 cursor-pointer transition-all group"
+                  className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 dark:border-[#313335] hover:border-orange-200 dark:hover:border-orange-800/60 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={c.logo} alt="" className="w-11 h-11 rounded-full object-cover border border-neutral-200 shrink-0" />
+                    <img src={c.logo} alt="" className="w-11 h-11 rounded-full object-cover border border-neutral-200 dark:border-[#313335] shrink-0" />
                     <div className="min-w-0">
-                      <h4 className="font-bold text-sm text-neutral-900 truncate group-hover:text-orange-600 transition-colors">
+                      <h4 className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] truncate group-hover:text-orange-600 transition-colors">
                         {c.businessName}
                       </h4>
-                      <p className="text-xs text-neutral-400 truncate mt-0.5 flex items-center gap-1">
+                      <p className="text-xs text-neutral-400 dark:text-[#8E918F] truncate mt-0.5 flex items-center gap-1">
                         <span>{c.type}</span>
                         {c.city && <span>· {c.city}</span>}
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost" className="shrink-0 text-orange-600 font-bold group-hover:bg-orange-500 group-hover:text-white">
+                  <Button size="sm" variant="ghost" className="shrink-0 text-orange-600 dark:text-orange-400 font-bold group-hover:bg-orange-500 group-hover:text-white">
                     Conversar
                   </Button>
                 </div>
@@ -433,30 +433,30 @@ export default function ChatPage() {
       >
         {activeContact && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-neutral-50 rounded-2xl">
-              <img src={activeContact.logo} alt="" className="w-14 h-14 rounded-full object-cover border border-neutral-200" />
+            <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl">
+              <img src={activeContact.logo} alt="" className="w-14 h-14 rounded-full object-cover border border-neutral-200 dark:border-[#313335]" />
               <div>
-                <h3 className="font-bold text-base text-neutral-900">{activeContact.businessName}</h3>
-                <p className="text-xs text-neutral-500">{activeContact.type || activeContact.name}</p>
+                <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">{activeContact.businessName}</h3>
+                <p className="text-xs text-neutral-500 dark:text-[#C4C7C5]">{activeContact.type || activeContact.name}</p>
               </div>
             </div>
 
             <div className="space-y-2 text-sm">
               {activeContact.phone && (
-                <div className="flex items-center gap-2 text-neutral-700">
-                  <Phone size={16} className="text-neutral-400 shrink-0" />
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-[#E3E3E3]">
+                  <Phone size={16} className="text-neutral-400 dark:text-[#8E918F] shrink-0" />
                   <span>{activeContact.phone}</span>
                 </div>
               )}
               {activeContact.address && (
-                <div className="flex items-center gap-2 text-neutral-700">
-                  <MapPin size={16} className="text-neutral-400 shrink-0" />
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-[#E3E3E3]">
+                  <MapPin size={16} className="text-neutral-400 dark:text-[#8E918F] shrink-0" />
                   <span>{activeContact.address}</span>
                 </div>
               )}
             </div>
 
-            <div className="pt-3 border-t border-neutral-100 flex flex-col gap-2">
+            <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex flex-col gap-2">
               {activeContact.phone ? (
                 <Button
                   fullWidth
@@ -466,7 +466,7 @@ export default function ChatPage() {
                   Conversar no WhatsApp 💬
                 </Button>
               ) : (
-                <p className="text-xs text-neutral-400 text-center">Nenhum telefone cadastrado para este contato.</p>
+                <p className="text-xs text-neutral-400 dark:text-[#8E918F] text-center">Nenhum telefone cadastrado para este contato.</p>
               )}
               <Button variant="ghost" fullWidth onClick={() => setContactModalOpen(false)}>
                 Fechar

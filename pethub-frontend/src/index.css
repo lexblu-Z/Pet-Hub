@@ -2,7 +2,63 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --surface-app: #fafafa;
+  --surface-header: #ffffff;
+  --surface-sidebar: #ffffff;
+  --surface-card: #ffffff;
+  --surface-subcard: #f5f5f5;
+  --surface-elevated: #ffffff;
+  --surface-input: #ffffff;
+  --surface-subtle: #f5f5f5;
+  --surface-hover: #f5f5f5;
+  
+  --border-subtle: #f5f5f5;
+  --border-default: #e5e5e5;
+  --border-strong: #d4d4d4;
+
+  --text-primary: #171717;
+  --text-secondary: #525252;
+  --text-muted: #737373;
+}
+
+.dark {
+  --surface-app: #131314;
+  --surface-header: #1e1f20;
+  --surface-sidebar: #1e1f20;
+  --surface-card: #1e1f20;
+  --surface-subcard: #282a2c;
+  --surface-elevated: #282a2c;
+  --surface-input: #1e1f20;
+  --surface-subtle: #282a2c;
+  --surface-hover: #282a2c;
+
+  --border-subtle: #282a2c;
+  --border-default: #313335;
+  --border-strong: #444746;
+
+  --text-primary: #e3e3e3;
+  --text-secondary: #c4c7c5;
+  --text-muted: #8e918f;
+}
+
 @theme {
+  --color-surface-app: var(--surface-app);
+  --color-surface-header: var(--surface-header);
+  --color-surface-sidebar: var(--surface-sidebar);
+  --color-surface-card: var(--surface-card);
+  --color-surface-subcard: var(--surface-subcard);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-input: var(--surface-input);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-theme-border: var(--border-default);
+  --color-theme-border-subtle: var(--border-subtle);
+
+  --color-theme-text: var(--text-primary);
+  --color-theme-muted: var(--text-secondary);
+
   --color-brand-50: #fff7ed;
   --color-brand-100: #ffedd5;
   --color-brand-200: #fed7aa;
@@ -66,8 +122,14 @@
     scroll-behavior: smooth;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+    background-color: var(--surface-app);
+    color: var(--text-primary);
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -140,8 +202,11 @@
   background: #d4d4d4;
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #a3a3a3;
+.dark ::-webkit-scrollbar-thumb {
+  background: #313335;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #444746;
 }
 
 /* Selection */
@@ -196,6 +261,11 @@
   background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e1f20 25%, #282a2c 50%, #1e1f20 75%);
+  background-size: 200% 100%;
 }
 
 /* Focus ring */

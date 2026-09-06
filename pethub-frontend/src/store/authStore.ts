@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UserRole, TutorProfile, EstablishmentProfile, ProfessionalProfile, AdminProfile } from '@/types';
 import { api } from '@/services/api';
+import { useThemeStore } from '@/store/themeStore';
 
 type CurrentUser = TutorProfile | EstablishmentProfile | ProfessionalProfile | AdminProfile;
 
@@ -31,6 +32,9 @@ export const useAuthStore = create<AuthStore>()(
           currentRole: role,
           isAuthenticated: true,
         });
+        if ((user as any)?.preferences?.theme) {
+          useThemeStore.getState().setTheme((user as any).preferences.theme, true);
+        }
       },
 
       logout: () => {
@@ -64,6 +68,9 @@ export const useAuthStore = create<AuthStore>()(
             currentRole: mappedRole,
             isAuthenticated: true,
           });
+          if (response.data.preferences?.theme) {
+            useThemeStore.getState().setTheme(response.data.preferences.theme, true);
+          }
         } catch (error) {
           get().logout();
         }

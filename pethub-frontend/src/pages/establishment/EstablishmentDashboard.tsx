@@ -19,6 +19,16 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
+import { useThemeStore } from '@/store/themeStore';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from 'recharts';
 
 interface DashboardData {
   hasData: boolean;
@@ -78,6 +88,63 @@ export default function EstablishmentDashboard() {
     fetchDashboard();
   }, [period]);
 
+  const { isDark } = useThemeStore();
+
+  // Format X-axis date cleanly according to point density
+  const formatXAxisDate = (dateStr: string, totalCount: number): string => {
+    if (!dateStr) return '';
+    if (['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom', 'Hoje'].includes(dateStr)) {
+      return dateStr;
+    }
+    const match = dateStr.match(/^(\d{1,2})/);
+    if (!match) return dateStr;
+    const dayNum = match[1];
+
+    // For dense charts (> 10 points, e.g. 30 days), show just day number (17, 18, 19...)
+    if (totalCount > 10) {
+      return dayNum;
+    }
+
+    // For fewer points, show clean short month (17 ago)
+    const monthMatch = dateStr.match(/([a-zA-Z]{3})/i);
+    if (monthMatch && monthMatch[1].toLowerCase() !== 'de') {
+      return `${dayNum} ${monthMatch[1].toLowerCase()}`;
+    }
+
+    return dayNum;
+  };
+
+  const chartData = (data?.revenueChart && data.revenueChart.length > 0)
+    ? data.revenueChart
+    : [
+        { date: 'Seg', amount: 0 },
+        { date: 'Ter', amount: 0 },
+        { date: 'Qua', amount: 0 },
+        { date: 'Qui', amount: 0 },
+        { date: 'Sex', amount: 0 },
+        { date: 'Sáb', amount: 0 },
+        { date: 'Dom', amount: 0 },
+      ];
+
+  const totalPoints = chartData.length;
+  // Adaptive tick frequency: ~5-7 ticks evenly distributed to prevent crowded/overlapping labels
+  const adaptiveInterval = totalPoints > 20 ? Math.ceil(totalPoints / 7) : totalPoints > 10 ? 2 : 0;
+
+  const CustomRevenueTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const point = payload[0].payload;
+      return (
+        <div className="bg-neutral-900/95 dark:bg-[#282A2C]/95 backdrop-blur-md text-white dark:text-[#E3E3E3] border border-neutral-700/80 dark:border-[#313335] px-3.5 py-2 rounded-xl shadow-xl text-xs space-y-0.5 pointer-events-none z-30">
+          <p className="font-semibold text-neutral-300 dark:text-[#C4C7C5]">{point.date}</p>
+          <p className="font-bold text-orange-400 text-sm">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(point.amount || 0)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   const maxRevenuePoint = data?.revenueChart?.length 
     ? Math.max(...data.revenueChart.map(p => p.amount), 1)
     : 1;
@@ -96,7 +163,7 @@ export default function EstablishmentDashboard() {
           />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-neutral-900">{businessName}</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">{businessName}</h1>
               {isSuspended ? (
                 <Badge variant="warning">⏸️ Suspenso</Badge>
               ) : isPendingApproval ? (
@@ -105,7 +172,7 @@ export default function EstablishmentDashboard() {
                 <Badge variant="success">✓ Ativo</Badge>
               )}
             </div>
-            <p className="text-neutral-500 text-sm mt-0.5">
+            <p className="text-neutral-500 dark:text-[#C4C7C5] text-sm mt-0.5">
               Painel de controle e desempenho do seu negócio em Ourinhos - SP
             </p>
           </div>
@@ -113,11 +180,11 @@ export default function EstablishmentDashboard() {
 
         {/* Period Selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-neutral-500 font-semibold hidden sm:inline">Período:</label>
+          <label className="text-xs text-neutral-500 dark:text-[#8E918F] font-semibold hidden sm:inline">Período:</label>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+            className="bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
           >
             <option value="today">Hoje</option>
             <option value="7days">Últimos 7 dias</option>
@@ -129,22 +196,22 @@ export default function EstablishmentDashboard() {
 
       {/* Suspended Alert Banner */}
       {isSuspended && (
-        <div className="bg-orange-50 border-2 border-orange-300 rounded-3xl p-6 shadow-xs text-orange-950">
+        <div className="bg-orange-50 dark:bg-orange-950/30 border-2 border-orange-300 dark:border-orange-800/60 rounded-3xl p-6 shadow-xs text-orange-950 dark:text-orange-200">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center shrink-0">
               <AlertTriangle size={24} />
             </div>
             <div className="space-y-1.5 flex-1">
-              <h3 className="font-bold text-orange-950 text-base">
+              <h3 className="font-bold text-orange-950 dark:text-orange-200 text-base">
                 Estabelecimento Temporariamente Suspenso
               </h3>
-              <p className="text-xs sm:text-sm text-orange-900 leading-relaxed">
+              <p className="text-xs sm:text-sm text-orange-900 dark:text-orange-300 leading-relaxed">
                 Seu estabelecimento está com as funcionalidades restritas temporariamente {establishmentProfile?.suspendedUntil ? `até ${new Date(establishmentProfile.suspendedUntil).toLocaleString('pt-BR')}` : ''}.
               </p>
-              <p className="text-xs text-orange-800 bg-white/70 p-3 rounded-xl border border-orange-200">
+              <p className="text-xs text-orange-800 dark:text-orange-200 bg-white/70 dark:bg-[#282A2C]/70 p-3 rounded-xl border border-orange-200 dark:border-orange-800/40">
                 <span className="font-bold">Motivo:</span> {establishmentProfile?.suspensionReason || 'Violação das diretrizes da plataforma.'}
               </p>
-              <p className="text-[11px] text-orange-700 mt-1">
+              <p className="text-[11px] text-orange-700 dark:text-orange-400 mt-1">
                 A reativação da conta ocorrerá automaticamente após o término do período de suspensão.
               </p>
             </div>
@@ -154,16 +221,16 @@ export default function EstablishmentDashboard() {
 
       {/* Pending Approval Checklist Banner */}
       {isPendingApproval && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-xs">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 shadow-xs">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
               <AlertTriangle size={20} />
             </div>
             <div className="space-y-2 flex-1">
-              <h3 className="font-bold text-amber-900 text-sm">
+              <h3 className="font-bold text-amber-900 dark:text-amber-200 text-sm">
                 Seu estabelecimento está em análise pela equipe administrativa
               </h3>
-              <p className="text-xs text-amber-800 leading-relaxed">
+              <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                 Você já pode preparar seu negócio cadastrando serviços, produtos, fotos e horários. Assim que o administrador aprovar, suas páginas ficarão públicas para os tutores de Ourinhos.
               </p>
               <div className="pt-1 flex flex-wrap gap-2">
@@ -175,7 +242,7 @@ export default function EstablishmentDashboard() {
                 </Link>
                 <Link
                   to="/estabelecimento/servicos"
-                  className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold transition-colors"
+                  className="px-3 py-1.5 bg-white dark:bg-[#282A2C] border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 rounded-lg text-xs font-bold transition-colors"
                 >
                   Cadastrar Serviços
                 </Link>
@@ -188,83 +255,83 @@ export default function EstablishmentDashboard() {
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Receita */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Receita Total</span>
-            <div className="w-9 h-9 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center">
               <DollarSign size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               R$ {data ? data.revenue.toFixed(2).replace('.', ',') : '0,00'}
             </span>
           </div>
-          <div className="flex justify-between text-[11px] text-neutral-500 pt-1 border-t border-neutral-50">
+          <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
             <span>Serviços: R$ {data ? data.appointmentRevenue.toFixed(2).replace('.', ',') : '0,00'}</span>
             <span>Produtos: R$ {data ? data.productRevenue.toFixed(2).replace('.', ',') : '0,00'}</span>
           </div>
         </div>
 
         {/* Agendamentos */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Agendamentos</span>
-            <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
               <Calendar size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data?.appointments.today || 0}
             </span>
-            <span className="text-xs text-neutral-400 ml-1.5 font-medium">hoje</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] ml-1.5 font-medium">hoje</span>
           </div>
-          <div className="flex justify-between text-[11px] text-neutral-500 pt-1 border-t border-neutral-50">
+          <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
             <span>Próximos: {data?.appointments.upcoming || 0}</span>
-            <span className="text-green-600 font-bold">Concluídos: {data?.appointments.completed || 0}</span>
+            <span className="text-green-600 dark:text-green-400 font-bold">Concluídos: {data?.appointments.completed || 0}</span>
           </div>
         </div>
 
         {/* Pedidos */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Pedidos</span>
-            <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
               <Package size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data?.orders.pending || 0}
             </span>
-            <span className="text-xs text-neutral-400 ml-1.5 font-medium">pendentes</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] ml-1.5 font-medium">pendentes</span>
           </div>
-          <div className="flex justify-between text-[11px] text-neutral-500 pt-1 border-t border-neutral-50">
+          <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
             <span>Entregues: {data?.orders.completed || 0}</span>
-            <Link to="/estabelecimento/pedidos" className="text-orange-600 font-bold hover:underline">
+            <Link to="/estabelecimento/pedidos" className="text-orange-600 dark:text-orange-400 font-bold hover:underline">
               Ver pedidos →
             </Link>
           </div>
         </div>
 
         {/* Clientes & Pets */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Clientes e Pets</span>
-            <div className="w-9 h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center">
               <PawPrint size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data?.clientsCount || 0}
             </span>
-            <span className="text-xs text-neutral-400 ml-1.5 font-medium">clientes</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] ml-1.5 font-medium">clientes</span>
           </div>
-          <div className="flex justify-between text-[11px] text-neutral-500 pt-1 border-t border-neutral-50">
+          <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
             <span>{data?.petsCount || 0} pets atendidos</span>
-            <span className="text-amber-600 font-semibold">★ {data?.averageRating.toFixed(1) || '5.0'}</span>
+            <span className="text-amber-600 dark:text-amber-400 font-semibold">★ {data?.averageRating.toFixed(1) || '5.0'}</span>
           </div>
         </div>
       </div>
@@ -272,119 +339,121 @@ export default function EstablishmentDashboard() {
       {/* Main Grid: Revenue Chart & Top Products */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Real Revenue Chart */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-neutral-100 p-5 shadow-xs space-y-4">
+        <div className="lg:col-span-2 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4 overflow-hidden">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-neutral-900 text-base">Evolução da Receita</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">Faturamento real com agendamentos e vendas no período</p>
+              <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Evolução da Receita</h2>
+              <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-0.5">Faturamento real com agendamentos e vendas no período</p>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-lg">
+            <span className="text-xs font-semibold px-2.5 py-1 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 rounded-lg">
               R$ {data ? data.revenue.toFixed(2).replace('.', ',') : '0,00'}
             </span>
           </div>
 
           {loading ? (
-            <div className="h-56 flex items-center justify-center text-neutral-400 text-xs">
+            <div className="h-64 sm:h-72 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
               Carregando dados reais do PostgreSQL...
             </div>
-          ) : !data?.hasData || data.revenue === 0 ? (
-            <div className="relative h-56 w-full flex flex-col justify-between pt-2 pb-2">
-              {/* Subtle watermark notice */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-4 text-center">
-                <span className="text-xs font-semibold text-neutral-500 bg-white/90 px-3 py-1.5 rounded-full border border-neutral-200/80 shadow-xs">
-                  📊 Ainda não há dados suficientes para exibir tendências
-                </span>
-                <p className="text-[11px] text-neutral-400 mt-1 max-w-sm">
-                  Conforme seus agendamentos e vendas forem concluídos, a curva de faturamento real aparecerá aqui.
-                </p>
-              </div>
-
-              {/* Grid Lines & Y-Axis */}
-              <div className="relative flex-1 flex flex-col justify-between border-l border-b border-neutral-200 pl-2">
-                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
-                  <span className="text-[10px] text-neutral-300 font-mono">R$ 500</span>
-                </div>
-                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
-                  <span className="text-[10px] text-neutral-300 font-mono">R$ 250</span>
-                </div>
-                <div className="w-full border-t border-dashed border-neutral-100 flex items-center justify-end pr-2">
-                  <span className="text-[10px] text-neutral-300 font-mono">R$ 0</span>
-                </div>
-
-                {/* Empty Baseline Bars */}
-                <div className="absolute bottom-0 inset-x-0 flex items-end justify-between px-2 gap-2">
-                  {(data?.revenueChart?.length ? data.revenueChart : [
-                    { date: 'Seg' }, { date: 'Ter' }, { date: 'Qua' }, { date: 'Qui' }, { date: 'Sex' }, { date: 'Sáb' }, { date: 'Dom' }
-                  ]).map((pt, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-1.5">
-                      <div className="w-full max-w-[20px] h-[3px] bg-neutral-200 rounded-t" />
-                      <span className="text-[10px] text-neutral-300">{pt.date}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           ) : (
-            <div className="h-56 flex items-end gap-1.5 sm:gap-2 pt-6 pb-2 px-2 overflow-x-auto">
-              {data.revenueChart.map((pt, idx) => {
-                const heightPercent = Math.max((pt.amount / maxRevenuePoint) * 100, 4);
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group min-w-[28px]">
-                    <div className="relative w-full flex items-end justify-center h-44">
-                      {/* Tooltip on hover */}
-                      <div className="absolute -top-7 opacity-0 group-hover:opacity-100 bg-neutral-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow pointer-events-none transition-all z-10 whitespace-nowrap">
-                        R$ {pt.amount.toFixed(2)}
-                      </div>
-                      <div
-                        style={{ height: `${heightPercent}%` }}
-                        className="w-full max-w-[24px] bg-gradient-to-t from-orange-500 to-orange-400 rounded-t-md transition-all group-hover:from-orange-600 group-hover:to-orange-500"
-                      />
-                    </div>
-                    <span className="text-[10px] text-neutral-400 truncate w-full text-center">
-                      {pt.date}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="relative h-64 sm:h-72 w-full pt-1">
+              {/* Subtle watermark notice when empty */}
+              {(!data?.hasData || data.revenue === 0) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-4 text-center">
+                  <span className="text-xs font-semibold text-neutral-500 dark:text-[#C4C7C5] bg-white/90 dark:bg-[#282A2C]/90 px-3 py-1.5 rounded-full border border-neutral-200/80 dark:border-[#313335] shadow-xs">
+                    📊 Ainda não há dados suficientes para exibir tendências
+                  </span>
+                  <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1 max-w-sm">
+                    Conforme seus agendamentos e vendas forem concluídos, a curva de faturamento real aparecerá aqui.
+                  </p>
+                </div>
+              )}
+
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 10, right: 12, left: -6, bottom: 2 }}
+                >
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F97316" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#F97316" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke={isDark ? '#313335' : '#E5E7EB'}
+                  />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={{ stroke: isDark ? '#313335' : '#E5E7EB' }}
+                    tickLine={false}
+                    tick={{ fill: isDark ? '#8E918F' : '#6B7280', fontSize: 11 }}
+                    interval={adaptiveInterval}
+                    tickFormatter={(val) => formatXAxisDate(val, totalPoints)}
+                    dy={6}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    width={56}
+                    tick={{ fill: isDark ? '#8E918F' : '#6B7280', fontSize: 11 }}
+                    tickFormatter={(val) =>
+                      val === 0 ? 'R$ 0' : `R$ ${val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}`
+                    }
+                  />
+                  <Tooltip content={<CustomRevenueTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#F97316"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#revenueGrad)"
+                    dot={totalPoints <= 7 && (data?.revenue ?? 0) > 0 ? { r: 3, fill: '#F97316' } : false}
+                    activeDot={{ r: 5, fill: '#F97316', stroke: isDark ? '#1E1F20' : '#FFFFFF', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
 
         {/* Top Sold Products */}
-        <div className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-neutral-900 text-base">Produtos Mais Vendidos</h2>
-            <Link to="/estabelecimento/produtos" className="text-xs text-orange-600 font-bold hover:underline">
+            <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Produtos Mais Vendidos</h2>
+            <Link to="/estabelecimento/produtos" className="text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline">
               Ver todos
             </Link>
           </div>
 
           {loading ? (
-            <div className="h-48 flex items-center justify-center text-neutral-400 text-xs">
+            <div className="h-48 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
               Carregando...
             </div>
           ) : !data?.topProducts || data.topProducts.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
-              <Package size={32} className="text-neutral-300 mb-2" />
-              <p className="font-bold text-neutral-700 text-xs">Nenhum produto vendido ainda</p>
-              <p className="text-[11px] text-neutral-400 mt-0.5">Cadastre produtos para começar a vender online</p>
+            <div className="h-48 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+              <Package size={32} className="text-neutral-300 dark:text-[#8E918F] mb-2" />
+              <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum produto vendido ainda</p>
+              <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Cadastre produtos para começar a vender online</p>
             </div>
           ) : (
             <div className="space-y-3">
               {data.topProducts.map((prod, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60">
+                <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335]">
                     {prod.photo ? (
                       <img src={prod.photo} alt={prod.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Package size={18} className="text-neutral-400" />
+                      <Package size={18} className="text-neutral-400 dark:text-[#8E918F]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-neutral-900 text-xs truncate">{prod.name}</p>
-                    <p className="text-[11px] text-neutral-400">{prod.quantity} unidades vendidas</p>
+                    <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{prod.name}</p>
+                    <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{prod.quantity} unidades vendidas</p>
                   </div>
-                  <span className="font-bold text-neutral-800 text-xs">
+                  <span className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-xs">
                     R$ {prod.revenue.toFixed(2).replace('.', ',')}
                   </span>
                 </div>
@@ -392,10 +461,10 @@ export default function EstablishmentDashboard() {
             </div>
           )}
 
-          <div className="pt-2 border-t border-neutral-50">
+          <div className="pt-2 border-t border-neutral-50 dark:border-[#313335]">
             <Link
               to="/estabelecimento/produtos"
-              className="w-full flex items-center justify-center gap-1 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-1 py-2 bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-800 dark:text-[#E3E3E3] font-bold text-xs rounded-xl transition-colors"
             >
               <Plus size={14} /> Adicionar Novo Produto
             </Link>

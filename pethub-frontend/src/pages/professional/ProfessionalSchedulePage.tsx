@@ -81,8 +81,8 @@ export default function ProfessionalSchedulePage() {
       {/* Header - Identical to Establishment */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Minha Agenda</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">Gerencie consultas, atendimentos clínicos e procedimentos com dados reais do banco</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Minha Agenda</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">Gerencie consultas, atendimentos clínicos e procedimentos com dados reais do banco</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -97,7 +97,7 @@ export default function ProfessionalSchedulePage() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+            className="bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
           />
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ProfessionalSchedulePage() {
       )}
 
       {/* Search & Filter bar - Identical to Establishment */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
           <Input
             placeholder="Buscar por paciente, tutor ou procedimento..."
@@ -133,8 +133,8 @@ export default function ProfessionalSchedulePage() {
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3.5 py-2 rounded-xl transition-all font-medium ${
                 statusFilter === tab.id
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  ? 'bg-neutral-900 dark:bg-orange-500 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]'
               }`}
             >
               {tab.label}
@@ -146,15 +146,15 @@ export default function ProfessionalSchedulePage() {
       {/* Appointments List - Matching Establishment Cards */}
       <div className="space-y-4">
         {loading ? (
-          <div className="p-12 text-center text-neutral-400">
+          <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
             <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-sm">Carregando seus atendimentos do banco...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-            <CalendarIcon size={40} className="mx-auto text-neutral-300 mb-3" />
-            <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum agendamento encontrado</h3>
-            <p className="text-xs text-neutral-400 max-w-md mx-auto">
+          <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+            <CalendarIcon size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+            <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum agendamento encontrado</h3>
+            <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto">
               Assim que tutores realizarem agendamentos com você, eles aparecerão aqui com dados reais.
             </p>
           </div>
@@ -165,26 +165,26 @@ export default function ProfessionalSchedulePage() {
             return (
               <div
                 key={apt.id}
-                className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-xs space-y-4 hover:border-orange-200 transition-colors"
+                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-5 shadow-xs space-y-4 hover:border-orange-200 dark:hover:border-orange-500/40 transition-colors"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   {/* Time & Service */}
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-orange-50 text-orange-700 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100">
+                    <div className="w-14 h-14 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100 dark:border-orange-800/50">
                       <Clock size={16} />
                       <span className="text-xs mt-0.5">{apt.time}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-neutral-900 text-base">{apt.service}</span>
+                        <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">{apt.service}</span>
                         <Badge variant={status.badge}>{status.label}</Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                        <span className="flex items-center gap-1 font-semibold text-neutral-800">
+                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
+                        <span className="flex items-center gap-1 font-semibold text-neutral-800 dark:text-[#E3E3E3]">
                           <Clock size={12} className="text-orange-500" /> {apt.duration} min
                         </span>
                         <span>•</span>
-                        <span className="font-bold text-green-700">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
+                        <span className="font-bold text-green-700 dark:text-emerald-400">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function ProfessionalSchedulePage() {
                   <div className="flex items-center gap-6 text-xs">
                     {/* Pet */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200 flex items-center justify-center text-sm">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-[#282A2C] overflow-hidden shrink-0 border border-neutral-200 dark:border-[#313335] flex items-center justify-center text-sm">
                         {apt.petPhoto ? (
                           <img src={apt.petPhoto} alt={apt.petName} className="w-full h-full object-cover" />
                         ) : (
@@ -201,23 +201,23 @@ export default function ProfessionalSchedulePage() {
                         )}
                       </div>
                       <div>
-                        <p className="font-bold text-neutral-900">{apt.petName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
                       </div>
                     </div>
 
                     {/* Tutor */}
-                    <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
+                    <div className="flex items-center gap-2.5 border-l border-neutral-100 dark:border-[#313335] pl-4">
                       <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" fallbackSrc="/user.jpg" />
                       <div>
-                        <p className="font-bold text-neutral-900">{apt.tutorName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.tutorPhone || 'Tutor'}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.tutorName}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.tutorPhone || 'Tutor'}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-neutral-100">
+                  <div className="flex items-center gap-2 w-full lg:w-auto justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-neutral-100 dark:border-[#313335]">
                     {apt.status === 'PENDING' && (
                       <Button
                         size="xs"
@@ -246,7 +246,7 @@ export default function ProfessionalSchedulePage() {
                       </Button>
                     )}
                     {apt.status === 'COMPLETED' && (
-                      <span className="text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-lg border border-green-200">
+                      <span className="text-xs font-semibold text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-green-200 dark:border-emerald-800/50">
                         Atendimento Finalizado
                       </span>
                     )}

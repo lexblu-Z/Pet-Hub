@@ -52,21 +52,21 @@ export default function ProfessionalWorkOrdersPage() {
       {/* Header - Matching Establishment */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Ordens de Serviço</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">Histórico clínico de procedimentos, laudos e cobranças reais</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Ordens de Serviço</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">Histórico clínico de procedimentos, laudos e cobranças reais</p>
         </div>
         <div className="flex gap-2 text-xs font-semibold">
-          <span className="px-3 py-1.5 bg-neutral-100 rounded-xl text-neutral-700">
+          <span className="px-3 py-1.5 bg-neutral-100 dark:bg-[#282A2C] rounded-xl text-neutral-700 dark:text-[#C4C7C5] border border-neutral-200/50 dark:border-[#313335]">
             Total: {orders.length} OS
           </span>
-          <span className="px-3 py-1.5 bg-orange-50 text-orange-800 rounded-xl border border-orange-200">
+          <span className="px-3 py-1.5 bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 rounded-xl border border-orange-200 dark:border-orange-800/50">
             Concluídas: {orders.filter(o => o.status === 'DONE').length}
           </span>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-xs">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs">
         <Input
           placeholder="Buscar por código de OS, paciente ou tutor..."
           leftIcon={<Search size={16} />}
@@ -77,23 +77,23 @@ export default function ProfessionalWorkOrdersPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando ordens de serviço...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <ClipboardList size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhuma ordem de serviço registrada</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <ClipboardList size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhuma ordem de serviço registrada</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto">
             Assim que você iniciar ou concluir atendimentos clínicos na plataforma, as ordens de serviço serão geradas aqui com dados reais.
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-neutral-50/80 text-neutral-500 font-semibold border-b border-neutral-100 text-xs uppercase tracking-wider">
+              <thead className="bg-neutral-50/80 dark:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F] font-semibold border-b border-neutral-100 dark:border-[#313335] text-xs uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">Código OS</th>
                   <th className="py-3.5 px-4">Paciente & Tutor</th>
@@ -103,25 +103,25 @@ export default function ProfessionalWorkOrdersPage() {
                   <th className="py-3.5 px-4 text-right">Ação</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-100 dark:divide-[#313335]">
                 {filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-neutral-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-orange-600 text-xs">
+                  <tr key={o.id} className="hover:bg-neutral-50/60 dark:hover:bg-[#282A2C]/50 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-orange-600 dark:text-orange-400 text-xs">
                       {o.code}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <Avatar src={o.tutorPhoto || '/user.jpg'} name={o.tutorName} size="xs" fallbackSrc="/user.jpg" />
                         <div>
-                          <div className="font-bold text-neutral-900">{o.petName} <span className="font-normal text-xs text-neutral-400">({o.petSpecies})</span></div>
-                          <div className="text-xs text-neutral-500">Tutor: {o.tutorName}</div>
+                          <div className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{o.petName} <span className="font-normal text-xs text-neutral-400 dark:text-[#8E918F]">({o.petSpecies})</span></div>
+                          <div className="text-xs text-neutral-500 dark:text-[#8E918F]">Tutor: {o.tutorName}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-neutral-700 text-xs font-medium">
+                    <td className="py-3.5 px-4 text-neutral-700 dark:text-[#C4C7C5] text-xs font-medium">
                       {o.service}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-neutral-900 text-xs">
+                    <td className="py-3.5 px-4 font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs">
                       R$ {o.value.toFixed(2).replace('.', ',')}
                     </td>
                     <td className="py-3.5 px-4">
@@ -133,6 +133,7 @@ export default function ProfessionalWorkOrdersPage() {
                         size="xs"
                         variant="ghost"
                         onClick={() => setSelectedOrder(o)}
+                        className="text-neutral-600 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-white"
                       >
                         <FileText size={14} className="mr-1" /> Laudo
                       </Button>
@@ -154,27 +155,27 @@ export default function ProfessionalWorkOrdersPage() {
           size="md"
         >
           <div className="space-y-4 text-sm">
-            <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+            <div className="p-4 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335]">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-neutral-400">Data de emissão: {selectedOrder.date}</span>
+                <span className="text-xs text-neutral-400 dark:text-[#8E918F]">Data de emissão: {selectedOrder.date}</span>
                 {selectedOrder.status === 'DONE' ? <Badge variant="success">Concluída</Badge> : <Badge variant="warning">Em aberto</Badge>}
               </div>
-              <p className="font-bold text-base text-neutral-900">{selectedOrder.petName}</p>
-              <p className="text-xs text-neutral-500">Espécie: {selectedOrder.petSpecies} • Tutor: {selectedOrder.tutorName}</p>
+              <p className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">{selectedOrder.petName}</p>
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Espécie: {selectedOrder.petSpecies} • Tutor: {selectedOrder.tutorName}</p>
             </div>
 
-            <div className="space-y-2 border border-neutral-100 rounded-xl p-3 text-xs">
-              <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500">Serviço / Procedimento:</span>
-                <span className="font-semibold text-neutral-900">{selectedOrder.service}</span>
+            <div className="space-y-2 border border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] rounded-xl p-3 text-xs">
+              <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
+                <span className="text-neutral-500 dark:text-[#8E918F]">Serviço / Procedimento:</span>
+                <span className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{selectedOrder.service}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-neutral-50">
-                <span className="text-neutral-500">Valor cobrado:</span>
-                <span className="font-bold text-green-700">R$ {selectedOrder.value.toFixed(2).replace('.', ',')}</span>
+              <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
+                <span className="text-neutral-500 dark:text-[#8E918F]">Valor cobrado:</span>
+                <span className="font-bold text-green-700 dark:text-emerald-400">R$ {selectedOrder.value.toFixed(2).replace('.', ',')}</span>
               </div>
               <div className="pt-2">
-                <span className="text-neutral-500 block mb-1 font-semibold">Observações Clínicas e Laudo:</span>
-                <p className="text-neutral-700 bg-neutral-50 p-3 rounded-xl border border-neutral-100 leading-relaxed">
+                <span className="text-neutral-500 dark:text-[#8E918F] block mb-1 font-semibold">Observações Clínicas e Laudo:</span>
+                <p className="text-neutral-700 dark:text-[#C4C7C5] bg-neutral-50 dark:bg-[#282A2C] p-3 rounded-xl border border-neutral-100 dark:border-[#313335] leading-relaxed">
                   {selectedOrder.notes || 'Sem observações registradas.'}
                 </p>
               </div>

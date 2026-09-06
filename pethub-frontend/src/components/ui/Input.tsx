@@ -38,14 +38,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-neutral-700 mb-1.5"
+            className="block text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] mb-1.5"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-[#8E918F] pointer-events-none">
               {leftIcon}
             </div>
           )}
@@ -54,16 +54,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={actualType}
             className={[
-              'w-full rounded-xl border px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400',
+              'w-full rounded-xl border px-4 py-2.5 text-sm text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F]',
               'transition-all duration-200 outline-none',
-              'bg-white',
+              'bg-white dark:bg-[#1E1F20]',
               leftIcon ? 'pl-10' : '',
               rightIcon || isPassword ? 'pr-10' : '',
               error
-                ? 'border-red-400 focus:ring-2 focus:ring-red-100 focus:border-red-500'
+                ? 'border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950/40 focus:border-red-500'
                 : success
-                ? 'border-green-400 focus:ring-2 focus:ring-green-100 focus:border-green-500'
-                : 'border-neutral-200 focus:ring-2 focus:ring-orange-100 focus:border-orange-400',
+                ? 'border-green-400 dark:border-green-500 focus:ring-2 focus:ring-green-100 dark:focus:ring-green-950/40 focus:border-green-500'
+                : 'border-neutral-200 dark:border-[#313335] focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-950/40 focus:border-orange-400 dark:focus:border-orange-500',
               className,
             ]
               .filter(Boolean)
@@ -74,7 +74,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword((p) => !p)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -84,7 +84,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={onRightIconClick}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
               tabIndex={-1}
             >
               {rightIcon}
@@ -108,7 +108,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </p>
         )}
         {hint && !error && (
-          <p className="mt-1.5 text-xs text-neutral-400">{hint}</p>
+          <p className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500">{hint}</p>
         )}
       </div>
     );
@@ -137,7 +137,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-neutral-700 mb-1.5">
+          <label htmlFor={selectId} className="block text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] mb-1.5">
             {label}
           </label>
         )}
@@ -145,11 +145,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={[
-            'w-full rounded-xl border px-4 py-2.5 text-sm text-neutral-900 bg-white',
+            'w-full rounded-xl border px-4 py-2.5 text-sm text-neutral-900 dark:text-[#E3E3E3] bg-white dark:bg-[#1E1F20]',
             'transition-all duration-200 outline-none appearance-none',
             error
-              ? 'border-red-400 focus:ring-2 focus:ring-red-100'
-              : 'border-neutral-200 focus:ring-2 focus:ring-orange-100 focus:border-orange-400',
+              ? 'border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950/40'
+              : 'border-neutral-200 dark:border-[#313335] focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-950/40 focus:border-orange-400 dark:focus:border-orange-500',
             className,
           ]
             .filter(Boolean)
@@ -158,13 +158,13 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         >
           {placeholder && <option value="">{placeholder}</option>}
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} className="bg-white dark:bg-[#1E1F20] text-neutral-900 dark:text-[#E3E3E3]">
               {opt.label}
             </option>
           ))}
         </select>
         {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
-        {hint && !error && <p className="mt-1.5 text-xs text-neutral-400">{hint}</p>}
+        {hint && !error && <p className="mt-1.5 text-xs text-neutral-400 dark:text-[#8E918F]">{hint}</p>}
       </div>
     );
   }
@@ -188,7 +188,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={textareaId} className="block text-sm font-medium text-neutral-700 mb-1.5">
+          <label htmlFor={textareaId} className="block text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] mb-1.5">
             {label}
           </label>
         )}
@@ -198,12 +198,12 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           maxLength={maxLength}
           value={value}
           className={[
-            'w-full rounded-xl border px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400',
+            'w-full rounded-xl border px-4 py-3 text-sm text-neutral-900 dark:text-[#E3E3E3] placeholder:text-neutral-400 dark:placeholder:text-[#8E918F]',
             'transition-all duration-200 outline-none resize-none',
-            'bg-white',
+            'bg-white dark:bg-[#1E1F20]',
             error
-              ? 'border-red-400 focus:ring-2 focus:ring-red-100'
-              : 'border-neutral-200 focus:ring-2 focus:ring-orange-100 focus:border-orange-400',
+              ? 'border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950/40'
+              : 'border-neutral-200 dark:border-[#313335] focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-950/40 focus:border-orange-400 dark:focus:border-orange-500',
             className,
           ]
             .filter(Boolean)

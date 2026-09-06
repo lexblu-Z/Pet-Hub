@@ -18,6 +18,7 @@ model User {
   createdAt                   DateTime              @default(now())
   updatedAt                   DateTime              @updatedAt
   avatar                      String?
+  defaultAvatar               String?
   preferences                  Json?
   paymentMethods              PaymentMethod[]
   cashbackTransactions        CashbackTransaction[]
@@ -96,6 +97,8 @@ model ProfessionalProfile {
   suspensionReason String?
   suspendedAt      DateTime?
   status           ApprovalStatus @default(PENDING_APPROVAL)
+  workingHours     Json?
+  bookingSettings  Json?
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -164,6 +167,7 @@ model Service {
   image           String?
   category        String?
   animalType      String?
+  active          Boolean       @default(true)
   establishmentId String?
   professionalId  String?
   employeeId      String?

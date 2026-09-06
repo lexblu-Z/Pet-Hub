@@ -74,26 +74,26 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: [0.34, 1.56, 0.64, 1] }}
             className={[
-              'relative z-10 bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden',
+              'relative z-10 bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden text-neutral-900 dark:text-[#E3E3E3]',
               'w-full',
               sizeClasses[size],
               'max-h-[90vh] flex flex-col',
             ].join(' ')}
           >
             {(title || !hideClose) && (
-              <div className="flex items-start justify-between p-5 pb-3 border-b border-neutral-100">
+              <div className="flex items-start justify-between p-5 pb-3 border-b border-neutral-100 dark:border-[#313335]">
                 <div>
                   {title && (
-                    <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+                    <h2 className="text-lg font-semibold text-neutral-900 dark:text-[#E3E3E3]">{title}</h2>
                   )}
                   {description && (
-                    <p className="text-sm text-neutral-500 mt-0.5">{description}</p>
+                    <p className="text-sm text-neutral-500 dark:text-[#C4C7C5] mt-0.5">{description}</p>
                   )}
                 </div>
                 {!hideClose && (
                   <button
                     onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors ml-4 shrink-0"
+                    className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-400 hover:text-neutral-600 dark:hover:text-white transition-colors ml-4 shrink-0 cursor-pointer"
                   >
                     <X size={18} />
                   </button>
@@ -104,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
             <div className="overflow-y-auto flex-1 p-5">{children}</div>
 
             {footer && (
-              <div className="p-5 pt-3 border-t border-neutral-100">{footer}</div>
+              <div className="p-5 pt-3 border-t border-neutral-100 dark:border-[#313335]">{footer}</div>
             )}
           </motion.div>
         </div>
@@ -149,8 +149,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} size="sm" hideClose>
       <div className="text-center py-2">
         <div className="text-4xl mb-4">{icons[variant]}</div>
-        <h3 className="text-lg font-semibold text-neutral-900 mb-2">{title}</h3>
-        <p className="text-sm text-neutral-500 mb-6">{description || message}</p>
+        <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">{title}</h3>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">{description || message}</p>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} fullWidth>
             {cancelText}

@@ -132,12 +132,12 @@ export default function ShopPage() {
       {/* Standard Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 mb-1">Loja PetHub</h1>
-          <p className="text-neutral-500 text-sm">Produtos reais de pet shops e clínicas parceiras</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Loja PetHub</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm">Produtos reais de pet shops e clínicas parceiras</p>
         </div>
         <button
           onClick={() => setIsCartOpen(true)}
-          className="relative flex items-center gap-2 px-3.5 py-2.5 bg-white rounded-2xl shadow-xs border border-neutral-200 text-neutral-800 hover:border-orange-300 hover:text-orange-600 transition-all cursor-pointer font-bold text-sm"
+          className="relative flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-[#1E1F20] rounded-2xl shadow-xs border border-neutral-200 dark:border-[#313335] text-neutral-800 dark:text-[#E3E3E3] hover:border-orange-300 dark:hover:border-orange-500 hover:text-orange-600 dark:hover:text-orange-400 transition-all cursor-pointer font-bold text-sm"
           title="Ver carrinho"
         >
           <ShoppingCart size={18} className="text-orange-500" />
@@ -164,16 +164,16 @@ export default function ShopPage() {
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-64 bg-neutral-100 rounded-2xl animate-pulse" />
+              <div key={i} className="h-64 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-3xl p-10 border border-neutral-100 text-center shadow-sm">
-            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-500">
+          <div className="bg-white dark:bg-[#1E1F20] rounded-3xl p-10 border border-neutral-100 dark:border-[#313335] text-center shadow-sm">
+            <div className="w-16 h-16 bg-orange-50 dark:bg-orange-950/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-orange-500">
               <Package size={32} />
             </div>
-            <h3 className="font-bold text-neutral-900 text-base mb-1">Não há produtos disponíveis no momento.</h3>
-            <p className="text-neutral-400 text-xs max-w-md mx-auto leading-relaxed">
+            <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base mb-1">Não há produtos disponíveis no momento.</h3>
+            <p className="text-neutral-400 dark:text-[#8E918F] text-xs max-w-md mx-auto leading-relaxed">
               Os estabelecimentos parceiros estão cadastrando novos produtos no catálogo. Volte em breve para conferir as novidades!
             </p>
           </div>
@@ -186,11 +186,11 @@ export default function ShopPage() {
                 <motion.div
                   key={product.id}
                   whileHover={{ y: -3 }}
-                  className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+                  className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
                 >
                   <div
                     onClick={() => handleOpenProduct(product)}
-                    className="relative aspect-square bg-neutral-50 overflow-hidden cursor-pointer"
+                    className="relative aspect-square bg-neutral-50 dark:bg-[#282A2C] overflow-hidden cursor-pointer"
                   >
                     <img
                       src={product.photo || '/romeu_e_julieta_1788367558045.jpg'}
@@ -216,22 +216,22 @@ export default function ShopPage() {
 
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div onClick={() => handleOpenProduct(product)} className="cursor-pointer">
-                      <div className="flex items-center gap-1 text-[11px] text-neutral-400 mb-1">
+                      <div className="flex items-center gap-1 text-[11px] text-neutral-400 dark:text-[#8E918F] mb-1">
                         <Store size={12} className="shrink-0 text-orange-500" />
                         <span className="truncate">{sellerName}</span>
                       </div>
-                      <h3 className="font-semibold text-sm text-neutral-900 line-clamp-2 mb-1 group-hover:text-orange-500 transition-colors">
+                      <h3 className="font-semibold text-sm text-neutral-900 dark:text-[#E3E3E3] line-clamp-2 mb-1 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors">
                         {product.name}
                       </h3>
                       {product.description && (
-                        <p className="text-xs text-neutral-400 line-clamp-2 mb-2 leading-relaxed">
+                        <p className="text-xs text-neutral-400 dark:text-[#8E918F] line-clamp-2 mb-2 leading-relaxed">
                           {product.description}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <div className="text-base font-bold text-neutral-900 mb-3">
+                      <div className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3] mb-3">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
                       </div>
 
@@ -254,7 +254,7 @@ export default function ShopPage() {
                             e.stopPropagation();
                             handleOpenProduct(product);
                           }}
-                          className="w-9 h-9 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-600 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                          className="w-9 h-9 rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                           title="Selecionar quantidade e adicionar ao carrinho"
                         >
                           <ShoppingCart size={15} />
@@ -284,16 +284,16 @@ export default function ShopPage() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col"
+              className="relative w-full max-w-lg bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-3xl shadow-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col"
             >
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-neutral-500 hover:text-neutral-900 shadow transition-colors z-20 cursor-pointer"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 dark:bg-[#282A2C]/80 backdrop-blur-sm flex items-center justify-center text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-white shadow transition-colors z-20 cursor-pointer"
               >
                 <X size={18} />
               </button>
 
-              <div className="relative h-60 sm:h-64 bg-neutral-100 shrink-0">
+              <div className="relative h-60 sm:h-64 bg-neutral-100 dark:bg-[#282A2C] shrink-0">
                 <img
                   src={selectedProduct.photo || '/romeu_e_julieta_1788367558045.jpg'}
                   alt={selectedProduct.name}
@@ -314,7 +314,7 @@ export default function ShopPage() {
                   )}
                 </div>
 
-                <h2 className="text-xl font-bold text-neutral-900">
+                <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                   {selectedProduct.name}
                 </h2>
 
@@ -324,33 +324,33 @@ export default function ShopPage() {
 
                 {selectedProduct.description && (
                   <div>
-                    <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Descrição</h4>
-                    <p className="text-sm text-neutral-600 leading-relaxed">
+                    <h4 className="text-xs font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider mb-1">Descrição</h4>
+                    <p className="text-sm text-neutral-600 dark:text-[#C4C7C5] leading-relaxed">
                       {selectedProduct.description}
                     </p>
                   </div>
                 )}
 
                 {selectedProduct.stock > 0 ? (
-                  <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-semibold text-neutral-700">Quantidade:</span>
-                      <p className="text-[11px] text-neutral-400">Máximo: {selectedProduct.stock} unidades</p>
+                      <span className="text-sm font-semibold text-neutral-700 dark:text-[#E3E3E3]">Quantidade:</span>
+                      <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">Máximo: {selectedProduct.stock} unidades</p>
                     </div>
-                    <div className="flex items-center gap-3 bg-neutral-100 rounded-xl px-3 py-1.5">
+                    <div className="flex items-center gap-3 bg-neutral-100 dark:bg-[#282A2C] rounded-xl px-3 py-1.5">
                       <button
                         type="button"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="text-neutral-600 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                        className="text-neutral-600 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
                         disabled={quantity <= 1}
                       >
                         <Minus size={16} />
                       </button>
-                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{quantity}</span>
+                      <span className="font-bold text-sm w-6 text-center text-neutral-900 dark:text-[#E3E3E3]">{quantity}</span>
                       <button
                         type="button"
                         onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
-                        className="text-neutral-600 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                        className="text-neutral-600 dark:text-[#C4C7C5] hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
                         disabled={quantity >= selectedProduct.stock}
                       >
                         <Plus size={16} />
@@ -358,13 +358,13 @@ export default function ShopPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 bg-neutral-100 rounded-xl text-center text-xs text-neutral-500 font-medium">
+                  <div className="p-3 bg-neutral-100 dark:bg-[#282A2C] rounded-xl text-center text-xs text-neutral-500 dark:text-[#8E918F] font-medium">
                     Este produto está indisponível no momento.
                   </div>
                 )}
               </div>
 
-              <div className="p-4 bg-neutral-50 border-t border-neutral-100 shrink-0 flex gap-3">
+              <div className="p-4 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] shrink-0 flex gap-3">
                 <Button
                   fullWidth
                   size="lg"
@@ -396,43 +396,43 @@ export default function ShopPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
-              className="relative w-full max-w-md bg-white h-full shadow-2xl z-10 flex flex-col p-6"
+              className="relative w-full max-w-md bg-white dark:bg-[#1E1F20] border-l border-neutral-100 dark:border-[#313335] h-full shadow-2xl z-10 flex flex-col p-6"
             >
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-                <h2 className="font-bold text-lg text-neutral-900 flex items-center gap-2">
+              <div className="flex items-center justify-between pb-4 border-b border-neutral-100 dark:border-[#313335]">
+                <h2 className="font-bold text-lg text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
                   <ShoppingCart size={20} className="text-orange-500" />
                   Seu Carrinho ({itemCount()})
                 </h2>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 text-neutral-400 hover:text-neutral-900 cursor-pointer">
+                <button onClick={() => setIsCartOpen(false)} className="p-2 text-neutral-400 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-white cursor-pointer">
                   <X size={20} />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto py-4 space-y-3">
                 {items.length === 0 ? (
-                  <div className="text-center py-16 text-neutral-400">
+                  <div className="text-center py-16 text-neutral-400 dark:text-[#8E918F]">
                     <ShoppingCart size={48} className="mx-auto mb-3 opacity-30" />
-                    <p className="font-semibold text-neutral-600">Seu carrinho está vazio</p>
-                    <p className="text-xs text-neutral-400 mt-1">Navegue pela loja e adicione produtos reais</p>
+                    <p className="font-semibold text-neutral-600 dark:text-[#C4C7C5]">Seu carrinho está vazio</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-1">Navegue pela loja e adicione produtos reais</p>
                   </div>
                 ) : (
                   items.map(item => (
-                    <div key={item.product.id} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-2xl">
-                      <img src={item.product.photos?.[0] || '/romeu_e_julieta_1788367558045.jpg'} alt="" className="w-14 h-14 rounded-xl object-cover bg-white" />
+                    <div key={item.product.id} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl">
+                      <img src={item.product.photos?.[0] || '/romeu_e_julieta_1788367558045.jpg'} alt="" className="w-14 h-14 rounded-xl object-cover bg-white dark:bg-[#1E1F20]" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-900 truncate">{item.product.name}</p>
-                        <p className="text-sm text-orange-600 font-bold mt-0.5">
+                        <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] truncate">{item.product.name}</p>
+                        <p className="text-sm text-orange-600 dark:text-orange-400 font-bold mt-0.5">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.product.price)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 bg-white rounded-xl border border-neutral-200 p-1">
+                      <div className="flex items-center gap-2 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-200 dark:border-[#313335] p-1">
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="p-1 text-neutral-400 hover:text-neutral-900 cursor-pointer"
+                          className="p-1 text-neutral-400 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-white cursor-pointer"
                         >
                           <Minus size={14} />
                         </button>
-                        <span className="text-xs font-bold w-5 text-center">{item.quantity}</span>
+                        <span className="text-xs font-bold w-5 text-center text-neutral-900 dark:text-[#E3E3E3]">{item.quantity}</span>
                         <button
                           onClick={() => {
                             if (item.quantity >= item.product.stock) {
@@ -442,7 +442,7 @@ export default function ShopPage() {
                             updateQuantity(item.product.id, item.quantity + 1);
                           }}
                           disabled={item.quantity >= item.product.stock}
-                          className="p-1 text-neutral-400 hover:text-neutral-900 disabled:opacity-30 cursor-pointer"
+                          className="p-1 text-neutral-400 dark:text-[#8E918F] hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 cursor-pointer"
                         >
                           <Plus size={14} />
                         </button>
@@ -453,10 +453,10 @@ export default function ShopPage() {
               </div>
 
               {items.length > 0 && (
-                <div className="pt-4 border-t border-neutral-100 space-y-3">
+                <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-500 font-medium">Total:</span>
-                    <span className="text-xl font-bold text-neutral-900">
+                    <span className="text-neutral-500 dark:text-[#8E918F] font-medium">Total:</span>
+                    <span className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total())}
                     </span>
                   </div>

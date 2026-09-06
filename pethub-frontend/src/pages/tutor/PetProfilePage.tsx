@@ -154,17 +154,17 @@ export default function PetProfilePage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white border-b border-neutral-100 sticky top-0 z-20">
+      <div className="bg-white dark:bg-[#1E1F20] border-b border-neutral-100 dark:border-[#313335] sticky top-0 z-20">
         <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={[
-                'flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-200',
+                'flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-200 cursor-pointer',
                 activeTab === tab.id
-                  ? 'border-orange-500 text-orange-600'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-700',
+                  ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                  : 'border-transparent text-neutral-500 dark:text-[#C4C7C5] hover:text-neutral-700 dark:hover:text-[#E3E3E3]',
               ].join(' ')}
             >
               <span>{tab.icon}</span>
@@ -185,26 +185,26 @@ export default function PetProfilePage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-2xl border border-neutral-100 p-4 text-center">
+              <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 text-center">
                 <Weight size={20} className="mx-auto mb-2 text-orange-400" />
-                <p className="text-xl font-bold text-neutral-900">{pet.weight}kg</p>
-                <p className="text-xs text-neutral-400">Peso</p>
+                <p className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3]">{pet.weight}kg</p>
+                <p className="text-xs text-neutral-400 dark:text-[#8E918F]">Peso</p>
               </div>
-              <div className="bg-white rounded-2xl border border-neutral-100 p-4 text-center">
+              <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 text-center">
                 <span className="block text-2xl mb-2">{(speciesEmoji as any)[pet.species || "dog"] || "🐾"}</span>
-                <p className="text-sm font-bold text-neutral-900">{(speciesLabel as any)[pet.species || "dog"] || pet.species}</p>
-                <p className="text-xs text-neutral-400">Espécie</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">{(speciesLabel as any)[pet.species || "dog"] || pet.species}</p>
+                <p className="text-xs text-neutral-400 dark:text-[#8E918F]">Espécie</p>
               </div>
-              <div className="bg-white rounded-2xl border border-neutral-100 p-4 text-center">
+              <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 text-center">
                 <Calendar size={20} className="mx-auto mb-2 text-blue-400" />
-                <p className="text-sm font-bold text-neutral-900">{pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || "—")}</p>
-                <p className="text-xs text-neutral-400">Idade</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">{pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || "—")}</p>
+                <p className="text-xs text-neutral-400 dark:text-[#8E918F]">Idade</p>
               </div>
             </div>
 
             {/* Main info */}
-            <div className="bg-white rounded-2xl border border-neutral-100 p-5 space-y-4">
-              <h3 className="font-semibold text-neutral-900">Informações gerais</h3>
+            <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 space-y-4">
+              <h3 className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">Informações gerais</h3>
               {[
                 { label: 'Espécie', value: (speciesLabel as any)[pet.species || "dog"] || pet.species },
                 { label: 'Raça', value: pet.breed },
@@ -214,35 +214,35 @@ export default function PetProfilePage() {
                 { label: 'Microchip', value: pet.microchip || 'Não registrado' },
                 { label: 'Castrado/a', value: pet.isNeutered ? 'Sim' : 'Não' },
               ].map((item) => (
-                <div key={item.label} className="flex items-start justify-between py-2 border-b border-neutral-50 last:border-0">
-                  <span className="text-sm text-neutral-500">{item.label}</span>
-                  <span className="text-sm font-medium text-neutral-900 text-right max-w-[60%]">{item.value}</span>
+                <div key={item.label} className="flex items-start justify-between py-2 border-b border-neutral-50 dark:border-[#313335] last:border-0">
+                  <span className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{item.label}</span>
+                  <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3] text-right max-w-[60%]">{item.value}</span>
                 </div>
               ))}
             </div>
 
             {/* Alerts */}
             {((pet.allergies && pet.allergies.length > 0) || (pet.medications && pet.medications.length > 0)) && (
-              <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
-                <h3 className="font-semibold text-red-700 flex items-center gap-2 mb-3">
+              <div className="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-2xl p-5">
+                <h3 className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2 mb-3">
                   <AlertCircle size={18} /> Alertas importantes
                 </h3>
                 {(pet.allergies && pet.allergies.length > 0) && (
                   <div className="mb-3">
-                    <p className="text-xs text-red-500 font-medium uppercase mb-2">Alergias</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 font-medium uppercase mb-2">Alergias</p>
                     <div className="flex flex-wrap gap-2">
                       {(pet.allergies || []).map((a) => (
-                        <span key={a} className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">{a}</span>
+                        <span key={a} className="px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200 text-sm rounded-full">{a}</span>
                       ))}
                     </div>
                   </div>
                 )}
                 {(pet.medications && pet.medications.length > 0) && (
                   <div>
-                    <p className="text-xs text-red-500 font-medium uppercase mb-2">Medicamentos</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 font-medium uppercase mb-2">Medicamentos</p>
                     <div className="space-y-1">
                       {(pet.medications || []).map((m) => (
-                        <p key={m} className="text-sm text-red-700">• {m}</p>
+                        <p key={m} className="text-sm text-red-700 dark:text-red-300">• {m}</p>
                       ))}
                     </div>
                   </div>
@@ -251,9 +251,9 @@ export default function PetProfilePage() {
             )}
 
             {pet.notes && (
-              <div className="bg-white rounded-2xl border border-neutral-100 p-5">
-                <h3 className="font-semibold text-neutral-900 mb-3">Observações</h3>
-                <p className="text-neutral-600 text-sm">{pet.notes}</p>
+              <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5">
+                <h3 className="font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-3">Observações</h3>
+                <p className="text-neutral-600 dark:text-[#C4C7C5] text-sm">{pet.notes}</p>
               </div>
             )}
           </motion.div>
@@ -264,34 +264,34 @@ export default function PetProfilePage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* Summary */}
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="bg-green-50 rounded-2xl p-4 text-center border border-green-100">
-                <p className="text-2xl font-bold text-green-700">{upToDate}</p>
-                <p className="text-xs text-green-600 font-medium">Em dia</p>
+              <div className="bg-green-50 dark:bg-emerald-950/30 rounded-2xl p-4 text-center border border-green-100 dark:border-emerald-900/40">
+                <p className="text-2xl font-bold text-green-700 dark:text-emerald-400">{upToDate}</p>
+                <p className="text-xs text-green-600 dark:text-emerald-300 font-medium">Em dia</p>
               </div>
-              <div className="bg-amber-50 rounded-2xl p-4 text-center border border-amber-100">
-                <p className="text-2xl font-bold text-amber-700">{upcoming}</p>
-                <p className="text-xs text-amber-600 font-medium">Próximas</p>
+              <div className="bg-amber-50 dark:bg-amber-950/30 rounded-2xl p-4 text-center border border-amber-100 dark:border-amber-900/40">
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{upcoming}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-300 font-medium">Próximas</p>
               </div>
-              <div className="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
-                <p className="text-2xl font-bold text-red-700">{overdue}</p>
-                <p className="text-xs text-red-600 font-medium">Atrasadas</p>
+              <div className="bg-red-50 dark:bg-red-950/30 rounded-2xl p-4 text-center border border-red-100 dark:border-red-900/40">
+                <p className="text-2xl font-bold text-red-700 dark:text-red-400">{overdue}</p>
+                <p className="text-xs text-red-600 dark:text-red-300 font-medium">Atrasadas</p>
               </div>
             </div>
 
             {/* Overdue */}
             {overdue > 0 && (
               <div className="mb-4">
-                <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <span className="w-2 h-2 bg-red-500 rounded-full" /> Atrasadas
                 </h3>
                 <div className="space-y-2">
                   {petVaccines.filter((v) => v.status === 'overdue').map((v) => (
-                    <div key={v.id} className="bg-red-50 border border-red-100 rounded-xl p-4">
+                    <div key={v.id} className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-xl p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-semibold text-neutral-900">{v.name}</p>
-                          {v.nextDueDate && <p className="text-sm text-red-500">Venceu em {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
-                          {v.veterinarian && <p className="text-xs text-neutral-400 mt-1">Dr. {v.veterinarian}</p>}
+                          <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{v.name}</p>
+                          {v.nextDueDate && <p className="text-sm text-red-500 dark:text-red-400">Venceu em {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
+                          {v.veterinarian && <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-1">Dr. {v.veterinarian}</p>}
                         </div>
                         <Badge variant="error" dot>Atrasada</Badge>
                       </div>
@@ -307,16 +307,16 @@ export default function PetProfilePage() {
             {/* Upcoming */}
             {upcoming > 0 && (
               <div className="mb-4">
-                <h3 className="text-sm font-semibold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <span className="w-2 h-2 bg-amber-500 rounded-full" /> Próximas (30 dias)
                 </h3>
                 <div className="space-y-2">
                   {petVaccines.filter((v) => v.status === 'upcoming').map((v) => (
-                    <div key={v.id} className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                    <div key={v.id} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-xl p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-semibold text-neutral-900">{v.name}</p>
-                          {v.nextDueDate && <p className="text-sm text-amber-600">Vence em {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
+                          <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{v.name}</p>
+                          {v.nextDueDate && <p className="text-sm text-amber-600 dark:text-amber-400">Vence em {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
                         </div>
                         <Badge variant="warning" dot>Próxima</Badge>
                       </div>
@@ -329,17 +329,17 @@ export default function PetProfilePage() {
             {/* Up-to-date */}
             {upToDate > 0 && (
               <div className="mb-4">
-                <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full" /> Em dia
+                <h3 className="text-sm font-semibold text-green-600 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 dark:bg-emerald-500 rounded-full" /> Em dia
                 </h3>
                 <div className="space-y-2">
                   {petVaccines.filter((v) => v.status === 'up-to-date').map((v) => (
-                    <div key={v.id} className="bg-white border border-neutral-100 rounded-xl p-4">
+                    <div key={v.id} className="bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-xl p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-semibold text-neutral-900">{v.name}</p>
-                          {v.date && <p className="text-xs text-neutral-400">Aplicada em {new Date(v.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
-                          {v.nextDueDate && <p className="text-xs text-neutral-400">Próxima: {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
+                          <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{v.name}</p>
+                          {v.date && <p className="text-xs text-neutral-400 dark:text-[#8E918F]">Aplicada em {new Date(v.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
+                          {v.nextDueDate && <p className="text-xs text-neutral-400 dark:text-[#8E918F]">Próxima: {new Date(v.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
                         </div>
                         <Badge variant="success">✓ Em dia</Badge>
                       </div>
@@ -349,7 +349,7 @@ export default function PetProfilePage() {
               </div>
             )}
 
-            <button className="w-full py-3 border-2 border-dashed border-orange-200 hover:border-orange-400 text-orange-500 hover:text-orange-600 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2">
+            <button className="w-full py-3 border-2 border-dashed border-orange-200 dark:border-orange-900/50 hover:border-orange-400 dark:hover:border-orange-500 text-orange-500 hover:text-orange-600 dark:hover:text-orange-400 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 bg-transparent dark:bg-[#1E1F20]/50">
               <Plus size={16} /> Registrar nova vacina
             </button>
           </motion.div>
@@ -368,25 +368,25 @@ export default function PetProfilePage() {
                 />
               ) : (
                 petAppointments.map((apt) => (
-                  <div key={apt.id} className="bg-white border border-neutral-100 rounded-xl p-4">
+                  <div key={apt.id} className="bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-xl p-4">
                     <div className="flex items-start gap-3">
                       <div className={[
                         'w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0',
-                        apt.serviceCategory === 'consulta' ? 'bg-blue-50' : 'bg-orange-50',
+                        apt.serviceCategory === 'consulta' ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-orange-50 dark:bg-orange-950/40',
                       ].join(' ')}>
                         {apt.serviceCategory === 'consulta' ? '🩺' : '✂️'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-semibold text-neutral-900 text-sm">{apt.serviceName}</p>
-                            <p className="text-xs text-neutral-400">{apt.establishmentName}</p>
+                            <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">{apt.serviceName}</p>
+                            <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{apt.establishmentName}</p>
                           </div>
                           <Badge variant={apt.status === 'completed' ? 'success' : apt.status === 'cancelled' ? 'error' : 'info'} size="sm">
                             {apt.status === 'completed' ? '✓ Concluído' : apt.status === 'cancelled' ? 'Cancelado' : apt.status}
                           </Badge>
                         </div>
-                        <p className="text-xs text-neutral-400 mt-1">
+                        <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-1">
                           {new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} · {apt.time}
                         </p>
                         {apt.rating && (
@@ -410,14 +410,14 @@ export default function PetProfilePage() {
               {petAppointments.filter((a) => a.serviceCategory === 'consulta').length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-4xl mb-3">🩺</p>
-                  <p className="text-neutral-500">Nenhuma consulta registrada</p>
+                  <p className="text-neutral-500 dark:text-[#8E918F]">Nenhuma consulta registrada</p>
                 </div>
               ) : (
                 petAppointments.filter((a) => a.serviceCategory === 'consulta').map((apt) => (
-                  <div key={apt.id} className="bg-white border border-neutral-100 rounded-xl p-4">
-                    <p className="font-semibold text-sm">{apt.serviceName}</p>
-                    <p className="text-xs text-neutral-400">{apt.establishmentName} · {apt.professionalName}</p>
-                    <p className="text-xs text-neutral-400">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                  <div key={apt.id} className="bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-xl p-4">
+                    <p className="font-semibold text-sm text-neutral-900 dark:text-[#E3E3E3]">{apt.serviceName}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{apt.establishmentName} · {apt.professionalName}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                   </div>
                 ))
               )}
@@ -438,14 +438,14 @@ export default function PetProfilePage() {
               {petAppointments.filter((a) => a.serviceCategory !== 'consulta').length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-4xl mb-3">✂️</p>
-                  <p className="text-neutral-500">Nenhum serviço registrado</p>
+                  <p className="text-neutral-500 dark:text-[#8E918F]">Nenhum serviço registrado</p>
                 </div>
               ) : (
                 petAppointments.filter((a) => a.serviceCategory !== 'consulta').map((apt) => (
-                  <div key={apt.id} className="bg-white border border-neutral-100 rounded-xl p-4">
-                    <p className="font-semibold text-sm">{apt.serviceName}</p>
-                    <p className="text-xs text-neutral-400">{apt.establishmentName}</p>
-                    <p className="text-xs text-neutral-400">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                  <div key={apt.id} className="bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-xl p-4">
+                    <p className="font-semibold text-sm text-neutral-900 dark:text-[#E3E3E3]">{apt.serviceName}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{apt.establishmentName}</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                   </div>
                 ))
               )}

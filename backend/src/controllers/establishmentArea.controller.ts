@@ -180,7 +180,7 @@ export const establishmentAreaController = {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dayStr = d.toISOString().split('T')[0];
-      const label = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+      const label = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace(' de ', ' ').replace('.', '');
       
       const dayStart = new Date(dayStr + 'T00:00:00');
       const dayEnd = new Date(dayStr + 'T23:59:59');

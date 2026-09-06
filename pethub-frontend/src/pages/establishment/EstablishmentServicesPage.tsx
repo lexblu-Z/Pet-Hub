@@ -169,15 +169,15 @@ export default function EstablishmentServicesPage() {
 
       {/* Services Grid */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando serviços do PostgreSQL...</p>
         </div>
       ) : services.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <Wrench size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum serviço cadastrado</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto mb-4">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <Wrench size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum serviço cadastrado</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto mb-4">
             Cadastre banhos, tosas, consultas e outros serviços para que os tutores de Ourinhos possam agendar online.
           </p>
           <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
@@ -187,9 +187,9 @@ export default function EstablishmentServicesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {services.map((s) => (
-            <div key={s.id} className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
+            <div key={s.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
               {/* Service Image */}
-              <div className="h-44 bg-neutral-100 relative overflow-hidden">
+              <div className="h-44 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden">
                 <img
                   src={s.image || serviceImagePresets[0].url}
                   alt={s.name}
@@ -209,23 +209,23 @@ export default function EstablishmentServicesPage() {
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded">
                       {s.category || 'Geral'}
                     </span>
-                    <span className="text-[11px] text-neutral-400 font-medium">
+                    <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] font-medium">
                       {s.animalType === 'dog' ? '🐶 Cães' : s.animalType === 'cat' ? '🐱 Gatos' : '🐾 Cães & Gatos'}
                     </span>
                   </div>
-                  <h3 className="font-bold text-neutral-900 text-base">{s.name}</h3>
-                  <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">
+                  <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{s.name}</h3>
+                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] line-clamp-2 leading-relaxed">
                     {s.description || 'Sem descrição cadastrada.'}
                   </p>
                 </div>
 
                 {/* Assigned employees */}
                 {s.employees && s.employees.length > 0 && (
-                  <div className="pt-2 border-t border-neutral-50 flex items-center gap-1.5 text-[11px] text-neutral-500">
-                    <Users size={12} className="text-neutral-400" />
+                  <div className="pt-2 border-t border-neutral-100 dark:border-[#313335] flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-[#8E918F]">
+                    <Users size={12} className="text-neutral-400 dark:text-[#8E918F]" />
                     <span className="truncate">
                       Profissionais: {s.employees.map(e => e.employee.name).join(', ')}
                     </span>
@@ -233,17 +233,17 @@ export default function EstablishmentServicesPage() {
                 )}
 
                 {/* Actions */}
-                <div className="pt-3 border-t border-neutral-100 flex gap-2 justify-end">
+                <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
                   <button
                     onClick={() => openEditModal(s)}
-                    className="p-2 hover:bg-neutral-100 text-neutral-600 rounded-lg transition-colors"
+                    className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] rounded-lg transition-colors cursor-pointer"
                     title="Editar serviço"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(s.id)}
-                    className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                    className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg transition-colors cursor-pointer"
                     title="Excluir serviço"
                   >
                     <Trash2 size={16} />
@@ -294,11 +294,11 @@ export default function EstablishmentServicesPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Categoria</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Categoria</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white"
+                  className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3]"
                 >
                   <option value="Banho e tosa">Banho e tosa</option>
                   <option value="Veterinária">Veterinária</option>
@@ -309,11 +309,11 @@ export default function EstablishmentServicesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Tipo de Animal</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Tipo de Animal</label>
                 <select
                   value={animalType}
                   onChange={(e) => setAnimalType(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white"
+                  className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3]"
                 >
                   <option value="all">Todos (Cães e Gatos)</option>
                   <option value="dog">Apenas Cães</option>
@@ -323,19 +323,19 @@ export default function EstablishmentServicesPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Descrição</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Descrição</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 placeholder="Descreva as etapas do serviço, produtos utilizados, etc..."
-                className="w-full border border-neutral-200 rounded-xl p-2.5 text-xs text-neutral-800 resize-none"
+                className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl p-2.5 text-xs text-neutral-800 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] resize-none"
               />
             </div>
 
             {/* Image Selection / Presets */}
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Imagem do Serviço</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Imagem do Serviço</label>
               <Input
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
@@ -348,10 +348,10 @@ export default function EstablishmentServicesPage() {
                     key={idx}
                     type="button"
                     onClick={() => setImage(preset.url)}
-                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold whitespace-nowrap ${
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-colors ${
                       image === preset.url
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-neutral-200 bg-neutral-50 text-neutral-600 hover:bg-neutral-100'
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300'
+                        : 'border-neutral-200 dark:border-[#313335] bg-neutral-50 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-100 dark:hover:bg-[#313335]'
                     }`}
                   >
                     {preset.label}
@@ -363,10 +363,10 @@ export default function EstablishmentServicesPage() {
             {/* Assign Employees */}
             {employees.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1.5">
                   Funcionários que realizam este serviço
                 </label>
-                <div className="grid grid-cols-2 gap-2 max-h-28 overflow-y-auto p-1 bg-neutral-50 rounded-xl border border-neutral-200">
+                <div className="grid grid-cols-2 gap-2 max-h-28 overflow-y-auto p-1 bg-neutral-50 dark:bg-[#1E1F20] rounded-xl border border-neutral-200 dark:border-[#313335]">
                   {employees.map((emp) => {
                     const selected = selectedEmployeeIds.includes(emp.id);
                     return (
@@ -374,12 +374,12 @@ export default function EstablishmentServicesPage() {
                         key={emp.id}
                         type="button"
                         onClick={() => toggleEmployee(emp.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs ${
-                          selected ? 'bg-orange-500 text-white font-bold' : 'bg-white hover:bg-neutral-100 text-neutral-800'
+                        className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs cursor-pointer ${
+                          selected ? 'bg-orange-500 text-white font-bold' : 'bg-white dark:bg-[#282A2C] hover:bg-neutral-100 dark:hover:bg-[#313335] text-neutral-800 dark:text-[#E3E3E3]'
                         }`}
                       >
                         <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                          selected ? 'bg-white text-orange-500 border-white' : 'border-neutral-300'
+                          selected ? 'bg-white text-orange-500 border-white' : 'border-neutral-300 dark:border-[#313335]'
                         }`}>
                           {selected && <Check size={12} />}
                         </div>

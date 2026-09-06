@@ -30,13 +30,17 @@ export const Card: React.FC<CardProps> = ({
   const isClickable = !!onClick;
 
   const baseClasses = [
-    'bg-white rounded-2xl shadow-[0_2px_16px_-4px_rgba(0,0,0,0.08)]',
+    'bg-white dark:bg-[#1E1F20] text-neutral-900 dark:text-[#E3E3E3] rounded-2xl shadow-[0_2px_16px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]',
     paddingClasses[padding],
     isClickable ? 'cursor-pointer' : '',
     hover
-      ? 'transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.16)]'
+      ? 'transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.16)] dark:hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]'
       : '',
-    selected ? 'ring-2 ring-orange-500 border-orange-500' : bordered ? 'border border-neutral-100' : '',
+    selected
+      ? 'ring-2 ring-orange-500 border-orange-500'
+      : bordered
+      ? 'border border-neutral-100 dark:border-[#313335]'
+      : 'border border-transparent dark:border-[#282A2C]',
     className,
   ]
     .filter(Boolean)
@@ -71,14 +75,14 @@ export type BadgeVariant =
   | 'dark';
 
 const badgeVariants: Record<BadgeVariant, string> = {
-  default: 'bg-neutral-100 text-neutral-600',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-amber-100 text-amber-700',
-  error: 'bg-red-100 text-red-700',
-  info: 'bg-blue-100 text-blue-700',
-  brand: 'bg-orange-100 text-orange-700',
-  outline: 'border border-neutral-200 text-neutral-600 bg-transparent',
-  dark: 'bg-neutral-900 text-white',
+  default: 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]',
+  success: 'bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-transparent dark:border-green-800/40',
+  warning: 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-transparent dark:border-amber-800/40',
+  error: 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-transparent dark:border-red-800/40',
+  info: 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-transparent dark:border-blue-800/40',
+  brand: 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-transparent dark:border-orange-800/40',
+  outline: 'border border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#C4C7C5] bg-transparent',
+  dark: 'bg-neutral-900 dark:bg-[#282A2C] text-white border border-transparent dark:border-[#313335]',
 };
 
 export interface BadgeProps {
@@ -184,6 +188,25 @@ const getFullImageUrl = (url?: string | null) => {
   return url;
 };
 
+export const DEFAULT_AVATARS = [
+  '/user.jpg',
+  '/user2.jpg',
+  '/user3.jpg',
+  '/user4.jpg',
+  '/user5.jpg',
+  '/user6.jpg',
+];
+
+export function getStableAvatar(seed?: string | null): string {
+  if (!seed) return DEFAULT_AVATARS[0];
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return DEFAULT_AVATARS[Math.abs(hash) % DEFAULT_AVATARS.length];
+}
+
 export const Avatar: React.FC<AvatarProps> = ({
   src,
   name = '',
@@ -215,6 +238,7 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const resolvedSrc = getFullImageUrl(src);
   const hasRealPhoto = Boolean(resolvedSrc && !imgError);
+  const resolvedFallback = fallbackSrc || getStableAvatar(name || 'user');
 
   return (
     <div className={`relative inline-flex shrink-0 ${className}`}>
@@ -222,7 +246,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         className={[
           avatarSizes[size],
           square ? 'rounded-xl' : 'rounded-full',
-          'overflow-hidden flex items-center justify-center bg-neutral-100 relative',
+          'overflow-hidden flex items-center justify-center bg-neutral-100 dark:bg-[#282A2C] relative',
           (!hasRealPhoto && fallbackFailed) ? `${getColorFromName(name)} text-white font-semibold` : '',
         ]
           .filter(Boolean)
@@ -246,7 +270,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           />
         ) : !fallbackFailed ? (
           <img
-            src={fallbackSrc || '/user.jpg'}
+            src={resolvedFallback}
             alt={name}
             className="w-full h-full object-cover"
             onError={() => setFallbackFailed(true)}

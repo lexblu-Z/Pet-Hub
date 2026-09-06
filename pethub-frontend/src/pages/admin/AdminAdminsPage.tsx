@@ -34,16 +34,16 @@ export default function AdminAdminsPage() {
   return (
     <div className='p-6 max-w-2xl mx-auto'>
       <div className='flex items-center gap-3 mb-6'>
-        <div className='w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-500'>
+        <div className='w-12 h-12 bg-orange-100 dark:bg-orange-950/40 rounded-xl flex items-center justify-center text-orange-500'>
           <UserPlus size={24} />
         </div>
         <div>
-          <h1 className='text-2xl font-bold text-neutral-900'>Novo Administrador</h1>
-          <p className='text-neutral-500'>Crie contas com acesso total ao painel</p>
+          <h1 className='text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]'>Novo Administrador</h1>
+          <p className='text-neutral-500 dark:text-[#8E918F]'>Crie contas com acesso total ao painel</p>
         </div>
       </div>
 
-      <div className='bg-white rounded-2xl border border-neutral-100 p-6'>
+      <div className='bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-6 shadow-xs'>
         <div className='space-y-4 mb-6'>
           <Input 
             label='Nome completo' 
@@ -67,8 +67,8 @@ export default function AdminAdminsPage() {
           />
         </div>
         
-        <div className='bg-orange-50 p-4 rounded-xl mb-6'>
-          <p className='text-sm text-orange-800'>
+        <div className='bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 p-4 rounded-xl mb-6'>
+          <p className='text-sm text-orange-800 dark:text-orange-300'>
             <strong>Atenção:</strong> Esta conta terá controle total sobre a plataforma, incluindo aprovação de cadastros, visualização de métricas e criação de novos administradores.
           </p>
         </div>

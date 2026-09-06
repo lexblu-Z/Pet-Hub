@@ -12,7 +12,11 @@ export async function uploadAvatar(request: FastifyRequest, reply: FastifyReply)
   const data = await request.file();
   if (!data) return reply.status(400).send({ error: 'Nenhum arquivo enviado.' });
 
-  const ext = path.extname(data.filename) || '.jpg';
+  const ext = (path.extname(data.filename) || '.jpg').toLowerCase();
+  const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+  if (!allowed.includes(ext)) {
+    return reply.status(400).send({ error: 'Formato inválido. Formatos aceitos: JPG, JPEG, PNG e WEBP.' });
+  }
   const fileName = `${user.sub}-${randomUUID()}${ext}`;
   const dir = path.join(UPLOAD_ROOT, 'avatars');
   fs.mkdirSync(dir, { recursive: true });
@@ -31,11 +35,12 @@ export async function uploadAvatar(request: FastifyRequest, reply: FastifyReply)
 
 export async function removeAvatar(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user as any;
-  await prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id: user.sub },
-    data: { avatar: null }
+    data: { avatar: null },
+    select: { id: true, name: true, email: true, phone: true, avatar: true, defaultAvatar: true, role: true }
   });
-  return reply.send({ success: true });
+  return reply.send({ success: true, user: updatedUser });
 }
 
 export async function uploadPetPhoto(request: FastifyRequest, reply: FastifyReply) {

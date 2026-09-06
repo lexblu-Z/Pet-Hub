@@ -18,8 +18,8 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean; onChange: () =>
   <button
     type="button"
     onClick={onChange}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-      checked ? 'bg-orange-500' : 'bg-neutral-200'
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+      checked ? 'bg-orange-500' : 'bg-neutral-200 dark:bg-[#313335]'
     }`}
   >
     <span
@@ -86,32 +86,32 @@ export default function NotificationSettingsPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/tutor/profile')}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
         >
-          <ArrowLeft size={18} className="text-neutral-600" />
+          <ArrowLeft size={18} className="text-neutral-600 dark:text-[#E3E3E3]" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2">
             <Bell className="w-5 h-5 text-orange-500" />
             Notificações
           </h1>
-          <p className="text-sm text-neutral-500">Configure seus alertas e avisos</p>
+          <p className="text-sm text-neutral-500 dark:text-[#8E918F]">Configure seus alertas e avisos</p>
         </div>
       </div>
 
-      <Card padding="none" className="border border-neutral-100 overflow-hidden">
+      <Card padding="none" className="border border-neutral-100 dark:border-[#313335] overflow-hidden">
         {notifItems.map(({ key, icon: Icon, label, desc }, i) => (
           <div
             key={key}
-            className={`flex items-center justify-between p-4 ${i < notifItems.length - 1 ? 'border-b border-neutral-100' : ''}`}
+            className={`flex items-center justify-between p-4 ${i < notifItems.length - 1 ? 'border-b border-neutral-100 dark:border-[#313335]' : ''}`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-orange-50 dark:bg-orange-950/40 rounded-xl flex items-center justify-center">
                 <Icon size={18} className="text-orange-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-neutral-900">{label}</p>
-                <p className="text-xs text-neutral-500">{desc}</p>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{label}</p>
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F]">{desc}</p>
               </div>
             </div>
             <ToggleSwitch checked={settings[key]} onChange={() => handleToggle(key)} />

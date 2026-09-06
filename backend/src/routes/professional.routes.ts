@@ -15,4 +15,15 @@ export async function professionalRoutes(fastify: FastifyInstance) {
   fastify.put('/appointments/:id/status', professionalController.updateAppointmentStatus);
   fastify.get('/work-orders', professionalController.getWorkOrders);
   fastify.get('/reviews', professionalController.getReviews);
+
+  // Services management
+  fastify.get('/services', professionalController.listServices);
+  fastify.post('/services', professionalController.createService);
+  fastify.put('/services/:id', professionalController.updateService);
+  fastify.delete('/services/:id', professionalController.deleteService);
+  fastify.patch('/services/:id/toggle', professionalController.toggleServiceActive);
+
+  // Availability & Booking Settings
+  fastify.get('/availability', professionalController.getAvailability);
+  fastify.put('/availability', professionalController.updateAvailability);
 }

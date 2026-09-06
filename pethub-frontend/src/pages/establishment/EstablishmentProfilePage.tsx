@@ -241,8 +241,8 @@ export default function EstablishmentProfilePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Meu Estabelecimento</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Meu Estabelecimento</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Gerencie as informações públicas, fotos e horários de atendimento da sua empresa
           </p>
         </div>
@@ -252,8 +252,8 @@ export default function EstablishmentProfilePage() {
       </div>
 
       {/* 1. Basic Information */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
           <Building2 size={18} className="text-orange-500" />
           <span>Informações do Negócio</span>
         </div>
@@ -268,13 +268,13 @@ export default function EstablishmentProfilePage() {
           />
 
           <div>
-            <label className="block text-xs font-bold text-neutral-700 uppercase mb-1.5">
+            <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1.5">
               Categoria / Tipo *
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full border border-neutral-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3.5 py-2.5 text-xs font-medium text-neutral-800 dark:text-[#E3E3E3] bg-white dark:bg-[#282A2C] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
             >
               <option value="Pet shop">Pet shop</option>
               <option value="Clínica veterinária">Clínica veterinária</option>
@@ -305,7 +305,7 @@ export default function EstablishmentProfilePage() {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-neutral-700 uppercase mb-1.5">
+          <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1.5">
             Descrição e Apresentação do Estabelecimento
           </label>
           <textarea
@@ -313,14 +313,14 @@ export default function EstablishmentProfilePage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="Conte a história, os diferenciais e a dedicação da sua equipe aos pets..."
-            className="w-full border border-neutral-200 rounded-xl p-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
+            className="w-full border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-xl p-3 text-xs text-neutral-800 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
           />
         </div>
       </div>
 
       {/* 2. Address (Ourinhos - SP) */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
           <MapPin size={18} className="text-orange-500" />
           <span>Localização e Endereço</span>
         </div>
@@ -347,22 +347,22 @@ export default function EstablishmentProfilePage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Cidade" value={city} readOnly className="bg-neutral-50 text-neutral-500" />
-          <Input label="Estado" value={state} readOnly className="bg-neutral-50 text-neutral-500" />
+          <Input label="Cidade" value={city} readOnly className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F]" />
+          <Input label="Estado" value={state} readOnly className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F]" />
         </div>
       </div>
 
       {/* 3. Photos Gallery */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-          <div className="flex items-center gap-2.5 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-[#313335]">
+          <div className="flex items-center gap-2.5 font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
             <Camera size={18} className="text-orange-500" />
             <span>Fotos do Estabelecimento</span>
           </div>
-          <span className="text-xs text-neutral-400 font-medium">{photos.length} fotos</span>
+          <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium">{photos.length} fotos</span>
         </div>
 
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
           Adicione fotos da fachada, recepção, baias, banho e tosa e consultório. A primeira foto será a foto principal do estabelecimento.
         </p>
 
@@ -379,30 +379,30 @@ export default function EstablishmentProfilePage() {
           type="button"
           onClick={() => photoFileInputRef.current?.click()}
           disabled={isUploadingPhoto}
-          className="w-full border-2 border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/40 hover:bg-orange-50/80 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-neutral-700 transition-all cursor-pointer"
+          className="w-full border-2 border-dashed border-orange-300 dark:border-orange-500/40 hover:border-orange-500 bg-orange-50/40 dark:bg-orange-950/20 hover:bg-orange-50/80 dark:hover:bg-orange-950/30 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-neutral-700 dark:text-[#C4C7C5] transition-all cursor-pointer"
         >
-          <div className="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shadow-xs">
+          <div className="w-11 h-11 bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center shadow-xs">
             <Upload size={22} className={isUploadingPhoto ? "animate-bounce" : ""} />
           </div>
-          <span className="text-sm font-bold text-neutral-900">
+          <span className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
             {isUploadingPhoto ? 'Enviando foto...' : 'Adicionar fotos do estabelecimento'}
           </span>
-          <span className="text-xs text-neutral-400">
+          <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
             Clique para selecionar fotos do seu computador ou celular (PNG, JPG, WebP)
           </span>
         </button>
 
         {/* Photos grid */}
         {photos.length === 0 ? (
-          <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-            <Camera size={32} className="mx-auto text-neutral-300 mb-2" />
-            <p className="text-xs font-bold text-neutral-600">Nenhuma foto adicionada ainda</p>
-            <p className="text-[11px] text-neutral-400 mt-0.5">Fotos atraem mais tutores para agendar com você</p>
+          <div className="p-8 text-center bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+            <Camera size={32} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+            <p className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5]">Nenhuma foto adicionada ainda</p>
+            <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Fotos atraem mais tutores para agendar com você</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {photos.map((url, idx) => (
-              <div key={idx} className="relative group rounded-xl overflow-hidden border border-neutral-200 aspect-video bg-neutral-100">
+              <div key={idx} className="relative group rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] aspect-video bg-neutral-100 dark:bg-[#282A2C]">
                 <img src={getFullImageUrl(url)} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                 {idx === 0 && (
                   <span className="absolute top-1.5 left-1.5 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
@@ -423,17 +423,17 @@ export default function EstablishmentProfilePage() {
       </div>
 
       {/* 4. Working Hours */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 font-bold text-neutral-900 text-base">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
           <Clock size={18} className="text-orange-500" />
           <span>Horários de Funcionamento</span>
         </div>
 
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
           Defina os dias e horários em que os tutores podem agendar serviços no seu estabelecimento.
         </p>
 
-        <div className="divide-y divide-neutral-100">
+        <div className="divide-y divide-neutral-100 dark:divide-[#313335]">
           {Object.entries(workingHours).map(([dayKey, val]) => (
             <div key={dayKey} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 w-44">
@@ -444,7 +444,7 @@ export default function EstablishmentProfilePage() {
                   onChange={() => toggleDay(dayKey)}
                   className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500 cursor-pointer"
                 />
-                <label htmlFor={`day-${dayKey}`} className="text-xs font-bold text-neutral-800 cursor-pointer">
+                <label htmlFor={`day-${dayKey}`} className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3] cursor-pointer">
                   {dayNames[dayKey] || dayKey}
                 </label>
               </div>
@@ -455,18 +455,18 @@ export default function EstablishmentProfilePage() {
                     type="time"
                     value={val.open}
                     onChange={(e) => updateTime(dayKey, 'open', e.target.value)}
-                    className="border border-neutral-200 rounded-lg px-2 py-1 text-neutral-800 font-medium"
+                    className="border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-lg px-2 py-1 text-neutral-800 dark:text-[#E3E3E3] font-medium"
                   />
-                  <span className="text-neutral-400">até</span>
+                  <span className="text-neutral-400 dark:text-[#8E918F]">até</span>
                   <input
                     type="time"
                     value={val.close}
                     onChange={(e) => updateTime(dayKey, 'close', e.target.value)}
-                    className="border border-neutral-200 rounded-lg px-2 py-1 text-neutral-800 font-medium"
+                    className="border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-lg px-2 py-1 text-neutral-800 dark:text-[#E3E3E3] font-medium"
                   />
                 </div>
               ) : (
-                <span className="text-xs font-semibold text-neutral-400 bg-neutral-100 px-3 py-1 rounded-lg">
+                <span className="text-xs font-semibold text-neutral-400 dark:text-[#8E918F] bg-neutral-100 dark:bg-[#282A2C] px-3 py-1 rounded-lg">
                   Fechado
                 </span>
               )}
@@ -474,7 +474,7 @@ export default function EstablishmentProfilePage() {
           ))}
         </div>
 
-        <div className="pt-4 border-t border-neutral-100 flex justify-end">
+        <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] flex justify-end">
           <Button onClick={handleSaveProfile} isLoading={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
             Salvar Perfil e Horários
           </Button>

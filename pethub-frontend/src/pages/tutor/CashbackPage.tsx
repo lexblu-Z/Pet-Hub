@@ -80,17 +80,17 @@ export default function CashbackPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 mb-1">Meu Cashback</h1>
-          <p className="text-neutral-500 text-sm">Receba parte do seu dinheiro de volta a cada compra ou agendamento</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Meu Cashback</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm">Receba parte do seu dinheiro de volta a cada compra ou agendamento</p>
         </div>
         <button
           onClick={() => setIsHowItWorksOpen(true)}
-          className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-xl transition-colors"
+          className="flex items-center gap-2 text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200/50 dark:border-orange-900/40 px-3.5 py-2 rounded-2xl transition-all shadow-xs cursor-pointer self-start sm:self-auto"
         >
-          <HelpCircle size={15} />
-          <span>Como usar seu saldo?</span>
+          <HelpCircle size={16} />
+          <span>Como funciona o cashback? Clique para saber mais</span>
         </button>
       </div>
 
@@ -121,14 +121,6 @@ export default function CashbackPage() {
               >
                 Resgatar Saldo
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
-                onClick={() => setIsHowItWorksOpen(true)}
-              >
-                Regras
-              </Button>
             </div>
           </div>
 
@@ -145,57 +137,23 @@ export default function CashbackPage() {
         </div>
       </motion.div>
 
-      {/* How it works tutorial section */}
-      <div className="bg-white rounded-3xl p-6 border border-neutral-100 shadow-sm space-y-4">
-        <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2">
-          <span>💡 Como usar seu cashback</span>
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          {[
-            {
-              step: '1',
-              title: 'Acumule em cada compra',
-              desc: 'Ao realizar agendamentos ou comprar produtos em parceiros PetHub, você recebe cashback automaticamente.',
-            },
-            {
-              step: '2',
-              title: 'Resgate o saldo',
-              desc: 'Clique em "Resgatar Saldo" para gerar um código de desconto exclusivo no valor que desejar.',
-            },
-            {
-              step: '3',
-              title: 'Apresente o código',
-              desc: 'Informe seu código no balcão ou agendamento para abater diretamente no pagamento do serviço.',
-            },
-          ].map(({ step, title, desc }) => (
-            <div key={step} className="p-4 rounded-2xl bg-neutral-50/70 border border-neutral-100 flex flex-col items-center text-center">
-              <div className="w-10 h-10 rounded-full border-2 border-orange-500 bg-orange-50 text-orange-600 font-bold text-sm flex items-center justify-center shrink-0 mb-3 shadow-xs">
-                {step}
-              </div>
-              <h4 className="text-sm font-bold text-neutral-900 mb-1">{title}</h4>
-              <p className="text-xs text-neutral-500 leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* History Section */}
       <div>
-        <h2 className="text-lg font-bold text-neutral-900 mb-4">Histórico de Movimentações</h2>
+        <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Histórico de Movimentações</h2>
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-neutral-100 rounded-2xl animate-pulse" />
+              <div key={i} className="h-16 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : transactions.length === 0 ? (
-          <div className="bg-white rounded-3xl p-8 border border-neutral-100 text-center shadow-sm">
-            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+          <div className="bg-white dark:bg-[#1E1F20] rounded-3xl p-8 border border-neutral-100 dark:border-[#313335] text-center shadow-sm">
+            <div className="w-16 h-16 bg-orange-50 dark:bg-orange-950/30 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
               🪙
             </div>
-            <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum cashback registrado ainda</h3>
-            <p className="text-neutral-400 text-xs max-w-sm mx-auto">
+            <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum cashback registrado ainda</h3>
+            <p className="text-neutral-400 dark:text-[#8E918F] text-xs max-w-sm mx-auto">
               Realize agendamentos ou compras em estabelecimentos parceiros para acumular saldo de cashback automaticamente.
             </p>
           </div>
@@ -208,22 +166,22 @@ export default function CashbackPage() {
                   key={tx.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm"
+                  className="flex items-center gap-4 p-4 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm"
                 >
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                    isCredit ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                    isCredit ? 'bg-green-50 dark:bg-emerald-950/40 text-green-600 dark:text-emerald-400' : 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
                   }`}>
                     {isCredit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-neutral-900 text-sm truncate">{tx.description}</p>
+                    <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm truncate">{tx.description}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-neutral-400">
+                      <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
                         {new Date(tx.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {tx.code && (
-                        <span className="text-[11px] font-mono font-bold bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded">
+                        <span className="text-[11px] font-mono font-bold bg-neutral-100 dark:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] px-2 py-0.5 rounded border border-transparent dark:border-[#313335]">
                           {tx.code}
                         </span>
                       )}
@@ -231,7 +189,7 @@ export default function CashbackPage() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className={`font-bold text-sm ${isCredit ? 'text-green-600' : 'text-neutral-900'}`}>
+                    <p className={`font-bold text-sm ${isCredit ? 'text-green-600 dark:text-emerald-400' : 'text-neutral-900 dark:text-[#E3E3E3]'}`}>
                       {isCredit ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(tx.amount)}
                     </p>
                   </div>
@@ -246,35 +204,55 @@ export default function CashbackPage() {
       <Modal
         isOpen={isHowItWorksOpen}
         onClose={() => setIsHowItWorksOpen(false)}
-        title="💡 Como usar seu cashback?"
+        title="💡 Como funciona o Cashback PetHub"
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-neutral-600 leading-relaxed">
+          <p className="text-sm text-neutral-600 dark:text-[#C4C7C5] leading-relaxed">
             O cashback do PetHub funciona de forma simples, transparente e sem pegadinhas. Veja o passo a passo:
           </p>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             {[
-              { step: '1', title: 'Escolha quanto deseja utilizar', desc: 'Clique em "Resgatar Saldo" e defina o valor desejado do seu saldo disponível.' },
-              { step: '2', title: 'Confirme a utilização', desc: 'O sistema valida seu saldo e deduz o valor solicitado com segurança.' },
-              { step: '3', title: 'Um código único será gerado', desc: 'Um código exclusivo de resgate (ex: CASH-7F2A-9B3E) será emitido instantaneamente.' },
-              { step: '4', title: 'Apresente o código', desc: 'Informe o código ao estabelecimento parceiro no balcão ou durante o agendamento.' },
-              { step: '5', title: 'Desconto aplicado', desc: 'O valor resgatado é descontado diretamente da sua conta conforme as regras da transação.' },
+              {
+                step: '1',
+                title: 'Escolha quanto deseja utilizar',
+                desc: 'Clique em "Resgatar Saldo" e defina o valor desejado do seu saldo disponível.',
+              },
+              {
+                step: '2',
+                title: 'Confirme a utilização',
+                desc: 'O sistema valida seu saldo e deduz o valor solicitado com segurança.',
+              },
+              {
+                step: '3',
+                title: 'Um código único será gerado',
+                desc: 'Um código exclusivo de resgate (ex: CASH-7F2A-9B3E) será emitido instantaneamente.',
+              },
+              {
+                step: '4',
+                title: 'Apresente o código',
+                desc: 'Informe o código ao estabelecimento parceiro no balcão ou durante o agendamento.',
+              },
+              {
+                step: '5',
+                title: 'Desconto aplicado',
+                desc: 'O valor resgatado é descontado diretamente da sua conta conforme as regras da transação.',
+              },
             ].map(({ step, title, desc }) => (
-              <div key={step} className="flex items-start gap-3 p-3 bg-neutral-50 rounded-xl">
-                <div className="w-8 h-8 rounded-full border-2 border-orange-500 bg-orange-50 text-orange-600 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <div key={step} className="flex items-start gap-3 p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335]">
+                <div className="w-8 h-8 rounded-full border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                   {step}
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-neutral-900">{title}</h4>
-                  <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">{title}</h4>
+                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5 leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="pt-4 border-t border-neutral-100 flex justify-end">
+          <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] flex justify-end">
             <Button onClick={() => setIsHowItWorksOpen(false)}>
               Entendi
             </Button>
@@ -294,28 +272,28 @@ export default function CashbackPage() {
       >
         {generatedCode ? (
           <div className="space-y-5 text-center py-2">
-            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
+            <div className="w-14 h-14 bg-green-50 dark:bg-emerald-950/40 rounded-full flex items-center justify-center mx-auto text-green-500 dark:text-emerald-400">
               <CheckCircle2 size={32} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-neutral-900">Código gerado com sucesso!</h3>
-              <p className="text-xs text-neutral-500 mt-1">Apresente este código no estabelecimento para obter seu desconto.</p>
+              <h3 className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3]">Código gerado com sucesso!</h3>
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-1">Apresente este código no estabelecimento para obter seu desconto.</p>
             </div>
 
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex items-center justify-between gap-3">
-              <span className="text-lg font-mono font-extrabold text-orange-600 tracking-wider">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-2xl flex items-center justify-between gap-3">
+              <span className="text-lg font-mono font-extrabold text-orange-600 dark:text-orange-400 tracking-wider">
                 {generatedCode}
               </span>
               <button
                 onClick={() => handleCopy(generatedCode)}
-                className="flex items-center gap-1 text-xs font-bold text-orange-700 hover:text-orange-900 bg-white px-3 py-1.5 rounded-lg border border-orange-200 shadow-sm"
+                className="flex items-center gap-1 text-xs font-bold text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-white bg-white dark:bg-[#1E1F20] px-3 py-1.5 rounded-lg border border-orange-200 dark:border-orange-900/50 shadow-sm cursor-pointer"
               >
                 <Copy size={13} />
                 Copiar
               </button>
             </div>
 
-            <p className="text-[11px] text-neutral-400">
+            <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
               Este código é único, intransferível e fica registrado no seu histórico.
             </p>
 
@@ -325,8 +303,8 @@ export default function CashbackPage() {
           </div>
         ) : (
           <form onSubmit={handleRedeem} className="space-y-4">
-            <p className="text-xs text-neutral-500">
-              Saldo disponível: <strong className="text-neutral-800">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}</strong>
+            <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+              Saldo disponível: <strong className="text-neutral-800 dark:text-[#E3E3E3]">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}</strong>
             </p>
 
             <Input
@@ -345,7 +323,7 @@ export default function CashbackPage() {
                   type="button"
                   disabled={val > balance}
                   onClick={() => setRedeemAmount(String(val))}
-                  className="flex-1 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 disabled:pointer-events-none"
+                  className="flex-1 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#E3E3E3] hover:bg-neutral-50 dark:hover:bg-[#282A2C] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                 >
                   R$ {val}
                 </button>
@@ -353,7 +331,7 @@ export default function CashbackPage() {
               <button
                 type="button"
                 onClick={() => setRedeemAmount(balance.toFixed(2))}
-                className="py-1.5 px-3 text-xs font-semibold rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100"
+                className="py-1.5 px-3 text-xs font-semibold rounded-lg bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50 hover:bg-orange-100 dark:hover:bg-orange-900/50 cursor-pointer"
               >
                 Tudo
               </button>

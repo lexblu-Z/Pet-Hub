@@ -75,12 +75,12 @@ export default function MyPetsPage() {
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Meus Pets</h1>
-          <p className="text-neutral-400 text-sm mt-0.5">{myPets.length} pet{myPets.length !== 1 ? 's' : ''} cadastrado{myPets.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Meus Pets</h1>
+          <p className="text-neutral-400 dark:text-[#C4C7C5] text-sm mt-0.5">{myPets.length} pet{myPets.length !== 1 ? 's' : ''} cadastrado{myPets.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           onClick={() => navigate('/tutor/pets/novo')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm cursor-pointer"
         >
           <Plus size={16} />
           Adicionar pet
@@ -92,22 +92,22 @@ export default function MyPetsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+          className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
         >
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0 mt-0.5">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-300 shrink-0 mt-0.5">
               <HelpCircle size={22} />
             </div>
             <div>
-              <p className="font-bold text-sm text-blue-950">Não sabe se as vacinas do seu pet estão em dia?</p>
-              <p className="text-xs text-blue-800 mt-0.5 leading-relaxed">
+              <p className="font-bold text-sm text-blue-950 dark:text-blue-200">Não sabe se as vacinas do seu pet estão em dia?</p>
+              <p className="text-xs text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
                 Recomendamos agendar uma avaliação com um médico veterinário para checar a caderneta de vacinação e manter seu amigão 100% protegido.
               </p>
             </div>
           </div>
           <Button
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 self-end sm:self-auto text-xs"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white shrink-0 self-end sm:self-auto text-xs border-2 border-blue-400 hover:border-blue-300 dark:border-blue-400 dark:hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-300 active:border-blue-500 shadow-xs"
             onClick={() => navigate('/tutor/explore')}
           >
             Encontrar um veterinário
@@ -137,10 +137,10 @@ export default function MyPetsPage() {
               <motion.div
                 key={pet.id}
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden hover:shadow-md hover:border-orange-100 transition-all duration-300 group"
+                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm overflow-hidden hover:shadow-md hover:border-orange-100 dark:hover:border-orange-500/30 transition-all duration-300 group"
               >
                 {/* Photo */}
-                <div className="relative h-48 overflow-hidden cursor-pointer bg-neutral-100" onClick={() => navigate(`/tutor/pets/${pet.id}`)}>
+                <div className="relative h-48 overflow-hidden cursor-pointer bg-neutral-100 dark:bg-[#282A2C]" onClick={() => navigate(`/tutor/pets/${pet.id}`)}>
                   <img
                     src={pet.photo || '/fallback-dog.png'}
                     alt={pet.name}
@@ -165,7 +165,7 @@ export default function MyPetsPage() {
                   <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setOpenMenu(isMenuOpen ? null : pet.id)}
-                      className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                      className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors cursor-pointer"
                       title="Opções"
                     >
                       <MoreVertical size={16} />
@@ -177,14 +177,14 @@ export default function MyPetsPage() {
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="absolute right-0 top-10 w-36 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-10"
+                          className="absolute right-0 top-10 w-36 bg-white dark:bg-[#282A2C] rounded-xl shadow-lg border border-neutral-100 dark:border-[#313335] py-1 z-10"
                         >
                           <button
                             onClick={() => {
                               setOpenMenu(null);
                               navigate(`/tutor/pets/${pet.id}/editar`);
                             }}
-                            className="w-full px-3 py-2 text-left text-xs font-medium text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+                            className="w-full px-3 py-2 text-left text-xs font-medium text-neutral-700 dark:text-[#E3E3E3] hover:bg-neutral-50 dark:hover:bg-[#333538] flex items-center gap-2 cursor-pointer"
                           >
                             <Edit size={14} />
                             Editar dados
@@ -194,7 +194,7 @@ export default function MyPetsPage() {
                               setOpenMenu(null);
                               setDeleteModal({ open: true, petId: pet.id });
                             }}
-                            className="w-full px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            className="w-full px-3 py-2 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 cursor-pointer"
                           >
                             <Trash2 size={14} />
                             Remover pet
@@ -206,13 +206,13 @@ export default function MyPetsPage() {
                 </div>
 
                 {/* Footer action */}
-                <div className="p-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between text-xs">
-                  <span className="text-neutral-500 font-medium">
+                <div className="p-3 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 dark:text-[#C4C7C5] font-medium">
                     {pet.gender === 'FEMALE' ? '♀️ Fêmea' : '♂️ Macho'} {pet.weight ? `· ${pet.weight} kg` : ''}
                   </span>
                   <button
                     onClick={() => navigate(`/tutor/pets/${pet.id}`)}
-                    className="text-orange-600 font-bold hover:underline flex items-center gap-1"
+                    className="text-orange-600 dark:text-orange-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     Ver perfil →
                   </button>

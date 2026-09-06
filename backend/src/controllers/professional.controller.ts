@@ -280,4 +280,232 @@ export const professionalController = {
     // Zero fake reviews. Only real reviews if any exist in the database
     return reply.send([]);
   },
+
+  // =========================================================================
+  // 6. SERVICES MANAGEMENT (PRESTAR SERVIÇOS)
+  // =========================================================================
+  async listServices(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const services = await prisma.service.findMany({
+      where: { professionalId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return reply.send(services);
+  },
+
+  async createService(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const { name, description, price, duration, category, animalType, active } = request.body as any;
+
+    if (!name || name.trim().length < 2) {
+      return reply.status(400).send({ error: 'O nome do serviço deve ter pelo menos 2 caracteres.' });
+    }
+
+    const priceNum = Number(price);
+    if (isNaN(priceNum) || priceNum < 0) {
+      return reply.status(400).send({ error: 'Preço inválido.' });
+    }
+
+    const durationNum = Number(duration);
+    if (isNaN(durationNum) || durationNum < 5) {
+      return reply.status(400).send({ error: 'A duração mínima deve ser de pelo menos 5 minutos.' });
+    }
+
+    const service = await prisma.service.create({
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        price: priceNum,
+        duration: durationNum,
+        category: category || 'Consultas',
+        animalType: animalType || 'Todos',
+        active: active !== undefined ? Boolean(active) : true,
+        professionalId: user.id,
+      },
+    });
+
+    return reply.status(201).send(service);
+  },
+
+  async updateService(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const { id } = request.params;
+    const { name, description, price, duration, category, animalType, active } = request.body as any;
+
+    const existing = await prisma.service.findUnique({ where: { id } });
+    if (!existing || existing.professionalId !== user.id) {
+      return reply.status(404).send({ error: 'Serviço não encontrado ou você não tem permissão para alterá-lo.' });
+    }
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description?.trim() || null;
+    if (price !== undefined) updateData.price = Number(price);
+    if (duration !== undefined) updateData.duration = Number(duration);
+    if (category !== undefined) updateData.category = category;
+    if (animalType !== undefined) updateData.animalType = animalType;
+    if (active !== undefined) updateData.active = Boolean(active);
+
+    const updated = await prisma.service.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return reply.send(updated);
+  },
+
+  async deleteService(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const { id } = request.params;
+
+    const existing = await prisma.service.findUnique({ where: { id } });
+    if (!existing || existing.professionalId !== user.id) {
+      return reply.status(404).send({ error: 'Serviço não encontrado ou você não tem permissão para excluí-lo.' });
+    }
+
+    // Check if there are active appointments with this service
+    const activeAppts = await prisma.appointment.count({
+      where: {
+        serviceId: id,
+        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
+      },
+    });
+
+    if (activeAppts > 0) {
+      return reply.status(400).send({
+        error: 'Este serviço possui agendamentos ativos e não pode ser excluído no momento. Você pode desativá-lo para novos agendamentos.',
+      });
+    }
+
+    await prisma.service.delete({ where: { id } });
+    return reply.send({ message: 'Serviço removido com sucesso.' });
+  },
+
+  async toggleServiceActive(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const { id } = request.params;
+
+    const existing = await prisma.service.findUnique({ where: { id } });
+    if (!existing || existing.professionalId !== user.id) {
+      return reply.status(404).send({ error: 'Serviço não encontrado.' });
+    }
+
+    const updated = await prisma.service.update({
+      where: { id },
+      data: { active: !existing.active },
+    });
+
+    return reply.send(updated);
+  },
+
+  // =========================================================================
+  // 7. AVAILABILITY & BOOKING SETTINGS (MINHA DISPONIBILIDADE)
+  // =========================================================================
+  async getAvailability(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const defaultHours = {
+      monday: { isOpen: true, open: '09:00', close: '18:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      tuesday: { isOpen: true, open: '09:00', close: '18:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      wednesday: { isOpen: true, open: '09:00', close: '18:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      thursday: { isOpen: true, open: '09:00', close: '18:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      friday: { isOpen: true, open: '09:00', close: '18:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      saturday: { isOpen: false, open: '09:00', close: '14:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+      sunday: { isOpen: false, open: '09:00', close: '12:00', hasBreak: false, breakStart: '12:00', breakEnd: '13:30' },
+    };
+
+    const defaultBookingSettings = {
+      acceptOnlineBooking: true,
+      minAdvanceHours: 2,
+      defaultDurationMinutes: 60,
+      maxPerSlot: 1,
+      unavailableDays: [],
+      vacationStart: null,
+      vacationEnd: null,
+    };
+
+    const prof = await prisma.professionalProfile.findUnique({
+      where: { userId: user.id },
+    });
+
+    return reply.send({
+      workingHours: prof?.workingHours || defaultHours,
+      bookingSettings: prof?.bookingSettings || defaultBookingSettings,
+    });
+  },
+
+  async updateAvailability(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureProfessional(request, reply);
+    if (!user) return;
+
+    const { workingHours, bookingSettings } = request.body as any;
+
+    if (!workingHours || typeof workingHours !== 'object') {
+      return reply.status(400).send({ error: 'Dados de disponibilidade inválidos.' });
+    }
+
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    const dayMap: Record<string, { label: string; aliases: string[] }> = {
+      segunda: { label: 'Segunda-feira', aliases: ['segunda', 'monday'] },
+      terca: { label: 'Terça-feira', aliases: ['terca', 'terça', 'tuesday'] },
+      quarta: { label: 'Quarta-feira', aliases: ['quarta', 'wednesday'] },
+      quinta: { label: 'Quinta-feira', aliases: ['quinta', 'thursday'] },
+      sexta: { label: 'Sexta-feira', aliases: ['sexta', 'friday'] },
+      sabado: { label: 'Sábado', aliases: ['sabado', 'sábado', 'saturday'] },
+      domingo: { label: 'Domingo', aliases: ['domingo', 'sunday'] },
+    };
+
+    for (const [_, { label, aliases }] of Object.entries(dayMap)) {
+      const dayKey = aliases.find((a) => workingHours[a] !== undefined);
+      if (!dayKey) continue;
+      const config = workingHours[dayKey];
+      const isDayActive = config.enabled !== undefined ? Boolean(config.enabled) : Boolean(config.isOpen);
+
+      if (config && isDayActive) {
+        if (!timeRegex.test(config.open) || !timeRegex.test(config.close)) {
+          return reply.status(400).send({ error: `Horários inválidos em ${label}. Use o formato HH:mm.` });
+        }
+        if (config.open >= config.close) {
+          return reply.status(400).send({ error: `Em ${label}, o horário de término (${config.close}) deve ser posterior ao horário de início (${config.open}).` });
+        }
+        if (config.hasBreak) {
+          if (!timeRegex.test(config.breakStart) || !timeRegex.test(config.breakEnd)) {
+            return reply.status(400).send({ error: `Horários de intervalo inválidos em ${label}. Use o formato HH:mm.` });
+          }
+          if (config.breakStart >= config.breakEnd) {
+            return reply.status(400).send({ error: `Em ${label}, o fim do intervalo (${config.breakEnd}) deve ser após o início (${config.breakStart}).` });
+          }
+          if (config.breakStart < config.open || config.breakEnd > config.close) {
+            return reply.status(400).send({ error: `Em ${label}, o intervalo deve estar dentro do expediente (${config.open} às ${config.close}).` });
+          }
+        }
+      }
+    }
+
+    const updated = await prisma.professionalProfile.update({
+      where: { userId: user.id },
+      data: {
+        workingHours,
+        ...(bookingSettings && typeof bookingSettings === 'object' ? { bookingSettings } : {}),
+      },
+    });
+
+    return reply.send({
+      message: 'Disponibilidade e configurações de agendamento salvas com sucesso!',
+      workingHours: updated.workingHours,
+      bookingSettings: updated.bookingSettings,
+    });
+  },
 };

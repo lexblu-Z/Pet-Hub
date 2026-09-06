@@ -94,7 +94,7 @@ export default function ProfessionalDashboard() {
           />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-neutral-900">Olá, {userName} 👋</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {userName} 👋</h1>
               {isSuspended ? (
                 <Badge variant="warning">⏸️ Suspenso</Badge>
               ) : isPendingApproval ? (
@@ -103,7 +103,7 @@ export default function ProfessionalDashboard() {
                 <Badge variant="success">✓ Ativo</Badge>
               )}
             </div>
-            <p className="text-neutral-500 text-sm mt-0.5">
+            <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
               {specialty} • Profissional PetHub Ourinhos - SP
             </p>
           </div>
@@ -111,38 +111,38 @@ export default function ProfessionalDashboard() {
 
         {/* Period Selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-neutral-500 font-semibold hidden sm:inline">Período:</label>
+          <label className="text-xs text-neutral-500 dark:text-[#8E918F] font-semibold hidden sm:inline">Período:</label>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+            className="bg-white dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-[#E3E3E3] shadow-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
           >
-            <option value="today">Hoje</option>
-            <option value="7days">Últimos 7 dias</option>
-            <option value="month">Últimos 30 dias</option>
-            <option value="year">Este ano</option>
+            <option value="today" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Hoje</option>
+            <option value="7days" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Últimos 7 dias</option>
+            <option value="month" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Últimos 30 dias</option>
+            <option value="year" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Este ano</option>
           </select>
         </div>
       </div>
 
       {/* Suspended Alert Banner - Identical to Establishment */}
       {isSuspended && (
-        <div className="bg-orange-50 border-2 border-orange-300 rounded-3xl p-6 shadow-xs text-orange-950">
+        <div className="bg-orange-50 dark:bg-orange-950/30 border-2 border-orange-300 dark:border-orange-800 rounded-3xl p-6 shadow-xs text-orange-950 dark:text-orange-200">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center shrink-0">
               <AlertTriangle size={24} />
             </div>
             <div className="space-y-1.5 flex-1">
-              <h3 className="font-bold text-orange-950 text-base">
+              <h3 className="font-bold text-orange-950 dark:text-orange-200 text-base">
                 Perfil Profissional Temporariamente Suspenso
               </h3>
-              <p className="text-xs sm:text-sm text-orange-900 leading-relaxed">
+              <p className="text-xs sm:text-sm text-orange-900 dark:text-orange-300 leading-relaxed">
                 Seu acesso aos atendimentos está suspenso temporariamente{profProfile?.suspendedUntil ? ` até ${new Date(profProfile.suspendedUntil).toLocaleString('pt-BR')}` : ''}.
               </p>
-              <p className="text-xs text-orange-800 bg-white/70 p-3 rounded-xl border border-orange-200">
+              <p className="text-xs text-orange-800 dark:text-orange-300 bg-white/70 dark:bg-[#1E1F20]/70 p-3 rounded-xl border border-orange-200 dark:border-orange-900/40">
                 <span className="font-bold">Motivo:</span> {profProfile?.suspensionReason || 'Violação das diretrizes da plataforma.'}
               </p>
-              <p className="text-[11px] text-orange-700 mt-1">
+              <p className="text-[11px] text-orange-700 dark:text-orange-400 mt-1">
                 A reativação da conta ocorrerá automaticamente após o término do período de suspensão.
               </p>
             </div>
@@ -152,16 +152,16 @@ export default function ProfessionalDashboard() {
 
       {/* Pending Approval Checklist Banner - Identical to Establishment */}
       {isPendingApproval && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-xs">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-5 shadow-xs">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
               <AlertTriangle size={20} />
             </div>
             <div className="space-y-2 flex-1">
-              <h3 className="font-bold text-amber-900 text-sm">
+              <h3 className="font-bold text-amber-900 dark:text-amber-300 text-sm">
                 Seu cadastro profissional está em análise pela equipe administrativa
               </h3>
-              <p className="text-xs text-amber-800 leading-relaxed">
+              <p className="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
                 Você já pode preencher suas informações, CRMV, especialidades e biografia. Assim que o administrador aprovar seu cadastro, sua agenda ficará disponível para os tutores da plataforma.
               </p>
               <div className="pt-1 flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ export default function ProfessionalDashboard() {
                 </Link>
                 <Link
                   to="/profissional/agenda"
-                  className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 rounded-lg text-xs font-bold transition-colors"
+                  className="px-3 py-1.5 bg-white dark:bg-[#282A2C] border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 rounded-lg text-xs font-bold transition-colors"
                 >
                   Ver Minha Agenda
                 </Link>
@@ -186,73 +186,73 @@ export default function ProfessionalDashboard() {
       {/* Metrics Row - 100% Real Data */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Atendimentos Hoje */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Atendimentos Hoje</span>
-            <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
               <Calendar size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data.todayAppointments}
             </span>
-            <span className="text-xs text-neutral-400 font-medium ml-2">consultas hoje</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">consultas hoje</span>
           </div>
         </div>
 
         {/* Próximos Agendamentos */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Próximos Agendamentos</span>
-            <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center">
               <Clock size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data.upcomingAppointments}
             </span>
-            <span className="text-xs text-neutral-400 font-medium ml-2">na fila de espera</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">na fila de espera</span>
           </div>
         </div>
 
         {/* Pacientes Atendidos */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Pacientes Atendidos</span>
-            <div className="w-9 h-9 bg-neutral-100 text-neutral-700 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-neutral-100 dark:bg-[#282A2C] text-neutral-700 dark:text-[#C4C7C5] rounded-xl flex items-center justify-center">
               <PawPrint size={18} />
             </div>
           </div>
           <div>
-            <span className="text-2xl font-black text-neutral-900">
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
               {data.patientsAttended}
             </span>
-            <span className="text-xs text-neutral-400 font-medium ml-2">pacientes únicos</span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">pacientes únicos</span>
           </div>
         </div>
 
         {/* Avaliação Média */}
-        <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-neutral-400">
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
             <span className="text-xs font-bold uppercase tracking-wider">Avaliação Média</span>
-            <div className="w-9 h-9 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 rounded-xl flex items-center justify-center">
               <Star size={18} className="fill-amber-400" />
             </div>
           </div>
           <div>
             {data.averageRating !== null ? (
               <>
-                <span className="text-2xl font-black text-neutral-900">
+                <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
                   {data.averageRating.toFixed(1)}
                 </span>
-                <span className="text-xs text-neutral-400 font-medium ml-2">★★★★★</span>
+                <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">★★★★★</span>
               </>
             ) : (
               <>
-                <span className="text-2xl font-black text-neutral-400">—</span>
-                <span className="text-xs text-neutral-400 font-medium ml-2">Sem avaliações</span>
+                <span className="text-2xl font-black text-neutral-400 dark:text-[#8E918F]">—</span>
+                <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">Sem avaliações</span>
               </>
             )}
           </div>
@@ -260,30 +260,30 @@ export default function ProfessionalDashboard() {
       </div>
 
       {/* Daily Appointments / Recent Agenda */}
-      <div className="bg-white rounded-2xl border border-neutral-100 shadow-xs p-5 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-          <div className="flex items-center gap-2 font-bold text-neutral-900">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs p-5 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-[#313335]">
+          <div className="flex items-center gap-2 font-bold text-neutral-900 dark:text-[#E3E3E3]">
             <Calendar size={18} className="text-orange-500" />
             <span>Consultas e Procedimentos de Hoje</span>
           </div>
           <Link
             to="/profissional/agenda"
-            className="text-xs text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1"
+            className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold flex items-center gap-1"
           >
             Ver agenda completa <ChevronRight size={14} />
           </Link>
         </div>
 
         {data.todaySchedule.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-            <Stethoscope size={40} className="mx-auto text-neutral-300 mb-3" />
-            <h4 className="font-bold text-neutral-800 text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-4">
+          <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+            <Stethoscope size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+            <h4 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-sm mb-1">Nenhum atendimento agendado para hoje</h4>
+            <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-sm mx-auto mb-4">
               Assim que tutores realizarem agendamentos com você, eles aparecerão aqui.
             </p>
             <Link
               to="/profissional/agenda"
-              className="inline-flex items-center text-xs text-orange-600 hover:text-orange-700 font-bold"
+              className="inline-flex items-center text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold"
             >
               Ver minha agenda →
             </Link>
@@ -293,28 +293,28 @@ export default function ProfessionalDashboard() {
             {data.todaySchedule.map((apt) => (
               <div
                 key={apt.id}
-                className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs space-y-3 hover:border-orange-200 transition-colors"
+                className="bg-white dark:bg-[#282A2C] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-4 shadow-xs space-y-3 hover:border-orange-200 dark:hover:border-orange-500/40 transition-colors"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   {/* Time & Service */}
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-orange-50 text-orange-700 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100">
+                    <div className="w-14 h-14 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100 dark:border-orange-900/40">
                       <Clock size={16} />
                       <span className="text-xs mt-0.5">{apt.time}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-neutral-900 text-base">{apt.service}</span>
+                        <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">{apt.service}</span>
                         <Badge variant={apt.status === 'CONFIRMED' ? 'success' : apt.status === 'IN_PROGRESS' ? 'brand' : 'warning'}>
                           {apt.status === 'CONFIRMED' ? 'Confirmado' : apt.status === 'IN_PROGRESS' ? 'Em Andamento' : 'Agendado'}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                        <span className="font-semibold text-neutral-800 flex items-center gap-1">
+                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
+                        <span className="font-semibold text-neutral-800 dark:text-[#E3E3E3] flex items-center gap-1">
                           <Clock size={12} className="text-orange-500" /> {apt.duration} min
                         </span>
                         <span>•</span>
-                        <span className="font-bold text-green-700">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
+                        <span className="font-bold text-green-700 dark:text-green-400">R$ {apt.price.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </div>
                   </div>
@@ -323,7 +323,7 @@ export default function ProfessionalDashboard() {
                   <div className="flex items-center gap-6 text-xs">
                     {/* Pet */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200 flex items-center justify-center text-sm">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-[#1E1F20] overflow-hidden shrink-0 border border-neutral-200 dark:border-[#313335] flex items-center justify-center text-sm">
                         {apt.petPhoto ? (
                           <img src={apt.petPhoto} alt={apt.petName} className="w-full h-full object-cover" />
                         ) : (
@@ -331,23 +331,23 @@ export default function ProfessionalDashboard() {
                         )}
                       </div>
                       <div>
-                        <p className="font-bold text-neutral-900">{apt.petName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.petSpecies} {apt.petBreed ? `• ${apt.petBreed}` : ''}</p>
                       </div>
                     </div>
 
                     {/* Tutor */}
-                    <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
+                    <div className="flex items-center gap-2.5 border-l border-neutral-100 dark:border-[#313335] pl-4">
                       <Avatar src={apt.tutorPhoto || '/user.jpg'} name={apt.tutorName} size="sm" fallbackSrc="/user.jpg" />
                       <div>
-                        <p className="font-bold text-neutral-900">{apt.tutorName}</p>
-                        <p className="text-[11px] text-neutral-400">{apt.tutorPhone || 'Tutor'}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.tutorName}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{apt.tutorPhone || 'Tutor'}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100">
+                  <div className="flex items-center gap-2 justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-neutral-100 dark:border-[#313335]">
                     <Link
                       to="/profissional/agenda"
                       className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"

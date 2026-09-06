@@ -31,7 +31,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-neutral-900 mb-6">Painel Administrativo</h1>
+      <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-6">Painel Administrativo</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
         <Link to="/admin/usuarios" className="block transition-transform hover:-translate-y-0.5">
           <StatCard title="Total de Usuários" value={isLoading ? '...' : stats.users} icon={<Users size={20} />} />
@@ -54,20 +54,20 @@ export default function AdminDashboard() {
       </div>
       
       {stats.pendingEstablishments === 0 ? (
-        <div className="bg-white rounded-2xl border border-neutral-100 p-12 flex flex-col items-center justify-center text-center shadow-sm">
-          <Store size={48} className="text-neutral-200 mb-4" />
-          <h3 className="text-lg font-bold text-neutral-900 mb-1">Nenhuma solicitação pendente</h3>
-          <p className="text-neutral-500 text-sm">Todos os cadastros de estabelecimentos estão em dia.</p>
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-12 flex flex-col items-center justify-center text-center shadow-sm">
+          <Store size={48} className="text-neutral-200 dark:text-neutral-700 mb-4" />
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Nenhuma solicitação pendente</h3>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm">Todos os cadastros de estabelecimentos estão em dia.</p>
         </div>
       ) : (
-        <div className="bg-orange-50 rounded-2xl border border-orange-200 p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="bg-orange-50 dark:bg-orange-950/30 rounded-2xl border border-orange-200 dark:border-orange-900/40 p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4 text-left">
-            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center shrink-0">
               <Clock size={24} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-neutral-900">Solicitações Pendentes de Análise</h3>
-              <p className="text-neutral-600 text-sm mt-0.5">Existem {stats.pendingEstablishments} estabelecimento(s) aguardando aprovação administrativa.</p>
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">Solicitações Pendentes de Análise</h3>
+              <p className="text-neutral-600 dark:text-[#C4C7C5] text-sm mt-0.5">Existem {stats.pendingEstablishments} estabelecimento(s) aguardando aprovação administrativa.</p>
             </div>
           </div>
           <Link

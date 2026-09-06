@@ -199,22 +199,22 @@ export default function ProfilePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                 >
-                  <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3 px-2">{section.title}</h2>
-                  <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm">
+                  <h2 className="text-sm font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider mb-3 px-2">{section.title}</h2>
+                  <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden shadow-sm">
                     {section.items.map((item) => (
                       <button
                         key={item.id}
                         onClick={() => { if (item.to) { navigate(item.to); } else if (item.id === 'personal') { setIsEditing(true); } }}
-                        className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 transition-colors border-b border-neutral-100 last:border-0 group"
+                        className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors border-b border-neutral-100 dark:border-[#313335] last:border-0 group cursor-pointer"
                       >
-                        <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-600 group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors">
+                        <div className="w-10 h-10 bg-neutral-100 dark:bg-[#282A2C] rounded-xl flex items-center justify-center text-neutral-600 dark:text-[#C4C7C5] group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                           {item.icon}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-neutral-900">{item.label}</p>
-                          <p className="text-xs text-neutral-500">{item.desc}</p>
+                          <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{item.label}</p>
+                          <p className="text-xs text-neutral-500 dark:text-[#8E918F]">{item.desc}</p>
                         </div>
-                        <ChevronRight size={18} className="text-neutral-300 group-hover:text-orange-500 transition-colors" />
+                        <ChevronRight size={18} className="text-neutral-300 dark:text-neutral-600 group-hover:text-orange-500 transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -228,23 +228,23 @@ export default function ProfilePage() {
                 transition={{ delay: 0.25 }}
                 className="pt-2"
               >
-                <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden shadow-xs hover:shadow-md transition-all">
+                <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden shadow-xs hover:shadow-md transition-all">
                   <button
                     onClick={() => setShowEasterEggModal(true)}
-                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors group cursor-pointer"
+                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors group cursor-pointer"
                   >
-                    <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 bg-neutral-100 dark:bg-[#282A2C] rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
                       🚫
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-orange-500 transition-colors flex items-center gap-1.5">
+                      <p className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] group-hover:text-orange-500 transition-colors flex items-center gap-1.5">
                         Easter Egg 🚫🚫🚫
                       </p>
-                      <p className="text-xs text-neutral-400">
+                      <p className="text-xs text-neutral-400 dark:text-[#8E918F]">
                         Área confidencial. Não clique aqui...
                       </p>
                     </div>
-                    <ChevronRight size={18} className="text-neutral-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                    <ChevronRight size={18} className="text-neutral-300 dark:text-neutral-600 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                   </button>
                 </div>
               </motion.div>
@@ -257,7 +257,7 @@ export default function ProfilePage() {
               >
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
                 >
                   <LogOut size={18} />
                   Sair da conta
@@ -268,27 +268,27 @@ export default function ProfilePage() {
         ) : (
           <motion.div key="edit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="flex items-center gap-4 mb-6">
-              <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
+              <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-full transition-colors text-neutral-800 dark:text-[#E3E3E3] cursor-pointer">
                 <ArrowLeft size={20} />
               </button>
-              <h1 className="text-2xl font-bold text-neutral-900">Editar Dados Pessoais</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Editar Dados Pessoais</h1>
             </div>
 
-            <div className="bg-white rounded-3xl border border-neutral-100 p-6 shadow-sm space-y-5">
-              <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
-                <Shield size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-100 dark:border-[#313335] p-6 shadow-sm space-y-5">
+              <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                <Shield size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-amber-900">Dados de Identificação Protegidos</span>
-                  <p className="mt-0.5 text-amber-800 leading-relaxed">
+                  <span className="font-bold text-amber-900 dark:text-amber-300">Dados de Identificação Protegidos</span>
+                  <p className="mt-0.5 text-amber-800 dark:text-amber-400 leading-relaxed">
                     O Nome Completo e o CPF são dados de identificação e não podem ser alterados diretamente. Encontrou algum erro nos seus dados? Entre em contato com o suporte.
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-neutral-900 mb-1.5 flex items-center justify-between">
+                <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1.5 flex items-center justify-between">
                   <span>Nome Completo</span>
-                  <span className="text-xs text-neutral-400 font-normal flex items-center gap-1">
+                  <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-normal flex items-center gap-1">
                     <Lock size={12} /> Somente leitura
                   </span>
                 </label>
@@ -297,14 +297,14 @@ export default function ProfilePage() {
                   value={formData.name}
                   readOnly
                   disabled
-                  className="w-full bg-neutral-100 border border-neutral-200 text-neutral-600 rounded-xl px-4 py-3 cursor-not-allowed font-medium select-none"
+                  className="w-full bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#8E918F] rounded-xl px-4 py-3 cursor-not-allowed font-medium select-none"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-neutral-900 mb-1.5 flex items-center justify-between">
+                <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1.5 flex items-center justify-between">
                   <span>CPF</span>
-                  <span className="text-xs text-neutral-400 font-normal flex items-center gap-1">
+                  <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-normal flex items-center gap-1">
                     <Lock size={12} /> Somente leitura
                   </span>
                 </label>
@@ -313,36 +313,36 @@ export default function ProfilePage() {
                   value={formData.cpf || 'Não informado'}
                   readOnly
                   disabled
-                  className="w-full bg-neutral-100 border border-neutral-200 text-neutral-600 rounded-xl px-4 py-3 cursor-not-allowed font-medium select-none"
+                  className="w-full bg-neutral-100 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#8E918F] rounded-xl px-4 py-3 cursor-not-allowed font-medium select-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-neutral-900 mb-1.5">
+                <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                   E-mail <span className="text-red-500">*</span>
                 </label>
                 <input 
                   type="email" 
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="w-full bg-neutral-50 border border-neutral-200 text-neutral-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                  className="w-full bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] text-neutral-900 dark:text-[#E3E3E3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-neutral-900 mb-1.5">
+                <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
                   Telefone / WhatsApp *
                 </label>
                 <input 
                   type="tel" 
                   value={formData.phone}
                   onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})}
-                  className="w-full bg-neutral-50 border border-neutral-200 text-neutral-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
+                  className="w-full bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] text-neutral-900 dark:text-[#E3E3E3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
                   placeholder="(14) 99999-9999"
                 />
               </div>
 
-              <div className="pt-4 border-t border-neutral-100 flex gap-3">
+              <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] flex gap-3">
                 <Button variant="ghost" fullWidth onClick={() => setIsEditing(false)}>
                   Cancelar
                 </Button>

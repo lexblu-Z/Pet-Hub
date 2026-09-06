@@ -115,30 +115,30 @@ export default function EstablishmentAppointmentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Gestão de Agendamentos</h1>
-          <p className="text-neutral-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Gestão de Agendamentos</h1>
+          <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
             Organize os horários de banho, tosa e consultas veterinárias da sua equipe
           </p>
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-xl border border-neutral-200">
+        <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-[#1E1F20] p-1 rounded-xl border border-neutral-200 dark:border-[#313335]">
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === 'list'
-                ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/80'
-                : 'text-neutral-500 hover:text-neutral-800'
+                ? 'bg-white dark:bg-[#282A2C] text-orange-600 dark:text-orange-400 shadow-xs border border-neutral-200/80 dark:border-[#313335]'
+                : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
             }`}
           >
             <span>📋</span> Visão em lista
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === 'calendar'
-                ? 'bg-white text-orange-600 shadow-xs border border-neutral-200/80'
-                : 'text-neutral-500 hover:text-neutral-800'
+                ? 'bg-white dark:bg-[#282A2C] text-orange-600 dark:text-orange-400 shadow-xs border border-neutral-200/80 dark:border-[#313335]'
+                : 'text-neutral-500 dark:text-[#8E918F] hover:text-neutral-800 dark:hover:text-[#E3E3E3]'
             }`}
           >
             <span>📅</span> Visão em agenda
@@ -147,7 +147,7 @@ export default function EstablishmentAppointmentsPage() {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
           <Input
             placeholder="Buscar por pet, tutor ou serviço..."
@@ -169,10 +169,10 @@ export default function EstablishmentAppointmentsPage() {
             <button
               key={f.id}
               onClick={() => setStatusFilter(f.id)}
-              className={`px-3.5 py-2 rounded-xl transition-all font-medium ${
+              className={`px-3.5 py-2 rounded-xl transition-all font-medium cursor-pointer ${
                 statusFilter === f.id
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
+                  : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]'
               }`}
             >
               {f.label}
@@ -183,15 +183,15 @@ export default function EstablishmentAppointmentsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="p-12 text-center text-neutral-400">
+        <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm">Carregando agendamentos do banco...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-neutral-200">
-          <CalendarIcon size={40} className="mx-auto text-neutral-300 mb-3" />
-          <h3 className="font-bold text-neutral-800 text-base mb-1">Nenhum agendamento encontrado</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
+        <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
+          <CalendarIcon size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+          <h3 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-base mb-1">Nenhum agendamento encontrado</h3>
+          <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto">
             Assim que os tutores agendarem banho, tosa ou consulta pelo aplicativo, eles aparecerão organizados aqui.
           </p>
         </div>
@@ -205,25 +205,25 @@ export default function EstablishmentAppointmentsPage() {
             const status = statusConfig[app.status] || statusConfig.PENDING;
 
             return (
-              <div key={app.id} className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-xs space-y-4 hover:border-orange-200 transition-colors">
+              <div key={app.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-5 shadow-xs space-y-4 hover:border-orange-200 dark:hover:border-orange-500/40 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   {/* Date & Service */}
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-orange-50 text-orange-700 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100">
+                    <div className="w-14 h-14 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-2xl flex flex-col items-center justify-center font-bold shrink-0 border border-orange-100 dark:border-orange-900/40">
                       <span className="text-[10px] uppercase">{formattedDate.split(' ')[0]}</span>
                       <span className="text-lg leading-none">{dateObj.getDate()}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-neutral-900 text-base">{app.service.name}</span>
+                        <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">{app.service.name}</span>
                         <Badge variant={status.badge}>{status.label}</Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500 mt-1">
-                        <span className="flex items-center gap-1 font-semibold text-neutral-800">
+                      <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
+                        <span className="flex items-center gap-1 font-semibold text-neutral-800 dark:text-[#E3E3E3]">
                           <Clock size={12} className="text-orange-500" /> {formattedTime} ({app.service.duration} min)
                         </span>
                         <span>•</span>
-                        <span className="font-bold text-green-700">R$ {app.service.price.toFixed(2).replace('.', ',')}</span>
+                        <span className="font-bold text-green-700 dark:text-green-400">R$ {app.service.price.toFixed(2).replace('.', ',')}</span>
                       </div>
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export default function EstablishmentAppointmentsPage() {
                   <div className="flex items-center gap-6 text-xs">
                     {/* Pet */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-[#282A2C] overflow-hidden shrink-0 border border-neutral-200 dark:border-[#313335]">
                         {app.pet.photo ? (
                           <img src={app.pet.photo} alt={app.pet.name} className="w-full h-full object-cover" />
                         ) : (
@@ -240,34 +240,34 @@ export default function EstablishmentAppointmentsPage() {
                         )}
                       </div>
                       <div>
-                        <p className="font-bold text-neutral-900">{app.pet.name}</p>
-                        <p className="text-[11px] text-neutral-400">{app.pet.species} {app.pet.breed ? `• ${app.pet.breed}` : ''}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{app.pet.name}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{app.pet.species} {app.pet.breed ? `• ${app.pet.breed}` : ''}</p>
                       </div>
                     </div>
 
                     {/* Tutor */}
-                    <div className="flex items-center gap-2.5 border-l border-neutral-100 pl-4">
+                    <div className="flex items-center gap-2.5 border-l border-neutral-100 dark:border-[#313335] pl-4">
                       <Avatar src={app.tutor.avatar || '/user.jpg'} name={app.tutor.name} size="sm" />
                       <div>
-                        <p className="font-bold text-neutral-900">{app.tutor.name}</p>
-                        <p className="text-[11px] text-neutral-400">{app.tutor.phone || app.tutor.email}</p>
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{app.tutor.name}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">{app.tutor.phone || app.tutor.email}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Employee & Actions */}
-                  <div className="flex items-center gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-neutral-100 justify-between lg:justify-end">
+                  <div className="flex items-center gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-neutral-100 dark:border-[#313335] justify-between lg:justify-end">
                     {/* Assign Employee */}
                     <div className="flex items-center gap-1.5">
-                      <Users size={14} className="text-neutral-400 shrink-0" />
+                      <Users size={14} className="text-neutral-400 dark:text-[#8E918F] shrink-0" />
                       <select
                         value={app.employee?.id || ''}
                         onChange={(e) => handleAssignEmployee(app.id, e.target.value)}
-                        className="text-xs bg-neutral-50 border border-neutral-200 rounded-lg px-2.5 py-1 text-neutral-700 font-medium cursor-pointer"
+                        className="text-xs bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-lg px-2.5 py-1 text-neutral-700 dark:text-[#E3E3E3] font-medium cursor-pointer"
                       >
-                        <option value="">Atribuir profissional...</option>
+                        <option value="" className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">Atribuir profissional...</option>
                         {employees.map(emp => (
-                          <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>
+                          <option key={emp.id} value={emp.id} className="dark:bg-[#282A2C] dark:text-[#E3E3E3]">{emp.name} ({emp.role})</option>
                         ))}
                       </select>
                     </div>
@@ -277,7 +277,7 @@ export default function EstablishmentAppointmentsPage() {
                       {app.status === 'PENDING' && (
                         <button
                           onClick={() => handleUpdateStatus(app.id, 'CONFIRMED')}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs cursor-pointer"
                         >
                           Confirmar
                         </button>
@@ -285,7 +285,7 @@ export default function EstablishmentAppointmentsPage() {
                       {app.status === 'CONFIRMED' && (
                         <button
                           onClick={() => handleUpdateStatus(app.id, 'IN_PROGRESS')}
-                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs cursor-pointer"
                         >
                           Iniciar
                         </button>
@@ -293,7 +293,7 @@ export default function EstablishmentAppointmentsPage() {
                       {app.status === 'IN_PROGRESS' && (
                         <button
                           onClick={() => handleUpdateStatus(app.id, 'COMPLETED')}
-                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs cursor-pointer"
                         >
                           Concluir
                         </button>
@@ -301,7 +301,7 @@ export default function EstablishmentAppointmentsPage() {
                       {app.status !== 'COMPLETED' && app.status !== 'CANCELLED' && (
                         <button
                           onClick={() => handleUpdateStatus(app.id, 'CANCELLED')}
-                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-colors"
+                          className="px-2.5 py-1 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                         >
                           Cancelar
                         </button>
@@ -315,41 +315,41 @@ export default function EstablishmentAppointmentsPage() {
         </div>
       ) : (
         /* CALENDAR VIEW */
-        <div className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-neutral-700">Selecione o Dia:</label>
+              <label className="text-xs font-bold text-neutral-700 dark:text-[#C4C7C5]">Selecione o Dia:</label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="border border-neutral-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-neutral-800"
+                className="border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-800 dark:text-[#E3E3E3] rounded-xl px-3 py-1.5 text-xs font-semibold"
               />
             </div>
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
               {appointments.filter(a => a.date.startsWith(selectedDate)).length} agendamentos neste dia
             </span>
           </div>
 
           <div className="space-y-3 pt-2">
             {appointments.filter(a => a.date.startsWith(selectedDate)).length === 0 ? (
-              <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                <CalendarIcon size={32} className="mx-auto text-neutral-300 mb-2" />
-                <p className="text-xs font-bold text-neutral-600">Nenhum atendimento agendado para esta data</p>
+              <div className="p-8 text-center bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+                <CalendarIcon size={32} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+                <p className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5]">Nenhum atendimento agendado para esta data</p>
               </div>
             ) : (
               appointments
                 .filter(a => a.date.startsWith(selectedDate))
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .map((app) => (
-                  <div key={app.id} className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200/80 flex items-center justify-between text-xs">
+                  <div key={app.id} className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-neutral-200/80 dark:border-[#313335] flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-orange-600 font-mono text-sm">
+                      <span className="font-bold text-orange-600 dark:text-orange-400 font-mono text-sm">
                         {new Date(app.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <div>
-                        <p className="font-bold text-neutral-900">{app.service.name} • {app.pet.name} ({app.tutor.name})</p>
-                        <p className="text-[11px] text-neutral-400">
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{app.service.name} • {app.pet.name} ({app.tutor.name})</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F]">
                           {app.employee ? `Profissional: ${app.employee.name}` : 'Nenhum profissional atribuído'}
                         </p>
                       </div>

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import {
   Home,
   Calendar,
+  Briefcase,
   ClipboardList,
   Star,
   User,
@@ -14,6 +15,7 @@ import type { NavItemConfig } from './SharedBusinessLayout';
 const navItems: NavItemConfig[] = [
   { path: '/profissional', icon: Home, label: 'Dashboard', end: true },
   { path: '/profissional/agenda', icon: Calendar, label: 'Minha Agenda' },
+  { path: '/profissional/prestar-servicos', icon: Briefcase, label: 'Prestar Serviços' },
   { path: '/profissional/ordens', icon: ClipboardList, label: 'Ordens de Serviço' },
   { path: '/profissional/avaliacoes', icon: Star, label: 'Avaliações' },
   { path: '/profissional/perfil', icon: User, label: 'Meu Perfil' },

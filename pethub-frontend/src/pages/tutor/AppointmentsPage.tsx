@@ -121,8 +121,8 @@ export default function AppointmentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 mb-1">Agendamentos</h1>
-          <p className="text-neutral-500 text-sm">Gerencie suas consultas, vacinas e procedimentos</p>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Agendamentos</h1>
+          <p className="text-neutral-500 dark:text-[#C4C7C5] text-sm">Gerencie suas consultas, vacinas e procedimentos</p>
         </div>
 
         {/* Discreet Google Calendar Action/Badge */}
@@ -135,12 +135,12 @@ export default function AppointmentsPage() {
               <Calendar size={14} />
               <span>Ver agenda completa</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Google Calendar conectado</span>
               <button
                 onClick={() => setShowManageModal(true)}
-                className="text-emerald-800 hover:text-emerald-950 font-bold ml-1.5 underline underline-offset-2 cursor-pointer"
+                className="text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white font-bold ml-1.5 underline underline-offset-2 cursor-pointer"
               >
                 Gerenciar
               </button>
@@ -149,7 +149,7 @@ export default function AppointmentsPage() {
         ) : (
           <button
             onClick={() => setShowPromptModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 hover:text-orange-600 bg-white hover:bg-orange-50/60 border border-neutral-200 hover:border-orange-200 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5] hover:text-orange-600 bg-white dark:bg-[#1E1F20] hover:bg-orange-50/60 dark:hover:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] hover:border-orange-200 dark:hover:border-orange-500/40 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
           >
             <Calendar size={14} className="text-orange-500" />
             <span>Sincronizar com Google Calendar</span>
@@ -175,16 +175,16 @@ export default function AppointmentsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => navigate(`/tutor/appointments/${apt.id}`)}
-              className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+              className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-sm hover:shadow-md hover:border-orange-200 dark:hover:border-orange-500/40 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${apt.serviceCategory === 'consulta' ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${apt.serviceCategory === 'consulta' ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-orange-50 dark:bg-orange-950/40'}`}>
                     {apt.serviceCategory === 'consulta' ? '🩺' : '✂️'}
                   </div>
                   <div>
-                    <h3 className="font-bold text-neutral-900">{apt.serviceName}</h3>
-                    <p className="text-sm text-neutral-500">{apt.establishmentName}</p>
+                    <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{apt.serviceName}</h3>
+                    <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{apt.establishmentName}</p>
                   </div>
                 </div>
                 <Badge variant={statusConfig[apt.status].variant}>
@@ -192,22 +192,22 @@ export default function AppointmentsPage() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 rounded-xl mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl mb-3">
                 <div>
-                  <p className="text-xs text-neutral-400 mb-1">🐾 Pet</p>
-                  <p className="text-sm font-semibold">{apt.petName}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet</p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{apt.petName}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-400 mb-1">📅 Data</p>
-                  <p className="text-sm font-semibold">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">📅 Data</p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-400 mb-1">⏰ Horário</p>
-                  <p className="text-sm font-semibold">{apt.time}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">⏰ Horário</p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{apt.time}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-400 mb-1">💰 Valor</p>
-                  <p className="text-sm font-semibold">R${apt.price.toFixed(2)}</p>
+                  <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor</p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">R${apt.price.toFixed(2)}</p>
                 </div>
               </div>
 
@@ -219,17 +219,17 @@ export default function AppointmentsPage() {
 
           {/* External Google Calendar Events */}
           {activeTab === 'upcoming' && googleStatus?.isConnected && externalGoogleEvents.length > 0 && (
-            <div className="pt-6 space-y-3 border-t border-neutral-200/60">
+            <div className="pt-6 space-y-3 border-t border-neutral-200/60 dark:border-[#313335]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-base">📅</span>
-                  <h3 className="font-bold text-sm text-neutral-800">
+                  <h3 className="font-bold text-sm text-neutral-800 dark:text-[#E3E3E3]">
                     Outros compromissos da sua agenda Google
                   </h3>
                 </div>
                 <button
                   onClick={() => setShowFullCalendarModal(true)}
-                  className="text-xs text-orange-600 hover:text-orange-700 font-bold hover:underline cursor-pointer"
+                  className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-bold hover:underline cursor-pointer"
                 >
                   Ver todos na agenda completa →
                 </button>
@@ -239,20 +239,20 @@ export default function AppointmentsPage() {
                 {externalGoogleEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className="p-3.5 bg-neutral-50 hover:bg-neutral-100/70 rounded-2xl border border-neutral-200/70 flex items-center justify-between gap-3 transition-colors"
+                    className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] hover:bg-neutral-100/70 dark:hover:bg-[#313335] rounded-2xl border border-neutral-200/70 dark:border-[#313335] flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0">
                         <Calendar size={16} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-neutral-900 truncate">{ev.summary}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
+                          <span className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{ev.summary}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 shrink-0">
                             Google Calendar
                           </span>
                         </div>
-                        <p className="text-[11px] text-neutral-500 mt-0.5">
+                        <p className="text-[11px] text-neutral-500 dark:text-[#C4C7C5] mt-0.5">
                           {ev.start ? new Date(ev.start).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Horário a definir'}
                           {ev.location ? ` • ${ev.location}` : ''}
                         </p>
@@ -264,7 +264,7 @@ export default function AppointmentsPage() {
                         href={ev.htmlLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-neutral-400 hover:text-blue-600 font-medium shrink-0 flex items-center gap-1 p-1"
+                        className="text-xs text-neutral-400 dark:text-[#8E918F] hover:text-blue-600 dark:hover:text-blue-400 font-medium shrink-0 flex items-center gap-1 p-1"
                         title="Abrir no Google Calendar"
                       >
                         Abrir <ExternalLink size={13} />
@@ -298,15 +298,15 @@ export default function AppointmentsPage() {
       {/* Google Calendar Management Modal */}
       {showManageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs font-sans">
-          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl border border-neutral-100 relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
-              <h2 className="text-lg font-bold text-neutral-900">Configuração do Google Calendar</h2>
+          <div className="bg-white dark:bg-[#1E1F20] rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl border border-neutral-100 dark:border-[#313335] relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100 dark:border-[#313335]">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-[#E3E3E3]">Configuração do Google Calendar</h2>
               <button
                 onClick={() => {
                   setShowManageModal(false);
                   api.get('/google/status').then(res => setGoogleStatus(res.data)).catch(() => {});
                 }}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-500 dark:text-[#C4C7C5] flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
