@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PawPrint, Check, ArrowRight, Phone, ShieldCheck } from 'lucide-react';
+import { PawPrint, Check, ArrowRight, Phone, ShieldCheck, User } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
@@ -49,10 +49,12 @@ const roleOptions: RoleCard[] = [
 export default function SelectRolePage() {
   const [searchParams] = useSearchParams();
   const regToken = searchParams.get('regToken') || '';
-  const name = searchParams.get('name') || '';
+  const initialName = searchParams.get('name') || '';
   const email = searchParams.get('email') || '';
   const avatar = searchParams.get('avatar') || '';
+  const source = searchParams.get('source') || (avatar ? 'google' : 'otp');
 
+  const [fullName, setFullName] = useState(initialName);
   const [selectedRole, setSelectedRole] = useState<RoleOption>('TUTOR');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,13 +70,28 @@ export default function SelectRolePage() {
       return;
     }
 
+    if (source === 'otp' && (!fullName.trim() || fullName.trim().length < 2)) {
+      toast.error('Informe seu nome completo (mínimo de 2 caracteres).');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const response = await api.post('/auth/google/complete', {
-        regToken,
-        role: selectedRole,
-        phone: phone.trim() || undefined,
-      });
+      const endpoint = source === 'otp' ? '/auth/otp/complete' : '/auth/google/complete';
+      const payload = source === 'otp'
+        ? {
+            regToken,
+            role: selectedRole,
+            name: fullName.trim(),
+            phone: phone.trim() || undefined,
+          }
+        : {
+            regToken,
+            role: selectedRole,
+            phone: phone.trim() || undefined,
+          };
+
+      const response = await api.post(endpoint, payload);
 
       const { token, user } = response.data;
 
@@ -129,14 +146,14 @@ export default function SelectRolePage() {
           {/* User profile pill */}
           <div className="flex items-center gap-2.5 px-3 py-1.5 bg-neutral-100/80 rounded-full border border-neutral-200/60">
             {avatar ? (
-              <img src={avatar} alt={name} className="w-6 h-6 rounded-full object-cover" />
+              <img src={avatar} alt={fullName || 'Avatar'} className="w-6 h-6 rounded-full object-cover" />
             ) : (
               <div className="w-6 h-6 rounded-full bg-orange-500 text-white text-[11px] font-bold flex items-center justify-center">
-                {name ? name.charAt(0).toUpperCase() : 'U'}
+                {fullName ? fullName.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U')}
               </div>
             )}
             <div className="text-left">
-              <p className="text-xs font-semibold text-neutral-800 leading-none">{name || 'Usuário Google'}</p>
+              <p className="text-xs font-semibold text-neutral-800 leading-none">{fullName || (source === 'otp' ? 'Novo Cadastro' : 'Usuário Google')}</p>
               <p className="text-[10px] text-neutral-400 leading-none mt-0.5">{email}</p>
             </div>
           </div>
@@ -204,8 +221,19 @@ export default function SelectRolePage() {
           })}
         </div>
 
-        {/* Optional Phone Input */}
-        <div className="pt-2">
+        {/* Name and Phone Inputs */}
+        <div className="space-y-4 pt-2">
+          {(source === 'otp' || !initialName) && (
+            <Input
+              label="Seu Nome Completo"
+              placeholder="Ex: Mariana Silva"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              leftIcon={<User size={16} />}
+              required
+            />
+          )}
+
           <Input
             label="Telefone / WhatsApp (opcional)"
             placeholder="(14) 99999-9999"

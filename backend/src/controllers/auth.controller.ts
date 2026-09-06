@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { Role, ApprovalStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { emailService } from '../services/email.service';
 
 const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').trim() : '');
 const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || '';
@@ -38,6 +39,22 @@ const loginSchema = z.object({
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Senha atual é obrigatória'),
   newPassword: z.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres'),
+});
+
+const sendOtpSchema = z.object({
+  email: z.string().email('Informe um e-mail válido'),
+});
+
+const verifyOtpSchema = z.object({
+  email: z.string().email('Informe um e-mail válido'),
+  code: z.string().min(6, 'O código deve conter 6 dígitos').max(6, 'O código deve conter 6 dígitos'),
+});
+
+const completeOtpSchema = z.object({
+  regToken: z.string().min(1, 'Token de registro obrigatório'),
+  role: z.nativeEnum(Role),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  phone: z.string().optional(),
 });
 
 export const authController = {
@@ -542,6 +559,303 @@ export const authController = {
     } catch (err: any) {
       request.log.error(err);
       return reply.status(500).send({ error: 'Erro ao concluir cadastro com Google.' });
+    }
+  },
+
+  // =========================================================================
+  // RESEND EMAIL OTP AUTHENTICATION
+  // =========================================================================
+
+  /**
+   * Solicita o envio de um código OTP de 6 dígitos via Resend.
+   * Aplica rate limit e nunca retorna o código na resposta da API.
+   */
+  async sendOtp(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const data = sendOtpSchema.parse(request.body);
+      const email = data.email.trim().toLowerCase();
+
+      // Rate limit 1: Cooldown de 60 segundos entre disparos para o mesmo e-mail
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const recentCode = await prisma.authVerificationCode.findFirst({
+        where: {
+          email,
+          createdAt: { gte: oneMinuteAgo },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (recentCode) {
+        return reply.status(429).send({
+          error: 'Aguarde 60 segundos antes de solicitar um novo código.',
+        });
+      }
+
+      // Rate limit 2: Máximo de 5 códigos nos últimos 15 minutos para evitar abuso
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const recentCount = await prisma.authVerificationCode.count({
+        where: {
+          email,
+          createdAt: { gte: fifteenMinutesAgo },
+        },
+      });
+
+      if (recentCount >= 5) {
+        return reply.status(429).send({
+          error: 'Muitas solicitações recentes. Por segurança, tente novamente em alguns minutos.',
+        });
+      }
+
+      // Invalidar códigos anteriores não utilizados deste e-mail
+      await prisma.authVerificationCode.updateMany({
+        where: {
+          email,
+          used: false,
+        },
+        data: { used: true },
+      });
+
+      // Gerar código aleatório de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+      // Salvar no banco PostgreSQL
+      await prisma.authVerificationCode.create({
+        data: {
+          email,
+          code,
+          expiresAt,
+        },
+      });
+
+      // Enviar via Resend (código nunca é logado)
+      const sendResult = await emailService.sendOtpEmail(email, code);
+
+      if (!sendResult.success) {
+        request.log.error({ err: sendResult.error }, 'Erro no envio via Resend:');
+        return reply.status(500).send({
+          error: sendResult.error || 'Não foi possível enviar o e-mail de verificação. Verifique suas credenciais do Resend.',
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: 'Código de verificação enviado com sucesso para o seu e-mail.',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'E-mail inválido.' });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Erro interno ao processar envio do código.' });
+    }
+  },
+
+  /**
+   * Valida o código OTP informado pelo usuário.
+   * Invalida o código após o uso e protege contra tentativas excessivas (brute-force).
+   */
+  async verifyOtp(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const data = verifyOtpSchema.parse(request.body);
+      const email = data.email.trim().toLowerCase();
+      const inputCode = data.code.trim();
+
+      // Buscar o código ativo mais recente
+      const record = await prisma.authVerificationCode.findFirst({
+        where: {
+          email,
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!record) {
+        return reply.status(400).send({
+          error: 'Código inválido ou expirado. Por favor, solicite um novo código.',
+        });
+      }
+
+      // Proteção contra brute-force: máximo 5 tentativas erradas
+      if (record.attempts >= 5) {
+        await prisma.authVerificationCode.update({
+          where: { id: record.id },
+          data: { used: true },
+        });
+        return reply.status(400).send({
+          error: 'Código bloqueado por excesso de tentativas. Solicite um novo código.',
+        });
+      }
+
+      // Comparação de código
+      if (record.code !== inputCode) {
+        const updated = await prisma.authVerificationCode.update({
+          where: { id: record.id },
+          data: { attempts: { increment: 1 } },
+        });
+        const remaining = Math.max(0, 5 - updated.attempts);
+        return reply.status(400).send({
+          error: `Código incorreto. Você tem mais ${remaining} tentativa(s).`,
+        });
+      }
+
+      // Código válido! Marcar como utilizado para impedir reuso
+      await prisma.authVerificationCode.update({
+        where: { id: record.id },
+        data: { used: true },
+      });
+
+      // Verificar se o usuário já possui cadastro no PostgreSQL
+      const user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          establishmentProfile: true,
+          professionalProfile: true,
+        },
+      });
+
+      if (user) {
+        const token = await reply.jwtSign({
+          sub: user.id,
+          role: user.role,
+        });
+
+        return reply.send({
+          isNewUser: false,
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar,
+            establishmentProfile: user.establishmentProfile,
+            professionalProfile: user.professionalProfile,
+          },
+        });
+      } else {
+        // Usuário novo -> Gerar token temporário assinado para escolher perfil e nome
+        const regToken = await reply.jwtSign(
+          {
+            email,
+            isOtpRegistration: true,
+          },
+          { expiresIn: '15m' }
+        );
+
+        return reply.send({
+          isNewUser: true,
+          regToken,
+          email,
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Erro interno ao validar código.' });
+    }
+  },
+
+  /**
+   * Finaliza o cadastro de um novo usuário que se autenticou via código de e-mail OTP.
+   */
+  async completeOtpRegistration(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const data = completeOtpSchema.parse(request.body);
+      const { regToken, role, name, phone } = data;
+
+      if (!([Role.TUTOR, Role.ESTABLISHMENT, Role.PROFESSIONAL] as Role[]).includes(role)) {
+        return reply.status(400).send({ error: 'Perfil inválido selecionado.' });
+      }
+
+      let decoded: any;
+      try {
+        decoded = (request.server as any).jwt.verify(regToken);
+      } catch {
+        return reply.status(401).send({ error: 'Sessão de registro expirada. Solicite um novo código.' });
+      }
+
+      if (!decoded.isOtpRegistration || !decoded.email) {
+        return reply.status(400).send({ error: 'Token de registro inválido.' });
+      }
+
+      const email = decoded.email.trim().toLowerCase();
+
+      // Verificar se o usuário já existe
+      let user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          establishmentProfile: true,
+          professionalProfile: true,
+        },
+      });
+
+      if (!user) {
+        const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
+
+        user = await prisma.$transaction(async (tx) => {
+          const newUser = await tx.user.create({
+            data: {
+              name,
+              email,
+              password: randomPassword,
+              phone: phone || null,
+              role,
+              establishmentProfile:
+                role === Role.ESTABLISHMENT
+                  ? {
+                      create: {
+                        businessName: name,
+                        status: ApprovalStatus.PENDING_APPROVAL,
+                        city: 'Ourinhos',
+                        state: 'SP',
+                      },
+                    }
+                  : undefined,
+              professionalProfile:
+                role === Role.PROFESSIONAL
+                  ? {
+                      create: {
+                        status: ApprovalStatus.PENDING_APPROVAL,
+                      },
+                    }
+                  : undefined,
+            },
+            include: {
+              establishmentProfile: true,
+              professionalProfile: true,
+            },
+          });
+          return newUser;
+        });
+      }
+
+      const token = await reply.jwtSign({
+        sub: user.id,
+        role: user.role,
+      });
+
+      return reply.send({
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          establishmentProfile: user.establishmentProfile,
+          professionalProfile: user.professionalProfile,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Erro ao concluir cadastro por e-mail.' });
     }
   },
 };

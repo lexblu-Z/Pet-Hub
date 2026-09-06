@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { PawPrint, Mail, Lock, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
@@ -13,10 +13,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Email OTP states (Resend)
+  const [authMethod, setAuthMethod] = useState<'otp' | 'password'>('otp');
+  const [otpStep, setOtpStep] = useState<'email' | 'code'>('email');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [isOtpSending, setIsOtpSending] = useState(false);
+  const [isOtpVerifying, setIsOtpVerifying] = useState(false);
+
   const { login } = useAuthStore();
   const toast = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // OTP Cooldown timer
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setOtpCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
 
   useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -42,6 +60,67 @@ export default function LoginPage() {
       toast.error('Erro ao conectar com o serviço do Google.');
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email || !email.includes('@')) {
+      toast.error('Informe um e-mail válido para receber o código.');
+      return;
+    }
+    setIsOtpSending(true);
+    try {
+      const res = await api.post('/auth/otp/send', { email });
+      toast.success(res.data?.message || 'Código de acesso enviado! Verifique seu e-mail.');
+      setOtpStep('code');
+      setOtpCooldown(60);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Erro ao enviar código por e-mail.';
+      toast.error(msg);
+    } finally {
+      setIsOtpSending(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      toast.error('O código de verificação deve conter 6 dígitos.');
+      return;
+    }
+    setIsOtpVerifying(true);
+    try {
+      const res = await api.post('/auth/otp/verify', {
+        email,
+        code: otpCode.trim(),
+      });
+
+      if (res.data?.isNewUser) {
+        toast.success('Código confirmado! Vamos concluir seu cadastro.');
+        navigate(
+          `/auth/select-role?regToken=${encodeURIComponent(res.data.regToken)}&email=${encodeURIComponent(
+            res.data.email
+          )}&source=otp`
+        );
+      } else {
+        const { token, user } = res.data;
+        const roleRouteMap: Record<string, string> = {
+          TUTOR: 'tutor',
+          ESTABLISHMENT: 'estabelecimento',
+          PROFESSIONAL: 'profissional',
+          ADMIN: 'admin',
+        };
+        const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
+        login(token, user, frontRole);
+        toast.success(`Bem-vindo de volta, ${user.name}! 🐾`);
+        navigate(`/${frontRole}`);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Código incorreto ou expirado.';
+      toast.error(msg);
+    } finally {
+      setIsOtpVerifying(false);
     }
   };
 
@@ -209,39 +288,174 @@ export default function LoginPage() {
 
             <div className="flex items-center gap-3 pt-3">
               <div className="flex-1 h-px bg-neutral-200" />
-              <span className="text-xs text-neutral-400 font-medium">ou entre com e-mail e senha</span>
+              <span className="text-xs text-neutral-400 font-medium">ou acesse com seu e-mail</span>
               <div className="flex-1 h-px bg-neutral-200" />
             </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              label="E-mail / Usuário (Admin)"
-              type="text"
-              placeholder="seu@email.com ou admin"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              leftIcon={<Mail size={16} />}
-            />
-            <Input
-              label="Senha"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock size={16} />}
-            />
-            <div className="flex justify-end">
-              <Link to="/auth/forgot-password" className="text-sm text-orange-500 hover:text-orange-600 transition-colors">
-                Esqueci minha senha
-              </Link>
-            </div>
+          {/* Auth Method Selector */}
+          <div className="flex items-center p-1 bg-neutral-100 rounded-2xl border border-neutral-200/70 mb-6">
+            <button
+              type="button"
+              onClick={() => { setAuthMethod('otp'); setOtpStep('email'); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                authMethod === 'otp'
+                  ? 'bg-white text-orange-600 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              <Mail size={14} />
+              <span>Código por E-mail</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMethod('password')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                authMethod === 'password'
+                  ? 'bg-white text-orange-600 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              <Lock size={14} />
+              <span>Senha</span>
+            </button>
+          </div>
 
-            <Button type="submit" fullWidth isLoading={isLoading} size="lg">
-              Entrar na conta
-              <ArrowRight size={18} />
-            </Button>
-          </form>
+          {/* FORM: OTP METHOD */}
+          {authMethod === 'otp' && (
+            <div>
+              {otpStep === 'email' ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <Input
+                    label="E-mail de Acesso"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    leftIcon={<Mail size={16} />}
+                    required
+                  />
+                  <p className="text-xs text-neutral-400 leading-relaxed">
+                    Enviaremos um código de verificação temporário de 6 dígitos para o seu e-mail. Sem complicação com senhas.
+                  </p>
+                  <Button
+                    type="submit"
+                    fullWidth
+                    isLoading={isOtpSending}
+                    size="lg"
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                  >
+                    Enviar código de acesso
+                    <ArrowRight size={18} />
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-5">
+                  <div className="text-center space-y-1.5 p-3 bg-neutral-50 border border-neutral-200/80 rounded-2xl">
+                    <p className="text-xs text-neutral-500">
+                      Código de 6 dígitos enviado para:
+                    </p>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs font-bold text-neutral-900">{email}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setOtpStep('email'); setOtpCode(''); }}
+                        className="text-[11px] text-orange-600 hover:text-orange-700 font-bold underline cursor-pointer"
+                      >
+                        Alterar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 mb-2 text-center">
+                      Digite o código de 6 dígitos recebido:
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white border-2 border-neutral-300 focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 shadow-xs"
+                      autoFocus
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    isLoading={isOtpVerifying}
+                    disabled={otpCode.length !== 6}
+                    size="lg"
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50"
+                  >
+                    Confirmar e entrar
+                    <ArrowRight size={18} />
+                  </Button>
+
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => { setOtpStep('email'); setOtpCode(''); }}
+                      className="text-neutral-500 hover:text-neutral-800 flex items-center gap-1 cursor-pointer font-medium"
+                    >
+                      <ArrowLeft size={14} /> Voltar
+                    </button>
+
+                    {otpCooldown > 0 ? (
+                      <span className="text-neutral-400 font-medium">
+                        Reenviar código em <strong>{otpCooldown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={isOtpSending}
+                        className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
+                      >
+                        Reenviar código
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* FORM: PASSWORD METHOD */}
+          {authMethod === 'password' && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Input
+                label="E-mail / Usuário (Admin)"
+                type="text"
+                placeholder="seu@email.com ou admin"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                leftIcon={<Mail size={16} />}
+              />
+              <Input
+                label="Senha"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                leftIcon={<Lock size={16} />}
+              />
+              <div className="flex justify-end">
+                <Link to="/auth/forgot-password" className="text-sm text-orange-500 hover:text-orange-600 transition-colors">
+                  Esqueci minha senha
+                </Link>
+              </div>
+
+              <Button type="submit" fullWidth isLoading={isLoading} size="lg">
+                Entrar na conta
+                <ArrowRight size={18} />
+              </Button>
+            </form>
+          )}
 
           <p className="text-center mt-8 text-sm text-neutral-500">
             Não tem conta?{' '}
