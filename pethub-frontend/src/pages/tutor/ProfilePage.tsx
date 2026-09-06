@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui';
+import { formatPhone } from '@/utils/phone';
 import type { TutorProfile } from '@/types';
 
 export default function ProfilePage() {
@@ -300,14 +301,14 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-bold text-neutral-900 mb-1.5">
-                  Telefone / WhatsApp <span className="text-neutral-400 font-normal">(Opcional)</span>
+                  Telefone / WhatsApp *
                 </label>
                 <input 
                   type="tel" 
                   value={formData.phone}
-                  onChange={e => setFormData({...formData, phone: e.target.value})}
+                  onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})}
                   className="w-full bg-neutral-50 border border-neutral-200 text-neutral-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all"
-                  placeholder="(11) 99999-9999"
+                  placeholder="(14) 99999-9999"
                 />
               </div>
 

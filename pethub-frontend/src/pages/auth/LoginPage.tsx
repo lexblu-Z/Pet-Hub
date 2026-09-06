@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
@@ -72,8 +72,8 @@ export default function LoginPage() {
     if (e) e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
-      setEmailError('Informe um e-mail válido para receber o código.');
-      toast.error('Informe um e-mail válido para receber o código.');
+      setEmailError('Informe um endereço de e-mail válido para receber o código.');
+      toast.error('Informe um endereço de e-mail válido para receber o código.');
       return;
     }
     setEmailError(null);
@@ -136,16 +136,10 @@ export default function LoginPage() {
     e.preventDefault();
     setNoPasswordAlert(null);
 
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setEmailError('Informe seu e-mail.');
-      toast.error('Informe seu e-mail.');
-      return;
-    }
-
-    if (!EMAIL_REGEX.test(cleanEmail)) {
-      setEmailError('E-mail inválido. Digite um endereço de e-mail válido (exemplo: usuario@email.com).');
-      toast.error('E-mail inválido. Digite um endereço de e-mail válido.');
+    const cleanIdentifier = email.trim();
+    if (!cleanIdentifier) {
+      setEmailError('Informe seu e-mail ou usuário.');
+      toast.error('Informe seu e-mail ou usuário.');
       return;
     }
     setEmailError(null);
@@ -158,7 +152,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await api.post('/auth/login', {
-        email: cleanEmail,
+        email: cleanIdentifier.toLowerCase(),
         password,
       });
 
@@ -355,13 +349,17 @@ export default function LoginPage() {
           {authMethod === 'otp' && (
             <div>
               {otpStep === 'email' ? (
-                <form onSubmit={handleSendOtp} className="space-y-4">
+                <form onSubmit={handleSendOtp} noValidate className="space-y-4">
                   <Input
                     label="E-mail de Acesso"
                     type="email"
                     placeholder="seu@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    error={emailError || undefined}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError(null);
+                    }}
                     leftIcon={<Mail size={16} />}
                     required
                   />
@@ -457,7 +455,7 @@ export default function LoginPage() {
 
           {/* FORM: PASSWORD METHOD */}
           {authMethod === 'password' && (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} noValidate className="space-y-4">
               {noPasswordAlert && (
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
                   <div className="flex items-start gap-2">
@@ -487,9 +485,10 @@ export default function LoginPage() {
               )}
 
               <Input
-                label="E-mail"
-                type="email"
-                placeholder="digite seu e-mail"
+                label="E-mail ou usuário"
+                type="text"
+                autoComplete="username"
+                placeholder="Digite seu e-mail ou usuário"
                 value={email}
                 error={emailError || undefined}
                 onChange={(e) => {
@@ -497,7 +496,7 @@ export default function LoginPage() {
                   if (emailError) setEmailError(null);
                   if (noPasswordAlert) setNoPasswordAlert(null);
                 }}
-                leftIcon={<Mail size={16} />}
+                leftIcon={<User size={16} />}
                 required
               />
 

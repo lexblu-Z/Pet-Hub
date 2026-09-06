@@ -6,6 +6,7 @@ import { Input, Button, Progress } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
+import { formatPhone, validatePhone } from '@/utils/phone';
 import type { UserRole } from '@/types';
 
 const roleOptions = [
@@ -179,6 +180,11 @@ export default function RegisterPage() {
     } else if (step === 2) {
       if (!name || !email || !phone || !password || !confirmPassword) {
         toast.error('Preencha todos os campos obrigatórios.');
+        return;
+      }
+      const phoneVal = validatePhone(phone);
+      if (!phoneVal.isValid) {
+        toast.error(phoneVal.error || 'Digite um número de telefone válido.');
         return;
       }
       const cleanEmail = email.trim().toLowerCase();
@@ -541,10 +547,10 @@ export default function RegisterPage() {
                   required
                 />
                 <Input
-                  label="Celular / WhatsApp *"
+                  label="Telefone / WhatsApp *"
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
                   leftIcon={<Phone size={16} />}
                   placeholder="(14) 99999-9999"
                   required
