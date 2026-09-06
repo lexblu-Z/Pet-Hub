@@ -9,10 +9,17 @@ const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').
 const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || '';
 const REDIRECT_URI = cleanEnv(process.env.GOOGLE_REDIRECT_URI) || 'http://localhost:3000/api/google/callback';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('E-mail inválido'),
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido (ex: seu@email.com)')
+    .email('E-mail inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  code: z.string().optional(),
   phone: z.string().optional(),
   role: z.nativeEnum(Role).default(Role.TUTOR),
   description: z.string().optional(),
@@ -32,21 +39,51 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'E-mail é obrigatório'),
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido (ex: seu@email.com)')
+    .email('Informe um endereço de e-mail válido'),
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Senha atual é obrigatória'),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres'),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido (ex: seu@email.com)')
+    .email('Informe um endereço de e-mail válido'),
+});
+
+const resetPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido')
+    .email('Informe um endereço de e-mail válido'),
+  code: z.string().min(6, 'O código deve conter 6 dígitos').max(6, 'O código deve conter 6 dígitos'),
   newPassword: z.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres'),
 });
 
 const sendOtpSchema = z.object({
-  email: z.string().email('Informe um e-mail válido'),
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido')
+    .email('Informe um e-mail válido'),
 });
 
 const verifyOtpSchema = z.object({
-  email: z.string().email('Informe um e-mail válido'),
+  email: z
+    .string()
+    .min(1, 'E-mail é obrigatório')
+    .regex(EMAIL_REGEX, 'Informe um endereço de e-mail válido')
+    .email('Informe um e-mail válido'),
   code: z.string().min(6, 'O código deve conter 6 dígitos').max(6, 'O código deve conter 6 dígitos'),
 });
 
@@ -81,6 +118,24 @@ export const authController = {
         return reply.status(409).send({ error: 'Este e-mail já está cadastrado.' });
       }
 
+      if (data.code) {
+        const codeRecord = await prisma.authVerificationCode.findFirst({
+          where: {
+            email: data.email,
+            code: data.code.trim(),
+            used: false,
+            expiresAt: { gt: new Date() },
+          },
+        });
+        if (!codeRecord) {
+          return reply.status(400).send({ error: 'Código de verificação de e-mail inválido ou expirado.' });
+        }
+        await prisma.authVerificationCode.update({
+          where: { id: codeRecord.id },
+          data: { used: true },
+        });
+      }
+
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
       const newUser = await prisma.$transaction(async (tx) => {
@@ -89,6 +144,7 @@ export const authController = {
             name: data.name,
             email: data.email,
             password: hashedPassword,
+            hasPassword: true,
             phone: data.phone,
             role: data.role,
           },
@@ -182,6 +238,14 @@ export const authController = {
         return reply.status(401).send({ error: 'E-mail ou senha incorretos.' });
       }
 
+      if (user.hasPassword === false) {
+        return reply.status(400).send({
+          code: 'NO_PASSWORD_SET',
+          noPassword: true,
+          error: 'Você ainda não possui uma senha cadastrada. Acesse por código de e-mail ou use "Esqueci minha senha" para criar uma senha.',
+        });
+      }
+
       const isValid = await bcrypt.compare(data.password, user.password);
       if (!isValid) {
         return reply.status(401).send({ error: 'E-mail ou senha incorretos.' });
@@ -270,6 +334,7 @@ export const authController = {
         phone: user.phone,
         role: user.role,
         avatar: user.avatar,
+        hasPassword: user.hasPassword,
         createdAt: user.createdAt,
       };
 
@@ -317,6 +382,7 @@ export const authController = {
           phone: true,
           role: true,
           avatar: true,
+          hasPassword: true,
           createdAt: true,
           preferences: true,
           establishmentProfile: true,
@@ -412,18 +478,30 @@ export const authController = {
       const user = await prisma.user.findUnique({ where: { id: token.sub } });
       if (!user) return reply.status(404).send({ error: 'Usuário não encontrado.' });
 
-      const isValid = await bcrypt.compare(data.currentPassword, user.password);
-      if (!isValid) {
-        return reply.status(400).send({ error: 'Senha atual incorreta.' });
+      // Se o usuário já possuía uma senha cadastrada, valida a senha atual
+      if (user.hasPassword) {
+        if (!data.currentPassword) {
+          return reply.status(400).send({ error: 'Senha atual é obrigatória.' });
+        }
+        const isValid = await bcrypt.compare(data.currentPassword, user.password);
+        if (!isValid) {
+          return reply.status(400).send({ error: 'Senha atual incorreta.' });
+        }
       }
 
       const hashedPassword = await bcrypt.hash(data.newPassword, 10);
       await prisma.user.update({
         where: { id: token.sub },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          hasPassword: true,
+        },
       });
 
-      return reply.send({ message: 'Senha alterada com sucesso.' });
+      return reply.send({
+        message: user.hasPassword ? 'Senha alterada com sucesso.' : 'Senha cadastrada com sucesso.',
+        hasPassword: true,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
@@ -507,6 +585,7 @@ export const authController = {
               name: googleName || 'Usuário PetHub',
               email: googleEmail,
               password: randomPassword,
+              hasPassword: false,
               avatar: googleAvatar || null,
               phone: phone || null,
               role,
@@ -730,6 +809,7 @@ export const authController = {
             email: user.email,
             role: user.role,
             avatar: user.avatar,
+            hasPassword: user.hasPassword,
             establishmentProfile: user.establishmentProfile,
             professionalProfile: user.professionalProfile,
           },
@@ -802,6 +882,7 @@ export const authController = {
               name,
               email,
               password: randomPassword,
+              hasPassword: false,
               phone: phone || null,
               role,
               establishmentProfile:
@@ -856,6 +937,177 @@ export const authController = {
       }
       request.log.error(error);
       return reply.status(500).send({ error: 'Erro ao concluir cadastro por e-mail.' });
+    }
+  },
+
+  /**
+   * Solicita redefinição de senha com envio de código de 6 dígitos via Resend.
+   */
+  async forgotPassword(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const data = forgotPasswordSchema.parse(request.body);
+      const email = data.email.trim().toLowerCase();
+
+      // Verificar se o usuário existe
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return reply.status(404).send({
+          error: 'Nenhuma conta encontrada com este e-mail. Verifique o endereço digitado ou crie uma nova conta.',
+        });
+      }
+
+      // Rate limit 1: Cooldown de 60 segundos
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const recentCode = await prisma.authVerificationCode.findFirst({
+        where: {
+          email,
+          createdAt: { gte: oneMinuteAgo },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (recentCode) {
+        return reply.status(429).send({
+          error: 'Aguarde 60 segundos antes de solicitar um novo código.',
+        });
+      }
+
+      // Rate limit 2: Máximo de 5 solicitações nos últimos 15 minutos
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const recentCount = await prisma.authVerificationCode.count({
+        where: {
+          email,
+          createdAt: { gte: fifteenMinutesAgo },
+        },
+      });
+
+      if (recentCount >= 5) {
+        return reply.status(429).send({
+          error: 'Muitas solicitações recentes. Por segurança, aguarde alguns minutos antes de tentar novamente.',
+        });
+      }
+
+      // Invalidar códigos anteriores não utilizados
+      await prisma.authVerificationCode.updateMany({
+        where: { email, used: false },
+        data: { used: true },
+      });
+
+      // Gerar código aleatório de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+      await prisma.authVerificationCode.create({
+        data: {
+          email,
+          code,
+          expiresAt,
+        },
+      });
+
+      // Enviar via Resend (código nunca é logado)
+      const sendResult = await emailService.sendPasswordResetEmail(email, code);
+
+      if (!sendResult.success) {
+        request.log.error({ err: sendResult.error }, 'Erro no envio de recuperação via Resend:');
+        return reply.status(500).send({
+          error: sendResult.error || 'Não foi possível enviar o e-mail de recuperação. Tente novamente mais tarde.',
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: 'Código de recuperação enviado com sucesso para o seu e-mail.',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'E-mail inválido.' });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Erro interno ao processar recuperação de senha.' });
+    }
+  },
+
+  /**
+   * Redefine a senha validando o código de 6 dígitos e gravando hash bcrypt.
+   */
+  async resetPassword(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const data = resetPasswordSchema.parse(request.body);
+      const email = data.email.trim().toLowerCase();
+      const inputCode = data.code.trim();
+
+      // Buscar código ativo
+      const record = await prisma.authVerificationCode.findFirst({
+        where: {
+          email,
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!record) {
+        return reply.status(400).send({
+          error: 'Código inválido ou expirado. Por favor, solicite um novo código.',
+        });
+      }
+
+      // Proteção anti brute-force: máximo 5 tentativas
+      if (record.attempts >= 5) {
+        await prisma.authVerificationCode.update({
+          where: { id: record.id },
+          data: { used: true },
+        });
+        return reply.status(400).send({
+          error: 'Código bloqueado por excesso de tentativas incorretas. Solicite um novo código.',
+        });
+      }
+
+      // Verificar código
+      if (record.code !== inputCode) {
+        const updated = await prisma.authVerificationCode.update({
+          where: { id: record.id },
+          data: { attempts: { increment: 1 } },
+        });
+        const remaining = Math.max(0, 5 - updated.attempts);
+        return reply.status(400).send({
+          error: `Código incorreto. Você tem mais ${remaining} tentativa(s).`,
+        });
+      }
+
+      // Código correto! Invalida o código
+      await prisma.authVerificationCode.update({
+        where: { id: record.id },
+        data: { used: true },
+      });
+
+      // Localizar o usuário
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return reply.status(404).send({ error: 'Usuário não encontrado.' });
+      }
+
+      // Atualizar com hash bcrypt (10 rounds) e marcar hasPassword: true
+      const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          hasPassword: true,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Senha redefinida com sucesso! Agora você já pode entrar com sua nova senha.',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Erro interno ao redefinir a senha.' });
     }
   },
 };

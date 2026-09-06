@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles } from 'lucide-react';
+import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Input, Button } from '@/components/ui';
 import type { UserRole } from '@/types';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [noPasswordAlert, setNoPasswordAlert] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -65,13 +70,16 @@ export default function LoginPage() {
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!email || !email.includes('@')) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+      setEmailError('Informe um e-mail válido para receber o código.');
       toast.error('Informe um e-mail válido para receber o código.');
       return;
     }
+    setEmailError(null);
     setIsOtpSending(true);
     try {
-      const res = await api.post('/auth/otp/send', { email });
+      const res = await api.post('/auth/otp/send', { email: cleanEmail });
       toast.success(res.data?.message || 'Código de acesso enviado! Verifique seu e-mail.');
       setOtpStep('code');
       setOtpCooldown(60);
@@ -92,7 +100,7 @@ export default function LoginPage() {
     setIsOtpVerifying(true);
     try {
       const res = await api.post('/auth/otp/verify', {
-        email,
+        email: email.trim().toLowerCase(),
         code: otpCode.trim(),
       });
 
@@ -126,37 +134,59 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Preencha todos os campos');
+    setNoPasswordAlert(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setEmailError('Informe seu e-mail.');
+      toast.error('Informe seu e-mail.');
       return;
     }
+
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setEmailError('E-mail inválido. Digite um endereço de e-mail válido (exemplo: usuario@email.com).');
+      toast.error('E-mail inválido. Digite um endereço de e-mail válido.');
+      return;
+    }
+    setEmailError(null);
+
+    if (!password) {
+      toast.error('Informe sua senha.');
+      return;
+    }
+
     setIsLoading(true);
-    
     try {
-      // API call to the backend
       const response = await api.post('/auth/login', {
-        email,
+        email: cleanEmail,
         password,
       });
-      
+
       const { token, user } = response.data;
-      
       const roleRouteMap: Record<string, string> = {
         TUTOR: 'tutor',
         ESTABLISHMENT: 'estabelecimento',
         PROFESSIONAL: 'profissional',
         ADMIN: 'admin',
       };
-      
+
       const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
       login(token, user, frontRole);
-      
+
       toast.success('Bem-vindo de volta! 🐶');
       navigate(`/${frontRole}`);
     } catch (error: any) {
       console.error(error);
-      const message = error.response?.data?.error || 'Erro ao fazer login. O back-end está rodando?';
-      toast.error(message);
+      if (error.response?.data?.code === 'NO_PASSWORD_SET' || error.response?.data?.noPassword) {
+        const errorMsg =
+          error.response.data.error ||
+          'Você ainda não possui uma senha cadastrada. Acesse por código de e-mail ou use "Esqueci minha senha" para criar uma senha.';
+        setNoPasswordAlert(errorMsg);
+        toast.error(errorMsg);
+      } else {
+        const message = error.response?.data?.error || 'E-mail ou senha incorretos.';
+        toast.error(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -428,30 +458,80 @@ export default function LoginPage() {
           {/* FORM: PASSWORD METHOD */}
           {authMethod === 'password' && (
             <form onSubmit={handleLogin} className="space-y-4">
+              {noPasswordAlert && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="font-medium leading-relaxed">{noPasswordAlert}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 pl-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMethod('otp');
+                        setOtpStep('email');
+                        setNoPasswordAlert(null);
+                      }}
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                    >
+                      Acessar por código
+                    </button>
+                    <Link
+                      to={`/auth/forgot-password?email=${encodeURIComponent(email)}`}
+                      className="text-orange-600 hover:text-orange-700 font-bold underline text-[11px]"
+                    >
+                      Criar uma senha
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <Input
-                label="E-mail / Usuário (Admin)"
-                type="text"
-                placeholder="seu@email.com ou admin"
+                label="E-mail"
+                type="email"
+                placeholder="digite seu e-mail"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                error={emailError || undefined}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(null);
+                  if (noPasswordAlert) setNoPasswordAlert(null);
+                }}
                 leftIcon={<Mail size={16} />}
+                required
               />
+
               <Input
                 label="Senha"
                 type="password"
-                placeholder="••••••••"
+                placeholder="digite sua senha"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (noPasswordAlert) setNoPasswordAlert(null);
+                }}
                 leftIcon={<Lock size={16} />}
+                required
               />
+
               <div className="flex justify-end">
-                <Link to="/auth/forgot-password" className="text-sm text-orange-500 hover:text-orange-600 transition-colors">
+                <Link
+                  to={`/auth/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                  className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                >
                   Esqueci minha senha
                 </Link>
               </div>
 
-              <Button type="submit" fullWidth isLoading={isLoading} size="lg" rightIcon={<ArrowRight size={18} />}>
-                Entrar na conta
+              <Button
+                type="submit"
+                fullWidth
+                isLoading={isLoading}
+                size="lg"
+                rightIcon={<ArrowRight size={18} />}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+              >
+                Entrar
               </Button>
             </form>
           )}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, Building2, MapPin, Search, Camera, Check, Upload, Trash2, Stethoscope, FileText, Sparkles } from 'lucide-react';
@@ -84,6 +84,18 @@ export default function RegisterPage() {
   const [isCepLoading, setIsCepLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
 
+  // Email verification OTP modal states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [regOtpCode, setRegOtpCode] = useState('');
+  const [isSendingRegOtp, setIsSendingRegOtp] = useState(false);
+  const [regOtpCooldown, setRegOtpCooldown] = useState(0);
+
+  useEffect(() => {
+    if (regOtpCooldown <= 0) return;
+    const timer = setInterval(() => setRegOtpCooldown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [regOtpCooldown]);
+
   const { login } = useAuthStore();
   const toast = useToast();
   const navigate = useNavigate();
@@ -159,12 +171,19 @@ export default function RegisterPage() {
     setEstablishmentPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleNext = () => {
     if (step === 1) {
       setStep(2);
     } else if (step === 2) {
       if (!name || !email || !phone || !password || !confirmPassword) {
         toast.error('Preencha todos os campos obrigatórios.');
+        return;
+      }
+      const cleanEmail = email.trim().toLowerCase();
+      if (!EMAIL_REGEX.test(cleanEmail)) {
+        toast.error('Informe um e-mail válido (exemplo: usuario@email.com).');
         return;
       }
       if (selectedRole !== 'tutor' && !document) {
@@ -183,7 +202,7 @@ export default function RegisterPage() {
       if (selectedRole === 'estabelecimento') {
         setStep(3); // Go to establishment details & photos
       } else {
-        handleFinish(); // Tutor or professional
+        handleRequestVerification(); // Tutor or professional
       }
     } else if (step === 3 && selectedRole === 'estabelecimento') {
       if (!businessName) {
@@ -203,11 +222,29 @@ export default function RegisterPage() {
         toast.error('É obrigatório adicionar pelo menos 1 foto do estabelecimento para verificação.');
         return;
       }
-      handleFinish();
+      handleRequestVerification();
     }
   };
 
-  const handleFinish = async () => {
+  const handleRequestVerification = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    setIsSendingRegOtp(true);
+    try {
+      await api.post('/auth/otp/send', { email: cleanEmail });
+      toast.success('Código de verificação enviado para seu e-mail!');
+      setRegOtpCooldown(60);
+      setShowOtpModal(true);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Erro ao enviar código por e-mail.';
+      toast.error(msg);
+      // Em caso de falha de envio, permite prosseguir diretamente
+      handleFinish();
+    } finally {
+      setIsSendingRegOtp(false);
+    }
+  };
+
+  const handleFinish = async (code?: string) => {
     setIsLoading(true);
     try {
       const roleMap: Record<string, string> = {
@@ -225,10 +262,11 @@ export default function RegisterPage() {
       ].filter(Boolean).join(' ');
 
       const payload: any = {
-        name,
-        email,
-        phone,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password,
+        code: code || undefined,
         document: document || undefined,
         role: roleMap[selectedRole] || 'TUTOR',
       };
@@ -251,6 +289,7 @@ export default function RegisterPage() {
       }
 
       const response = await api.post('/auth/register', payload);
+      setShowOtpModal(false);
 
       if (response.data.pendingApproval) {
         toast.success('Cadastro enviado com sucesso!');
@@ -862,6 +901,83 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-neutral-100 space-y-6"
+          >
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                <Mail size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-neutral-900">Confirme seu E-mail</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Enviamos um código de verificação de 6 dígitos para:
+                <br />
+                <strong className="text-neutral-800">{email}</strong>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 mb-2 text-center">
+                Digite o código de 6 dígitos:
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={regOtpCode}
+                onChange={(e) => setRegOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="••••••"
+                className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 bg-white border-2 border-neutral-300 focus:border-orange-500 rounded-2xl outline-none transition-all text-neutral-900 shadow-xs"
+                autoFocus
+              />
+            </div>
+
+            <Button
+              type="button"
+              fullWidth
+              size="lg"
+              isLoading={isLoading}
+              disabled={regOtpCode.length !== 6}
+              onClick={() => handleFinish(regOtpCode)}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50"
+            >
+              Confirmar e criar conta
+            </Button>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => setShowOtpModal(false)}
+                className="text-neutral-500 hover:text-neutral-800 font-medium cursor-pointer"
+              >
+                Voltar e editar
+              </button>
+
+              {regOtpCooldown > 0 ? (
+                <span className="text-neutral-400 font-medium">
+                  Reenviar em <strong>{regOtpCooldown}s</strong>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRequestVerification}
+                  disabled={isSendingRegOtp}
+                  className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
+                >
+                  Reenviar código
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

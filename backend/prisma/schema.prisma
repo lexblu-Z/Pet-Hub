@@ -12,6 +12,7 @@ model User {
   name                        String
   email                       String                @unique
   password                    String
+  hasPassword                 Boolean               @default(false)
   phone                       String?
   role                        Role                  @default(TUTOR)
   createdAt                   DateTime              @default(now())

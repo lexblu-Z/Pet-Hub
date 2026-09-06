@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Lock, ArrowLeft, CheckCircle, ShieldCheck, KeyRound, AlertCircle } from 'lucide-react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
+import { useAuthStore } from '@/store/authStore';
 import { Button, Input, Card } from '@/components/ui';
 
 export default function SecurityPage() {
+  const { currentUser, setUser } = useAuthStore();
+  const [hasPassword, setHasPassword] = useState<boolean>(currentUser?.hasPassword !== false);
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,8 +20,28 @@ export default function SecurityPage() {
   const toast = useToast();
   const navigate = useNavigate();
 
+  // Load latest state from backend
+  useEffect(() => {
+    api.get('/auth/me')
+      .then((res) => {
+        if (res.data) {
+          const userHasPass = res.data.hasPassword !== false;
+          setHasPassword(userHasPass);
+          if (currentUser) {
+            setUser({ ...currentUser, hasPassword: userHasPass });
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (hasPassword && !currentPassword) {
+      toast.error('Informe sua senha atual.');
+      return;
+    }
 
     if (newPassword.length < 6) {
       toast.error('A nova senha deve ter no mínimo 6 caracteres');
@@ -31,12 +55,20 @@ export default function SecurityPage() {
 
     try {
       setLoading(true);
-      await api.put('/users/me/password', {
-        currentPassword,
-        newPassword,
-      });
+      const payload: any = { newPassword };
+      if (hasPassword) {
+        payload.currentPassword = currentPassword;
+      }
+
+      await api.put('/users/me/password', payload);
       setSuccess(true);
-      toast.success('Senha alterada com sucesso!');
+      setHasPassword(true);
+      if (currentUser) {
+        setUser({ ...currentUser, hasPassword: true });
+      }
+
+      const successMsg = hasPassword ? 'Senha alterada com sucesso!' : 'Senha cadastrada com sucesso!';
+      toast.success(successMsg);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -57,16 +89,18 @@ export default function SecurityPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/tutor/profile')}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer"
         >
           <ArrowLeft size={18} className="text-neutral-600" />
         </button>
         <div>
           <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <Lock className="w-5 h-5 text-orange-500" />
-            Segurança
+            Segurança da Conta
           </h1>
-          <p className="text-sm text-neutral-500">Atualize sua senha de acesso</p>
+          <p className="text-sm text-neutral-500">
+            {hasPassword ? 'Atualize sua senha de acesso' : 'Cadastre uma senha para sua conta'}
+          </p>
         </div>
       </div>
 
@@ -74,37 +108,59 @@ export default function SecurityPage() {
         {success && (
           <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl mb-6 border border-green-200">
             <CheckCircle className="text-green-500 shrink-0" size={20} />
-            <p className="text-sm text-green-800 font-medium">Senha alterada com sucesso!</p>
+            <p className="text-sm text-green-800 font-medium">
+              {hasPassword ? 'Senha atualizada com sucesso!' : 'Senha cadastrada com sucesso!'}
+            </p>
           </div>
         )}
 
-        <h2 className="text-base font-bold text-neutral-900 mb-5">Alterar senha</h2>
+        {!hasPassword && (
+          <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-2xl mb-6 border border-orange-200/80 text-xs text-orange-950">
+            <ShieldCheck className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-orange-900">Você ainda não tem uma senha cadastrada</p>
+              <p className="text-orange-800/90 leading-relaxed">
+                Sua conta foi criada através do Google ou Código por E-mail. Crie uma senha abaixo para poder entrar também utilizando seu e-mail e senha com total praticidade.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <h2 className="text-base font-bold text-neutral-900 mb-5">
+          {hasPassword ? 'Alterar senha' : 'Cadastrar senha de acesso'}
+        </h2>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Senha atual"
-            type="password"
-            value={currentPassword}
-            onChange={e => setCurrentPassword(e.target.value)}
-            placeholder="Sua senha atual"
-            leftIcon={<Lock size={16} />}
-          />
+          {hasPassword && (
+            <Input
+              label="Senha atual"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Sua senha atual"
+              leftIcon={<Lock size={16} />}
+              required
+            />
+          )}
 
           <Input
-            label="Nova senha"
+            label={hasPassword ? 'Nova senha' : 'Senha desejada'}
             type="password"
             value={newPassword}
-            onChange={e => setNewPassword(e.target.value)}
+            onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Mínimo 6 caracteres"
             leftIcon={<Lock size={16} />}
+            required
           />
 
           <Input
             label="Confirmar nova senha"
             type="password"
             value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Repita a nova senha"
             leftIcon={<Lock size={16} />}
+            required
           />
 
           <div className="pt-2">
@@ -112,9 +168,14 @@ export default function SecurityPage() {
               type="submit"
               fullWidth
               isLoading={loading}
-              disabled={!currentPassword || !newPassword || !confirmPassword}
+              disabled={(hasPassword && !currentPassword) || !newPassword || !confirmPassword}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
             >
-              {loading ? 'Atualizando...' : 'Atualizar senha'}
+              {loading
+                ? 'Salvando...'
+                : hasPassword
+                ? 'Atualizar senha'
+                : 'Cadastrar senha'}
             </Button>
           </div>
         </form>

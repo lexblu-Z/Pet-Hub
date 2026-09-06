@@ -9,6 +9,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
   fastify.post('/otp/send', authController.sendOtp);
   fastify.post('/otp/verify', authController.verifyOtp);
   fastify.post('/otp/complete', authController.completeOtpRegistration);
+  fastify.post('/forgot-password', authController.forgotPassword);
+  fastify.post('/reset-password', authController.resetPassword);
 
   // Authenticated route
   fastify.get(

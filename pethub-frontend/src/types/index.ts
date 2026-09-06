@@ -25,6 +25,7 @@ export interface User {
   phone: string;
   avatar?: string;
   role: UserRole;
+  hasPassword?: boolean;
   createdAt: string;
 }
 
