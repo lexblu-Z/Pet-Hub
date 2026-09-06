@@ -262,5 +262,154 @@ export const adminController = {
     });
     
     return reply.status(201).send({ id: admin.id, name: admin.name, email: admin.email, role: admin.role });
-  }
+  },
+
+  async deleteUser(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    try {
+      const { id } = request.params;
+      const requestingUser = request.user as any;
+
+      // 1. Verify target user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id },
+        include: {
+          establishmentProfile: true,
+          professionalProfile: true,
+        },
+      });
+
+      if (!targetUser) {
+        return reply.status(404).send({ error: 'Usuário não encontrado.' });
+      }
+
+      // 2. Prevent admin from deleting themselves
+      if (targetUser.id === requestingUser.sub) {
+        return reply.status(400).send({
+          error: 'Você não pode excluir sua própria conta de administrador.',
+        });
+      }
+
+      // 3. Prevent deleting the last remaining admin in the system
+      if (targetUser.role === Role.ADMIN) {
+        const adminCount = await prisma.user.count({
+          where: { role: Role.ADMIN },
+        });
+        if (adminCount <= 1) {
+          return reply.status(400).send({
+            error: 'Não é permitido excluir o único administrador da plataforma.',
+          });
+        }
+      }
+
+      const targetEmail = targetUser.email.toLowerCase().trim();
+
+      // 4. Atomic transaction to cleanly wipe all related records and User
+      await prisma.$transaction(async (tx) => {
+        // Clean up appointments where user is tutor, establishment, or professional
+        await tx.appointment.deleteMany({
+          where: {
+            OR: [
+              { tutorId: id },
+              { establishmentId: id },
+              { professionalId: id },
+            ],
+          },
+        });
+
+        // Clean up services created by establishment or professional
+        await tx.service.deleteMany({
+          where: {
+            OR: [
+              { establishmentId: id },
+              { professionalId: id },
+            ],
+          },
+        });
+
+        // Clean up products and order items
+        await tx.orderItem.deleteMany({
+          where: { establishmentId: id },
+        });
+
+        await tx.product.deleteMany({
+          where: { establishmentId: id },
+        });
+
+        // Clean up orders made by tutor
+        await tx.order.deleteMany({
+          where: { tutorId: id },
+        });
+
+        // Clean up cart items
+        await tx.cartItem.deleteMany({
+          where: { tutorId: id },
+        });
+
+        // Clean up pets
+        await tx.pet.deleteMany({
+          where: { tutorId: id },
+        });
+
+        // Clean up employees
+        await tx.employee.deleteMany({
+          where: { establishmentId: id },
+        });
+
+        // Clean up Google Calendar Connection
+        await tx.googleCalendarConnection.deleteMany({
+          where: { userId: id },
+        });
+
+        // Clean up notifications
+        await tx.notification.deleteMany({
+          where: { userId: id },
+        });
+
+        // Clean up payment methods and cashback
+        await tx.paymentMethod.deleteMany({
+          where: { userId: id },
+        });
+
+        await tx.cashbackTransaction.deleteMany({
+          where: { userId: id },
+        });
+
+        // Clean up profiles
+        await tx.establishmentProfile.deleteMany({
+          where: { userId: id },
+        });
+
+        await tx.professionalProfile.deleteMany({
+          where: { userId: id },
+        });
+
+        await tx.adminProfile.deleteMany({
+          where: { userId: id },
+        });
+
+        // Clean up any AuthVerificationCode associated with this email
+        await tx.authVerificationCode.deleteMany({
+          where: { email: targetEmail },
+        });
+
+        // Finally, delete the User record itself
+        await tx.user.delete({
+          where: { id },
+        });
+      });
+
+      request.log.info(`[Admin] User deleted successfully: ${id} (${targetEmail})`);
+
+      return reply.send({
+        success: true,
+        message: 'Conta e dados associados excluídos com sucesso.',
+        email: targetEmail,
+      });
+    } catch (err: any) {
+      request.log.error(err, 'Error deleting user:');
+      return reply.status(500).send({
+        error: 'Erro interno ao excluir usuário. Tente novamente.',
+      });
+    }
+  },
 };

@@ -171,6 +171,7 @@ export default function App() {
           <Route path="estabelecimentos" element={<AdminEstablishmentsPage />} />
           <Route path="profissionais" element={<AdminProfessionalsPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
+          <Route path="users" element={<Navigate to="/admin/usuarios" replace />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
 

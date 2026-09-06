@@ -282,13 +282,13 @@ export default function LoginPage() {
               <span>{isGoogleLoading ? 'Conectando ao Google...' : 'Continuar com Google'}</span>
             </button>
 
-            <p className="text-[11px] text-neutral-400 text-center leading-relaxed">
-              Ao continuar com o Google, o PetHub acessará apenas suas informações básicas de perfil (nome, e-mail e foto). O Google Calendar é uma integração separada que pode ser conectada nas configurações da sua agenda.
+            <p className="text-[11px] text-neutral-400 text-center">
+              Usaremos apenas os dados necessários para acessar sua conta.
             </p>
 
-            <div className="flex items-center gap-3 pt-3">
+            <div className="flex items-center gap-3 pt-1">
               <div className="flex-1 h-px bg-neutral-200" />
-              <span className="text-xs text-neutral-400 font-medium">ou acesse com seu e-mail</span>
+              <span className="text-xs text-neutral-400 font-medium">ou entre com seu e-mail</span>
               <div className="flex-1 h-px bg-neutral-200" />
             </div>
           </div>
@@ -343,10 +343,10 @@ export default function LoginPage() {
                     fullWidth
                     isLoading={isOtpSending}
                     size="lg"
+                    rightIcon={<ArrowRight size={18} />}
                     className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
                   >
                     Enviar código de acesso
-                    <ArrowRight size={18} />
                   </Button>
                 </form>
               ) : (
@@ -390,10 +390,10 @@ export default function LoginPage() {
                     isLoading={isOtpVerifying}
                     disabled={otpCode.length !== 6}
                     size="lg"
+                    rightIcon={<ArrowRight size={18} />}
                     className="bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50"
                   >
                     Confirmar e entrar
-                    <ArrowRight size={18} />
                   </Button>
 
                   <div className="flex items-center justify-between pt-1 text-xs">
@@ -450,9 +450,8 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              <Button type="submit" fullWidth isLoading={isLoading} size="lg">
+              <Button type="submit" fullWidth isLoading={isLoading} size="lg" rightIcon={<ArrowRight size={18} />}>
                 Entrar na conta
-                <ArrowRight size={18} />
               </Button>
             </form>
           )}

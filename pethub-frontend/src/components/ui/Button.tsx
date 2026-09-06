@@ -81,10 +81,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading ? (
           <Loader2 className="animate-spin shrink-0" size={16} />
         ) : leftIcon ? (
-          <span className="shrink-0">{leftIcon}</span>
+          <span className="shrink-0 flex items-center">{leftIcon}</span>
         ) : null}
-        <span>{children}</span>
-        {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
+        <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">{children}</span>
+        {!isLoading && rightIcon && <span className="shrink-0 flex items-center">{rightIcon}</span>}
       </motion.button>
     );
   }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, Mail, Phone, Calendar, Shield, Eye, Building2, Stethoscope, PawPrint } from 'lucide-react';
+import { Search, User, Mail, Phone, Calendar, Shield, Eye, Building2, Stethoscope, PawPrint, Trash2, AlertTriangle } from 'lucide-react';
 import { Input, Button, Badge, Modal, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
+import { useAuthStore } from '@/store/authStore';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -10,7 +11,10 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const { currentUser } = useAuthStore();
   const toast = useToast();
 
   useEffect(() => {
@@ -26,6 +30,22 @@ export default function AdminUsersPage() {
       toast.error('Erro ao carregar usuários.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/admin/users/${userToDelete.id}`);
+      toast.success('Conta excluída com sucesso.');
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
+      setUserToDelete(null);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Erro ao excluir conta. Tente novamente.';
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -153,12 +173,27 @@ export default function AdminUsersPage() {
                       {new Date(user.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => setSelectedUser(user)}
-                        className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1"
-                      >
-                        <Eye size={14} /> Detalhes
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedUser(user)}
+                          className="px-2.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={13} /> Detalhes
+                        </button>
+                        {user.id === currentUser?.id ? (
+                          <span className="px-2.5 py-1.5 bg-neutral-100 text-neutral-400 text-xs font-semibold rounded-lg select-none">
+                            Você
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setUserToDelete(user)}
+                            className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="Excluir conta do sistema"
+                          >
+                            <Trash2 size={13} /> Excluir
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,6 +259,61 @@ export default function AdminUsersPage() {
             <div className="pt-2 flex justify-end">
               <Button fullWidth variant="ghost" onClick={() => setSelectedUser(null)}>
                 Fechar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {userToDelete && (
+        <Modal
+          isOpen={!!userToDelete}
+          onClose={() => !isDeleting && setUserToDelete(null)}
+          title="Excluir conta?"
+          size="sm"
+        >
+          <div className="space-y-4 text-sm">
+            <div className="p-3.5 bg-red-50 border border-red-200/80 rounded-2xl flex items-start gap-3">
+              <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+              <div className="text-xs text-red-900 space-y-1">
+                <p className="font-bold">Esta ação removerá a conta e todos os dados associados.</p>
+                <p className="text-red-700 leading-relaxed">
+                  O usuário poderá criar uma nova conta usando o mesmo e-mail posteriormente.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-neutral-50 rounded-xl space-y-2 border border-neutral-100 text-xs">
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-neutral-400 font-medium">Nome:</span>
+                <span className="font-bold text-neutral-800">{userToDelete.name}</span>
+              </div>
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-neutral-400 font-medium">E-mail:</span>
+                <span className="font-mono text-neutral-700">{userToDelete.email}</span>
+              </div>
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-neutral-400 font-medium">Perfil:</span>
+                <span>{getRoleBadge(userToDelete.role)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setUserToDelete(null)}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteUser}
+                isLoading={isDeleting}
+                leftIcon={<Trash2 size={15} />}
+              >
+                Excluir conta
               </Button>
             </div>
           </div>

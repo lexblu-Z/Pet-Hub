@@ -17,6 +17,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
 
   fastify.get('/dashboard', adminController.getDashboard);
   fastify.get('/users', adminController.listUsers);
+  fastify.delete('/users/:id', adminController.deleteUser);
   
   fastify.get('/establishments', adminController.listEstablishments);
   fastify.put('/establishments/:id/status', adminController.updateEstablishmentStatus);

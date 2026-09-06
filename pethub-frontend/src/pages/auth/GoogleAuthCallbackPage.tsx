@@ -10,21 +10,28 @@ export default function GoogleAuthCallbackPage() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const toast = useToast();
+  const hasProcessedRef = React.useRef(false);
 
   useEffect(() => {
+    if (hasProcessedRef.current) return;
+
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
     if (error) {
+      hasProcessedRef.current = true;
       toast.error('Não foi possível autenticar com o Google.');
       navigate('/auth/login');
       return;
     }
 
     if (!token) {
+      hasProcessedRef.current = true;
       navigate('/auth/login');
       return;
     }
+
+    hasProcessedRef.current = true;
 
     const processLogin = async () => {
       try {
