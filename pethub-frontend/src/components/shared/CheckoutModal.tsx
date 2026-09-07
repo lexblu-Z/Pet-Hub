@@ -8,6 +8,9 @@ import { Button, Badge } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
+import { ItemLogo } from '@/components/shared/ServiceLogo';
+import { PaymentMethodSelector } from '@/components/shared/PaymentMethodSelector';
 
 export interface CheckoutModalProps {
   isOpen: boolean;
@@ -20,61 +23,7 @@ export interface CheckoutModalProps {
   totalAmount: number;
 }
 
-// Visual Graphics for Payment Methods
-const DebitCardGraphic = () => (
-  <div className="w-12 h-8 rounded-lg bg-gradient-to-tr from-slate-800 to-slate-600 dark:from-slate-700 dark:to-slate-500 p-1.5 flex flex-col justify-between shadow-xs relative overflow-hidden border border-white/10 shrink-0">
-    <div className="flex items-center justify-between">
-      {/* Chip */}
-      <div className="w-2.5 h-2 rounded-[2px] bg-amber-300/90 border border-amber-400/80" />
-      {/* Contactless waves */}
-      <div className="text-[7px] text-white/70 font-mono tracking-tighter">DÉBITO</div>
-    </div>
-    <div className="flex items-center justify-between text-[6px] font-mono text-white/80">
-      <span>••••</span>
-      <div className="w-3 h-2 rounded-[2px] bg-white/20" />
-    </div>
-  </div>
-);
 
-const CreditCardGraphic = () => (
-  <div className="w-12 h-8 rounded-lg bg-gradient-to-tr from-indigo-700 via-purple-700 to-orange-500 p-1.5 flex flex-col justify-between shadow-xs relative overflow-hidden border border-white/10 shrink-0">
-    <div className="flex items-center justify-between">
-      {/* Chip */}
-      <div className="w-2.5 h-2 rounded-[2px] bg-amber-300/90 border border-amber-400/80" />
-      <div className="text-[7px] text-white/90 font-mono tracking-tighter">CRÉDITO</div>
-    </div>
-    <div className="flex items-center justify-between text-[6px] font-mono text-white/90">
-      <span>••••</span>
-      <div className="w-3 h-2 rounded-[2px] bg-white/30" />
-    </div>
-  </div>
-);
-
-const PixGraphic = () => (
-  <div className="w-12 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 p-1 flex items-center justify-center shadow-xs shrink-0">
-    {/* Official Pix Geometric Diamond Logo */}
-    <svg viewBox="0 0 512 512" className="w-6 h-6 text-[#32BCAD] fill-current">
-      <path d="M112.5 124.7l70.1 70.1c14.1 14.1 36.9 14.1 51 0l70.1-70.1c60.5-60.5 158.8-60.5 219.3 0l-51 51c-32.3-32.3-84.8-32.3-117.2 0l-70.1 70.1c-14.1 14.1-36.9 14.1-51 0l-70.1-70.1c-32.3-32.3-84.8-32.3-117.2 0l-51-51c60.5-60.5 158.8-60.5 219.3 0zM399.5 387.3l-70.1-70.1c-14.1-14.1-36.9-14.1-51 0l-70.1 70.1c-60.5 60.5-158.8 60.5-219.3 0l51-51c32.3 32.3 84.8 32.3 117.2 0l70.1-70.1c14.1-14.1 36.9-14.1 51 0l70.1 70.1c32.3 32.3 84.8 32.3 117.2 0l51 51c-60.5 60.5-158.8 60.5-219.3 0z" />
-    </svg>
-  </div>
-);
-
-const CashGraphic = () => (
-  <div className="w-12 h-8 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-700 p-1 flex flex-col justify-between shadow-xs border border-emerald-400/40 shrink-0 text-white">
-    <div className="flex justify-between items-center text-[6px] font-bold tracking-wider">
-      <span>R$</span>
-      <span className="opacity-80">REAL</span>
-    </div>
-    <div className="flex items-center justify-center">
-      <div className="w-4 h-4 rounded-full border border-white/40 flex items-center justify-center text-[7px] font-bold">
-        $
-      </div>
-    </div>
-    <div className="flex justify-end text-[5px] font-mono opacity-80">
-      <span>100</span>
-    </div>
-  </div>
-);
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   isOpen,
@@ -89,6 +38,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [step, setStep] = useState<'RECEIVE' | 'PAYMENT' | 'REVIEW' | 'SUCCESS'>('RECEIVE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+
+  // Cashback Voucher State
+  const [appliedCashbackCode, setAppliedCashbackCode] = useState<string | null>(null);
+  const [cashbackDiscount, setCashbackDiscount] = useState<number>(0);
 
   // Step 1: Receiving Method
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
@@ -140,6 +93,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setIsSubmitting(false);
       setDeliverToDifferentAddress(false);
       setAddressErrors({});
+      setAppliedCashbackCode(null);
+      setCashbackDiscount(0);
     }
   }, [isOpen]);
 
@@ -252,13 +207,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setStep('PAYMENT');
   };
 
+  const finalAmount = Math.max(0, Math.round((totalAmount - cashbackDiscount) * 100) / 100);
+
   const handleNextFromPayment = () => {
     const isCash = paymentMethod.toLowerCase().includes('dinheiro');
     if (isCash && needsChange) {
       const cleanChange = changeFor.replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
       const numChange = parseFloat(cleanChange);
-      if (isNaN(numChange) || numChange < totalAmount) {
-        toast.error(`O valor para troco deve ser maior ou igual ao total do pedido (R$ ${totalAmount.toFixed(2).replace('.', ',')}).`);
+      if (isNaN(numChange) || numChange < finalAmount) {
+        toast.error(`O valor para troco deve ser maior ou igual ao total a pagar (R$ ${finalAmount.toFixed(2).replace('.', ',')}).`);
         return;
       }
     }
@@ -288,6 +245,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         paymentMethod,
         needsChange: isCash ? needsChange : false,
         changeFor: parsedChangeFor,
+        cashbackCode: appliedCashbackCode || null,
         notes: notes.trim() || null,
       };
 
@@ -574,157 +532,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 2: PAYMENT (Presencial com Ilustrações e Troco Reativo) */}
+          {/* STEP 2: PAYMENT (Presencial com Logos Transparentes, Troco e Cashback) */}
           {/* ========================================================================= */}
           {step === 'PAYMENT' && (
-            <div className="space-y-4">
-              {/* Notice */}
-              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-900/40 flex items-start gap-3 text-xs text-blue-950 dark:text-blue-200">
-                <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold mb-0.5">Pagamento Presencial no Ato da Entrega ou Retirada</p>
-                  <p className="text-[11px] leading-relaxed text-blue-900/80 dark:text-blue-300/80">
-                    O pagamento será realizado no momento da entrega ou retirada. Para entrega por motoboy, ele levará a maquininha quando aplicável. Nenhum dado sensível de cartão é solicitado online.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5] uppercase tracking-wider block mb-2">
-                  Escolha a forma de pagamento:
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    { id: 'Cartão de Débito', label: 'Cartão de Débito', graphic: <DebitCardGraphic />, desc: 'Maquininha no local' },
-                    { id: 'Cartão de Crédito', label: 'Cartão de Crédito', graphic: <CreditCardGraphic />, desc: 'Maquininha no local' },
-                    { id: 'Pix', label: 'Pix', graphic: <PixGraphic />, desc: 'Chave na entrega/balcão' },
-                    { id: 'Dinheiro', label: 'Dinheiro', graphic: <CashGraphic />, desc: 'Pagamento em espécie' },
-                  ].map((p) => {
-                    const isSelected = paymentMethod === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(p.id)}
-                        className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
-                          isSelected
-                            ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 text-orange-950 dark:text-orange-200 ring-2 ring-orange-500/20'
-                            : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          {p.graphic}
-                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                            isSelected ? 'border-orange-500 bg-orange-500' : 'border-neutral-300'
-                          }`}>
-                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="font-bold text-xs text-neutral-900 dark:text-[#E3E3E3]">{p.label}</p>
-                          <p className="text-[10px] text-neutral-400 dark:text-[#8E918F]">{p.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Cash Change Section (Problema 5) */}
-              {paymentMethod === 'Dinheiro' ? (
-                <div className="p-4 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-3">
-                  {/* Order Total Prominently Displayed */}
-                  <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-200 dark:border-[#313335] flex items-center justify-between">
-                    <span className="text-xs font-semibold text-neutral-600 dark:text-[#C4C7C5]">Total a pagar:</span>
-                    <span className="text-base font-black text-neutral-900 dark:text-[#E3E3E3]">
-                      R$ {totalAmount.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-800 dark:text-[#E3E3E3]">Precisa de troco?</span>
-                    <div className="flex gap-2 text-xs font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => setNeedsChange(false)}
-                        className={`px-3 py-1.5 rounded-xl cursor-pointer transition-colors ${
-                          !needsChange
-                            ? 'bg-neutral-900 dark:bg-orange-500 text-white shadow-xs'
-                            : 'bg-white dark:bg-[#1E1F20] text-neutral-600 dark:text-[#C4C7C5] border border-neutral-200 dark:border-[#313335]'
-                        }`}
-                      >
-                        Não, valor exato
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNeedsChange(true)}
-                        className={`px-3 py-1.5 rounded-xl cursor-pointer transition-colors ${
-                          needsChange
-                            ? 'bg-neutral-900 dark:bg-orange-500 text-white shadow-xs'
-                            : 'bg-white dark:bg-[#1E1F20] text-neutral-600 dark:text-[#C4C7C5] border border-neutral-200 dark:border-[#313335]'
-                        }`}
-                      >
-                        Sim, preciso
-                      </button>
-                    </div>
-                  </div>
-
-                  {needsChange && (
-                    <div className="pt-2 border-t border-neutral-200/50 dark:border-[#313335] space-y-2">
-                      <label className="text-[11px] text-neutral-600 dark:text-[#C4C7C5] font-medium block">
-                        Troco para quanto?
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-neutral-500 dark:text-[#8E918F]">R$</span>
-                        <input
-                          type="text"
-                          value={changeFor}
-                          onChange={(e) => setChangeFor(e.target.value)}
-                          placeholder="Ex: 100,00"
-                          className="flex-1 text-xs px-3 py-2 bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] font-bold focus:outline-none focus:ring-1 focus:ring-orange-500"
-                        />
-                      </div>
-
-                      {/* Quick amount suggestion chips */}
-                      <div className="flex gap-1.5 pt-0.5 flex-wrap">
-                        {[20, 50, 100, 150, 200].filter(v => v > totalAmount).map(val => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => setChangeFor(val.toFixed(2).replace('.', ','))}
-                            className="text-[10px] px-2.5 py-1 bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-lg text-neutral-600 dark:text-[#C4C7C5] hover:border-orange-400 cursor-pointer font-medium"
-                          >
-                            R$ {val},00
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Validation and Dynamic Calculation */}
-                      {changeFor && (
-                        <div>
-                          {numChangeVal < totalAmount ? (
-                            <p className="text-[11px] text-red-500 font-semibold">
-                              O valor informado deve ser maior ou igual ao total do pedido (R$ {totalAmount.toFixed(2).replace('.', ',')}).
-                            </p>
-                          ) : (
-                            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold flex items-center justify-between">
-                              <span>Troco a devolver:</span>
-                              <span className="font-bold text-xs">R$ {changeToReturn.toFixed(2).replace('.', ',')}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335] text-[11px] text-neutral-500 dark:text-[#8E918F]">
-                  <p>
-                    ✓ Pagamento selecionado: <strong>{paymentMethod}</strong>. O atendente ou motoboy fará a cobrança presencialmente na conclusão da entrega ou retirada.
-                  </p>
-                </div>
-              )}
-            </div>
+            <PaymentMethodSelector
+              type="PRODUCT"
+              subtotal={totalAmount}
+              selectedMethod={paymentMethod}
+              onSelectMethod={setPaymentMethod}
+              needsChange={needsChange}
+              onToggleNeedsChange={setNeedsChange}
+              changeFor={changeFor}
+              onChangeForChange={setChangeFor}
+              appliedCashbackCode={appliedCashbackCode}
+              cashbackDiscount={cashbackDiscount}
+              onApplyCashback={(code, discount) => {
+                setAppliedCashbackCode(code);
+                setCashbackDiscount(discount);
+              }}
+              showBreakdown={false}
+            />
           )}
 
           {/* ========================================================================= */}
@@ -740,8 +567,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
                 {cartItems.map((it, idx) => (
                   <div key={idx} className="flex items-center justify-between py-1">
-                    <span className="text-neutral-800 dark:text-[#C4C7C5]">
-                      {it.quantity}x {it.product.name}
+                    <span className="text-neutral-800 dark:text-[#C4C7C5] flex items-center gap-1.5">
+                      <ItemLogo size="xs" />
+                      <span>{it.quantity}x {it.product.name}</span>
                     </span>
                     <span className="font-bold text-neutral-900 dark:text-[#E3E3E3]">
                       R$ {(it.product.price * it.quantity).toFixed(2).replace('.', ',')}
@@ -754,8 +582,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-1">
                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Recebimento</p>
-                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">
-                    {deliveryMethod === 'DELIVERY' ? '🚚 Entrega' : '🏪 Retirada na Loja'}
+                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5">
+                    {deliveryMethod === 'DELIVERY' ? (
+                      <>
+                        <Truck size={14} className="text-orange-500" />
+                        Entrega
+                      </>
+                    ) : (
+                      <>
+                        <Store size={14} className="text-orange-500" />
+                        Retirada na Loja
+                      </>
+                    )}
                   </p>
                   <p className="text-[11px] text-neutral-600 dark:text-[#C4C7C5] line-clamp-2">
                     {deliveryMethod === 'DELIVERY'
@@ -766,7 +604,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                 <div className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-1">
                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Pagamento</p>
-                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{paymentMethod}</p>
+                  <div className="flex items-center gap-1.5">
+                    <PaymentLogo method={paymentMethod} size="xs" />
+                    <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{paymentMethod}</p>
+                  </div>
                   {paymentMethod === 'Dinheiro' && needsChange && (
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                       Troco para R$ {changeFor}
@@ -790,15 +631,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 />
               </div>
 
-              {/* Total amount highlight */}
-              <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-200 dark:border-orange-800/40 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-orange-950 dark:text-orange-200">Total a pagar</p>
-                  <p className="text-[10px] text-orange-700 dark:text-orange-400">Pagamento direto ao parceiro</p>
+              {/* Total amount highlight with cashback breakdown */}
+              <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-200 dark:border-orange-800/40 space-y-2">
+                <div className="flex justify-between items-center text-xs text-neutral-600 dark:text-[#C4C7C5]">
+                  <span>Subtotal produtos:</span>
+                  <span>R$ {totalAmount.toFixed(2).replace('.', ',')}</span>
                 </div>
-                <p className="text-xl font-black text-orange-600 dark:text-orange-400">
-                  R$ {totalAmount.toFixed(2).replace('.', ',')}
-                </p>
+                {cashbackDiscount > 0 && (
+                  <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Desconto Cashback ({appliedCashbackCode}):</span>
+                    <span>- R$ {cashbackDiscount.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-orange-200/60 dark:border-orange-800/40 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-orange-950 dark:text-orange-200">Total a pagar</p>
+                    <p className="text-[10px] text-orange-700 dark:text-orange-400">Pagamento direto ao parceiro</p>
+                  </div>
+                  <p className="text-xl font-black text-orange-600 dark:text-orange-400">
+                    R$ {finalAmount.toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+                <div className="text-[10px] text-amber-700 dark:text-amber-400 font-medium pt-1 border-t border-dashed border-orange-200/60 dark:border-orange-800/40">
+                  Ganhe + R$ {(Math.round(finalAmount * 0.03 * 100) / 100).toFixed(2).replace('.', ',')} (3%) de cashback após a confirmação!
+                </div>
               </div>
             </div>
           )}

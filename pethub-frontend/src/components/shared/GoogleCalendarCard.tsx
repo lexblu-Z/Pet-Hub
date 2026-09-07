@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronUp,
+  PawPrint,
+  Lock,
 } from 'lucide-react';
 import { Button, Badge, Modal } from '@/components/ui';
 
@@ -146,7 +148,7 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
     setCreatingCal(true);
     try {
       await api.post('/google/create-pethub-calendar');
-      toast.success('Agenda "🐾 PetHub — Agendamentos" criada e ativada no seu Google!');
+      toast.success('Agenda "PetHub — Agendamentos" criada e ativada no seu Google!');
       fetchStatus();
     } catch {
       toast.error('Erro ao criar agenda no Google.');
@@ -382,16 +384,25 @@ export const GoogleCalendarCard: React.FC<GoogleCalendarCardProps> = ({
           <p className="text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase tracking-wider">Como funciona:</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-neutral-600 dark:text-[#C4C7C5]">
             <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
-              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">🐾 100% Automático</span>
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5 mb-1">
+                <PawPrint size={14} className="text-orange-500" />
+                100% Automático
+              </span>
               Agendamentos confirmados ou alterados no PetHub refletem no seu calendário.
             </div>
             <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
-              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">🔒 Seguro & Privado</span>
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5 mb-1">
+                <Lock size={14} className="text-orange-500" />
+                Seguro & Privado
+              </span>
               Seus dados pessoais permanecem protegidos com autenticação oficial Google OAuth 2.0.
             </div>
             <div className="p-3 bg-white dark:bg-[#282A2C] rounded-xl border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
-              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] block mb-1">📅 Total Flexibilidade</span>
-              Use sua agenda principal ou crie uma agenda exclusiva "🐾 PetHub" com 1 clique.
+              <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5 mb-1">
+                <Calendar size={14} className="text-orange-500" />
+                Total Flexibilidade
+              </span>
+              Use sua agenda principal ou crie uma agenda exclusiva PetHub com 1 clique.
             </div>
           </div>
         </div>

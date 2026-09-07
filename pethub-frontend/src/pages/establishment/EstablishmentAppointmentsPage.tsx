@@ -22,8 +22,10 @@ import {
   Building2,
   XCircle,
   Filter,
+  X,
 } from 'lucide-react';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
+import { ServiceLogo } from '@/components/shared/ServiceLogo';
 import {
   getBrasiliaToday,
   formatBrasiliaDate,
@@ -684,10 +686,13 @@ export default function EstablishmentAppointmentsPage() {
 
                       {/* Informações do Serviço */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">
-                            {apt.service}
-                          </span>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <ServiceLogo category={apt.serviceCategory} name={apt.service} size="sm" showBadge={true} />
+                            <span className="font-extrabold text-neutral-900 dark:text-[#E3E3E3] text-base">
+                              {apt.service}
+                            </span>
+                          </div>
                           <Badge variant={status.badge}>{status.label}</Badge>
                         </div>
 
@@ -805,8 +810,8 @@ export default function EstablishmentAppointmentsPage() {
                       </Button>
                     )}
                     {apt.status === 'COMPLETED' && (
-                      <span className="text-xs font-semibold text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-green-200 dark:border-emerald-800/50">
-                        ✓ Atendimento Concluído
+                      <span className="text-xs font-semibold text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-green-200 dark:border-emerald-800/50 inline-flex items-center gap-1">
+                        <CheckCircle size={12} /> Atendimento Concluído
                       </span>
                     )}
                     {apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED' && (
@@ -842,7 +847,7 @@ export default function EstablishmentAppointmentsPage() {
                 onClick={() => setSelectedApt(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F] transition-colors cursor-pointer"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -916,9 +921,12 @@ export default function EstablishmentAppointmentsPage() {
               <div className="p-4 rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-2">
                 <p className="text-xs font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider">Serviço Solicitado</p>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm">{selectedApt.service}</h4>
-                    <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Duração prevista: {selectedApt.duration} minutos</p>
+                  <div className="flex items-center gap-2.5">
+                    <ServiceLogo category={selectedApt.serviceCategory} name={selectedApt.service} size="sm" showBadge={true} />
+                    <div>
+                      <h4 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-sm">{selectedApt.service}</h4>
+                      <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Duração prevista: {selectedApt.duration} minutos</p>
+                    </div>
                   </div>
                   <span className="text-base font-black text-green-700 dark:text-emerald-400">
                     R$ {Number(selectedApt.price ?? 0).toFixed(2).replace('.', ',')}

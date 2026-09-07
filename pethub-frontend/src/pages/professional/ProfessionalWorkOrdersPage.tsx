@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardList, FileText, Search } from 'lucide-react';
+import { ClipboardList, FileText, Search, CheckCircle2, Clock } from 'lucide-react';
 import { Button, Badge, Input, Modal, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 
@@ -125,8 +125,8 @@ export default function ProfessionalWorkOrdersPage() {
                       R$ {o.value.toFixed(2).replace('.', ',')}
                     </td>
                     <td className="py-3.5 px-4">
-                      {o.status === 'DONE' && <Badge variant="success">✓ Finalizada</Badge>}
-                      {o.status === 'IN_PROGRESS' && <Badge variant="warning">⏳ Em Andamento</Badge>}
+                      {o.status === 'DONE' && <Badge variant="success" className="inline-flex items-center gap-1"><CheckCircle2 size={11} /> Finalizada</Badge>}
+                      {o.status === 'IN_PROGRESS' && <Badge variant="warning" className="inline-flex items-center gap-1"><Clock size={11} /> Em Andamento</Badge>}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <Button

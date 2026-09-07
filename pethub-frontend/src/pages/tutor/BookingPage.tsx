@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ArrowLeft, Calendar as CalendarIcon, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Calendar as CalendarIcon, Clock, MapPin, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button, Stepper } from '@/components/ui';
 import type { Pet, EstablishmentProfile, Service } from '@/types';
 import { getBrasiliaToday, addDaysToDate, formatBrasiliaDate } from '@/utils/date';
+import { 
+  isPetCompatibleWithService, 
+  isPetCompatibleWithProvider, 
+  getSpeciesInfo, 
+  getAnimalTypeLabel, 
+  formatAcceptedSpeciesBadges 
+} from '@/utils/species';
+import { ServiceLogo } from '@/components/shared/ServiceLogo';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
+import { PaymentMethodSelector } from '@/components/shared/PaymentMethodSelector';
 
 const steps = [
   { id: 1, label: 'Pet' },
@@ -23,6 +33,13 @@ export default function BookingPage() {
   const toast = useToast();
   const { currentStep, setCurrentStep, reset, ...store } = useBookingStore();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Payment & Cashback state
+  const [paymentMethod, setPaymentMethod] = useState<string>('Cartão de Débito');
+  const [needsChange, setNeedsChange] = useState<boolean>(false);
+  const [changeFor, setChangeFor] = useState<string>('');
+  const [appliedCashbackCode, setAppliedCashbackCode] = useState<string | null>(null);
+  const [cashbackDiscount, setCashbackDiscount] = useState<number>(0);
 
   const [myPets, setMyPets] = useState<any[]>([]);
   const [availableEsts, setAvailableEsts] = useState<any[]>([]);
@@ -110,6 +127,7 @@ export default function BookingPage() {
           rating: e.rating || 4.5,
           reviewCount: e.reviewCount || 10,
           isApproved: true,
+          acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
         }));
         setAvailableEsts(mappedEsts);
         
@@ -144,13 +162,40 @@ export default function BookingPage() {
 
   const handleConfirm = async () => {
     if (isLoading) return;
-    setIsLoading(true);
-    try {
-      if (!store.selectedPet || !store.selectedService || !store.selectedEstablishment || !store.selectedDate || !store.selectedTime) {
-        toast.error('Dados incompletos para agendamento. Verifique pet, serviço, data e horário.');
+
+    if (!store.selectedPet || !store.selectedService || !store.selectedEstablishment || !store.selectedDate || !store.selectedTime) {
+      toast.error('Dados incompletos para agendamento. Verifique pet, serviço, data e horário.');
+      return;
+    }
+
+    // Strict Compatibility Check
+    const estSpecies = (store.selectedEstablishment as any).acceptedSpecies || [];
+    if (!isPetCompatibleWithProvider(store.selectedPet.species, estSpecies)) {
+      toast.error(`Incompatibilidade: o estabelecimento "${store.selectedEstablishment.businessName}" não atende a espécie ${getSpeciesInfo(store.selectedPet.species).label}.`);
+      return;
+    }
+
+    if (!isPetCompatibleWithService(store.selectedPet.species, (store.selectedService as any).animalType)) {
+      toast.error(`Incompatibilidade: este serviço é exclusivo para ${getAnimalTypeLabel((store.selectedService as any).animalType)}.`);
+      return;
+    }
+
+    const servicePrice = store.selectedService.price || 0;
+    const finalAmount = Math.max(0, Math.round((servicePrice - cashbackDiscount) * 100) / 100);
+
+    const isCash = paymentMethod.toLowerCase().includes('dinheiro') || paymentMethod.toUpperCase() === 'CASH';
+    let parsedChangeFor: number | null = null;
+    if (isCash && needsChange) {
+      const cleanChange = changeFor.replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
+      parsedChangeFor = parseFloat(cleanChange);
+      if (isNaN(parsedChangeFor) || parsedChangeFor < finalAmount) {
+        toast.error(`O valor para troco deve ser maior ou igual ao total a pagar (R$ ${finalAmount.toFixed(2).replace('.', ',')}).`);
         return;
       }
-      
+    }
+
+    setIsLoading(true);
+    try {
       const provider = store.selectedEstablishment as any;
       const isProf = provider?.role === 'PROFESSIONAL' || !!store.selectedProfessional;
       const profId = (store.selectedProfessional as any)?.userId || store.selectedProfessional?.id || (isProf ? (provider?.userId || provider?.id) : undefined);
@@ -161,6 +206,10 @@ export default function BookingPage() {
         establishmentId: provider?.userId || provider?.id,
         professionalId: profId,
         date: `${store.selectedDate}T${store.selectedTime || '09:00'}:00.000Z`,
+        paymentMethod,
+        needsChange: isCash ? needsChange : false,
+        changeFor: parsedChangeFor,
+        cashbackCode: appliedCashbackCode || null,
       };
 
       await api.post('/appointments', payload);
@@ -185,10 +234,55 @@ export default function BookingPage() {
     }
   };
 
-  // Selectors
-  const selectPet = (pet: Pet) => { store.setSelectedPet(pet); handleNext(); };
-  const selectEst = (est: EstablishmentProfile) => { store.setSelectedEstablishment(est); handleNext(); };
-  const selectSvc = (svc: Service) => { store.setSelectedService(svc); handleNext(); };
+  // Selectors with strict compatibility handling
+  const selectPet = (pet: Pet) => {
+    store.setSelectedPet(pet);
+    // If establishment was previously chosen and is incompatible, reset it
+    if (store.selectedEstablishment) {
+      const estSpecies = (store.selectedEstablishment as any).acceptedSpecies || [];
+      if (!isPetCompatibleWithProvider(pet.species, estSpecies)) {
+        store.setSelectedEstablishment(null as any);
+        store.setSelectedService(null as any);
+        toast.error(`O local selecionado anteriormente não atende ${getSpeciesInfo(pet.species).label}. Escolha um local compatível.`);
+      }
+    }
+    // If service was previously chosen and is incompatible, reset it
+    if (store.selectedService) {
+      if (!isPetCompatibleWithService(pet.species, (store.selectedService as any).animalType)) {
+        store.setSelectedService(null as any);
+        toast.error(`O serviço selecionado anteriormente não é compatível com ${getSpeciesInfo(pet.species).label}.`);
+      }
+    }
+    handleNext();
+  };
+
+  const selectEst = (est: EstablishmentProfile) => {
+    if (store.selectedPet) {
+      const isCompat = isPetCompatibleWithProvider(store.selectedPet.species, (est as any).acceptedSpecies);
+      if (!isCompat) {
+        toast.error(`Este estabelecimento não realiza atendimentos para ${getSpeciesInfo(store.selectedPet.species).label}.`);
+        return;
+      }
+    }
+    store.setSelectedEstablishment(est);
+    // Reset service if it doesn't belong to the newly selected establishment
+    if (store.selectedService && (store.selectedService as any).establishmentId !== est.id && (store.selectedService as any).professionalId !== est.id) {
+      store.setSelectedService(null as any);
+    }
+    handleNext();
+  };
+
+  const selectSvc = (svc: Service) => {
+    if (store.selectedPet) {
+      const isCompat = isPetCompatibleWithService(store.selectedPet.species, (svc as any).animalType);
+      if (!isCompat) {
+        toast.error(`Este serviço é exclusivo para ${getAnimalTypeLabel((svc as any).animalType)}.`);
+        return;
+      }
+    }
+    store.setSelectedService(svc);
+    handleNext();
+  };
 
   // Validation
   const canProceedDate = !!store.selectedDate && !!store.selectedTime;
@@ -242,26 +336,50 @@ export default function BookingPage() {
           {/* STEP 2: ESTABLISHMENT */}
           {currentStep === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Onde deseja agendar?</h2>
+              <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Onde deseja agendar?</h2>
+              {store.selectedPet && (
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F] mb-4">
+                  Mostrando locais compatíveis com seu pet: <strong className="text-orange-600 dark:text-orange-400">{store.selectedPet.name} ({getSpeciesInfo(store.selectedPet.species).label})</strong>
+                </p>
+              )}
               <div className="space-y-3">
-                {availableEsts.map((est) => (
-                  <button
-                    key={est.id}
-                    onClick={() => selectEst(est)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                      store.selectedEstablishment?.id === est.id
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                        : 'border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-orange-200 dark:hover:border-orange-500/50'
-                    }`}
-                  >
-                    <img src={est.cover} alt={est.businessName} className="w-14 h-14 rounded-xl object-cover" />
-                    <div className="flex-1 text-left">
-                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{est.businessName}</p>
-                      <p className="text-sm text-neutral-500 dark:text-[#8E918F] truncate">{est.address.neighborhood}</p>
-                    </div>
-                    {store.selectedEstablishment?.id === est.id && <CheckCircle2 className="text-orange-500" />}
-                  </button>
-                ))}
+                {availableEsts.map((est) => {
+                  const isCompatible = !store.selectedPet || isPetCompatibleWithProvider(store.selectedPet.species, est.acceptedSpecies);
+                  const petInfo = store.selectedPet ? getSpeciesInfo(store.selectedPet.species) : null;
+
+                  return (
+                    <button
+                      key={est.id}
+                      onClick={() => isCompatible && selectEst(est)}
+                      disabled={!isCompatible}
+                      className={`w-full flex items-start gap-4 p-4 rounded-2xl border-2 transition-all ${
+                        !isCompatible
+                          ? 'opacity-60 bg-neutral-50 dark:bg-[#1E1F20]/40 border-neutral-200 dark:border-[#313335] cursor-not-allowed text-left'
+                          : store.selectedEstablishment?.id === est.id
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 cursor-pointer text-left'
+                            : 'border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-orange-200 dark:hover:border-orange-500/50 cursor-pointer text-left'
+                      }`}
+                    >
+                      <img src={est.cover} alt={est.businessName} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{est.businessName}</p>
+                          {store.selectedEstablishment?.id === est.id && isCompatible && <CheckCircle2 className="text-orange-500 shrink-0" />}
+                        </div>
+                        <p className="text-sm text-neutral-500 dark:text-[#8E918F] truncate">{est.address.neighborhood}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1 truncate">
+                          Atende: {formatAcceptedSpeciesBadges(est.acceptedSpecies)}
+                        </p>
+                        {!isCompatible && petInfo && (
+                          <div className="mt-2 p-1.5 px-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 rounded-lg text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5">
+                            <AlertTriangle size={13} className="shrink-0 text-red-500" />
+                            <span>Este estabelecimento não realiza atendimentos para {petInfo.label.toLowerCase()}s</span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -269,34 +387,64 @@ export default function BookingPage() {
           {/* STEP 3: SERVICE */}
           {currentStep === 3 && (
             <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Escolha o serviço</h2>
+              <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">Escolha o serviço</h2>
+              {store.selectedPet && (
+                <p className="text-xs text-neutral-500 dark:text-[#8E918F] mb-4">
+                  Atendimento para: <strong className="text-orange-600 dark:text-orange-400">{store.selectedPet.name} ({getSpeciesInfo(store.selectedPet.species).label})</strong>
+                </p>
+              )}
               {availableServices.length === 0 ? (
                 <div className="bg-neutral-50 dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-2xl p-6 text-center">
                   <p className="text-neutral-500 dark:text-[#8E918F] font-medium">Este estabelecimento ainda não possui serviços cadastrados.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {availableServices.map((svc) => (
-                    <button
-                      key={svc.id}
-                      onClick={() => selectSvc(svc)}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                        store.selectedService?.id === svc.id
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                          : 'border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-orange-200 dark:hover:border-orange-500/50'
-                      }`}
-                    >
-                      <div className="flex-1 text-left pr-4">
-                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{svc.name}</p>
-                        <p className="text-sm text-neutral-500 dark:text-[#8E918F] mt-1 line-clamp-2">{svc.description}</p>
-                        <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-2">⏱ {svc.duration} min</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-orange-600 dark:text-orange-400">R${svc.price.toFixed(2)}</p>
-                        {store.selectedService?.id === svc.id && <CheckCircle2 className="inline-block mt-2 text-orange-500" />}
-                      </div>
-                    </button>
-                  ))}
+                  {availableServices.map((svc) => {
+                    const isCompatible = !store.selectedPet || isPetCompatibleWithService(store.selectedPet.species, svc.animalType);
+                    const petInfo = store.selectedPet ? getSpeciesInfo(store.selectedPet.species) : null;
+                    const typeLabel = getAnimalTypeLabel(svc.animalType);
+
+                    return (
+                      <button
+                        key={svc.id}
+                        onClick={() => isCompatible && selectSvc(svc)}
+                        disabled={!isCompatible}
+                        className={`w-full flex items-start justify-between p-4 rounded-2xl border-2 transition-all ${
+                          !isCompatible
+                            ? 'opacity-60 bg-neutral-50 dark:bg-[#1E1F20]/40 border-neutral-200 dark:border-[#313335] cursor-not-allowed text-left'
+                            : store.selectedService?.id === svc.id
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 cursor-pointer text-left'
+                              : 'border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-orange-200 dark:hover:border-orange-500/50 cursor-pointer text-left'
+                        }`}
+                      >
+                        <div className="flex-1 text-left pr-4">
+                          <div className="flex items-center gap-2.5 mb-1">
+                            <ServiceLogo category={svc.category} name={svc.name} size="sm" showBadge={true} />
+                            <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{svc.name}</p>
+                          </div>
+                          <p className="text-sm text-neutral-500 dark:text-[#8E918F] mt-1 line-clamp-2">{svc.description}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-xs text-neutral-400 dark:text-[#8E918F] flex items-center gap-1">
+                              <Clock size={12} /> {svc.duration} min
+                            </span>
+                            <span className="text-xs font-medium text-neutral-600 dark:text-[#C4C7C5] bg-neutral-100 dark:bg-[#282A2C] px-2 py-0.5 rounded-full">
+                              Para: {typeLabel}
+                            </span>
+                          </div>
+                          {!isCompatible && petInfo && (
+                            <div className="mt-2 p-1.5 px-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 rounded-lg text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5">
+                              <AlertTriangle size={13} className="shrink-0 text-red-500" />
+                              <span>Este serviço é exclusivo para {typeLabel} (incompatível com {petInfo.label})</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-orange-600 dark:text-orange-400">R${svc.price.toFixed(2)}</p>
+                          {store.selectedService?.id === svc.id && isCompatible && <CheckCircle2 className="inline-block mt-2 text-orange-500" />}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -372,51 +520,109 @@ export default function BookingPage() {
           )}
 
           {/* STEP 5: REVIEW */}
-          {currentStep === 5 && (
-            <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Revisar agendamento</h2>
-              
-              <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden mb-6">
-                <div className="p-4 border-b border-neutral-100 dark:border-[#313335] flex items-center gap-4">
-                  <img src={store.selectedPet?.photo || '/fallback-dog.png'} alt="" className="w-12 h-12 rounded-full object-cover" />
-                  <div>
-                    <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{store.selectedPet?.name}</p>
-                    <p className="text-sm text-neutral-500 dark:text-[#8E918F]">{store.selectedPet?.breed}</p>
-                  </div>
-                </div>
-                <div className="p-4 border-b border-neutral-100 dark:border-[#313335]">
-                  <div className="flex items-start justify-between mb-1">
-                    <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{store.selectedService?.name}</p>
-                    <p className="font-bold text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</p>
-                  </div>
-                  <p className="text-sm text-neutral-500 dark:text-[#8E918F] mb-4">{store.selectedEstablishment?.businessName}</p>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
-                      <CalendarIcon size={16} className="text-neutral-400 dark:text-[#8E918F]" />
-                      <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">
-                        {formatBrasiliaDate(store.selectedDate)}
-                      </span>
-                    </div>
-                    <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
-                      <Clock size={16} className="text-neutral-400 dark:text-[#8E918F]" />
-                      <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">{store.selectedTime}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border-t border-transparent dark:border-orange-900/40">
-                  <div className="flex items-center justify-between font-bold text-neutral-900 dark:text-[#E3E3E3]">
-                    <span>Total a pagar no local</span>
-                    <span className="text-lg text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
+          {currentStep === 5 && (() => {
+            const isEstCompat = !store.selectedPet || !store.selectedEstablishment || isPetCompatibleWithProvider(store.selectedPet.species, (store.selectedEstablishment as any).acceptedSpecies);
+            const isSvcCompat = !store.selectedPet || !store.selectedService || isPetCompatibleWithService(store.selectedPet.species, (store.selectedService as any).animalType);
+            const canConfirm = isEstCompat && isSvcCompat && !isLoading;
 
-              <Button fullWidth size="lg" isLoading={isLoading} disabled={isLoading} onClick={handleConfirm}>
-                {isLoading ? 'Confirmando Agendamento...' : 'Confirmar Agendamento'}
-              </Button>
-            </motion.div>
-          )}
+            return (
+              <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-4">Revisar agendamento</h2>
+
+                {!isEstCompat && store.selectedPet && store.selectedEstablishment && (
+                  <div className="mb-4 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-700 dark:text-red-300 text-xs flex items-start gap-2.5">
+                    <AlertCircle size={18} className="shrink-0 text-red-500 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold">Incompatibilidade de espécie com o estabelecimento:</strong>
+                      <span>O estabelecimento "{store.selectedEstablishment.businessName}" não atende a espécie {getSpeciesInfo(store.selectedPet.species).label}. Volte ao passo anterior e selecione um local compatível.</span>
+                    </div>
+                  </div>
+                )}
+
+                {!isSvcCompat && store.selectedPet && store.selectedService && (
+                  <div className="mb-4 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-700 dark:text-red-300 text-xs flex items-start gap-2.5">
+                    <AlertCircle size={18} className="shrink-0 text-red-500 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold">Incompatibilidade com o serviço selecionado:</strong>
+                      <span>O serviço "{store.selectedService.name}" é exclusivo para {getAnimalTypeLabel((store.selectedService as any).animalType)} e não pode ser realizado para seu pet ({getSpeciesInfo(store.selectedPet.species).label}).</span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] overflow-hidden mb-6">
+                  <div className="p-4 border-b border-neutral-100 dark:border-[#313335] flex items-center gap-4">
+                    <img src={store.selectedPet?.photo || '/fallback-dog.png'} alt="" className="w-12 h-12 rounded-full object-cover" />
+                    <div>
+                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{store.selectedPet?.name}</p>
+                      <p className="text-sm text-neutral-500 dark:text-[#8E918F]">{store.selectedPet?.breed} ({getSpeciesInfo(store.selectedPet?.species).label})</p>
+                    </div>
+                  </div>
+                  <div className="p-4 border-b border-neutral-100 dark:border-[#313335]">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex items-center gap-2.5">
+                        <ServiceLogo 
+                          category={store.selectedService?.category} 
+                          name={store.selectedService?.name} 
+                          size="sm" 
+                          showBadge={true} 
+                        />
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{store.selectedService?.name}</p>
+                      </div>
+                      <p className="font-bold text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</p>
+                    </div>
+                    <p className="text-sm text-neutral-500 dark:text-[#8E918F] mb-4">{store.selectedEstablishment?.businessName}</p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
+                        <CalendarIcon size={16} className="text-neutral-400 dark:text-[#8E918F]" />
+                        <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">
+                          {formatBrasiliaDate(store.selectedDate)}
+                        </span>
+                      </div>
+                      <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
+                        <Clock size={16} className="text-neutral-400 dark:text-[#8E918F]" />
+                        <span className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">{store.selectedTime}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border-t border-transparent dark:border-orange-900/40">
+                    <div className="flex items-center justify-between font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                      <span className="flex items-center gap-2">
+                        <PaymentLogo method={paymentMethod} size="xs" />
+                        <span>Valor do Serviço</span>
+                      </span>
+                      <span className="text-lg text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Unified Payment Method & Cashback Selector */}
+                <div className="mb-6">
+                  <PaymentMethodSelector
+                    type="SERVICE"
+                    subtotal={store.selectedService?.price || 0}
+                    selectedMethod={paymentMethod}
+                    onSelectMethod={setPaymentMethod}
+                    needsChange={needsChange}
+                    onToggleNeedsChange={setNeedsChange}
+                    changeFor={changeFor}
+                    onChangeForChange={setChangeFor}
+                    appliedCashbackCode={appliedCashbackCode}
+                    cashbackDiscount={cashbackDiscount}
+                    onApplyCashback={(code, discount) => {
+                      setAppliedCashbackCode(code);
+                      setCashbackDiscount(discount);
+                    }}
+                    showBreakdown={true}
+                  />
+                </div>
+
+                <Button fullWidth size="lg" isLoading={isLoading} disabled={!canConfirm} onClick={handleConfirm}>
+                  {isLoading ? 'Confirmando Agendamento...' : 'Confirmar Agendamento'}
+                </Button>
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
       </div>
     </div>

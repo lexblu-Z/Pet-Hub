@@ -252,6 +252,7 @@ export const establishmentAreaController = {
       zipCode: z.string().optional(),
       phone: z.string().optional(),
       email: z.string().email().optional(),
+      acceptedSpecies: z.array(z.string()).optional(),
     });
 
     const data = schema.parse(request.body);

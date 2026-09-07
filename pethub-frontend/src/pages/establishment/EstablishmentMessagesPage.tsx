@@ -15,6 +15,7 @@ import {
   CheckCheck,
   Clock,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { Button, Modal, Badge, Avatar } from '@/components/ui';
 
 interface Participant {
@@ -416,7 +417,7 @@ export default function EstablishmentMessagesPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                     title="Conversar via WhatsApp"
                   >
-                    <Phone size={14} />
+                    <WhatsAppIcon size={16} />
                     <span className="hidden sm:inline">WhatsApp</span>
                   </button>
                 )}

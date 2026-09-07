@@ -1,8 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { Role, ApprovalStatus } from '@prisma/client';
+import { Role, ApprovalStatus, ReportStatus, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import bcrypt from 'bcrypt';
+import { logAdminAction } from '../utils/auditLogger';
 
 const statusSchema = z.object({
   status: z.nativeEnum(ApprovalStatus),
@@ -19,41 +20,259 @@ const adminCreateSchema = z.object({
 
 export const adminController = {
   async getDashboard(request: FastifyRequest, reply: FastifyReply) {
-    const totalUsers = await prisma.user.count();
-    const activeEstabs = await prisma.establishmentProfile.count({
-      where: { status: ApprovalStatus.ACTIVE },
-    });
-    const pendingEstabs = await prisma.establishmentProfile.count({
-      where: { status: ApprovalStatus.PENDING_APPROVAL },
-    });
-    const totalProfessionals = await prisma.professionalProfile.count();
-    const pendingProfessionals = await prisma.professionalProfile.count({
-      where: { status: ApprovalStatus.PENDING_APPROVAL },
-    });
-    const totalAppointments = await prisma.appointment.count();
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 
-    const completedAppointments = await prisma.appointment.findMany({
-      where: { status: 'COMPLETED' },
-      include: { service: true },
-    });
+    const [
+      totalUsers,
+      totalPets,
+      activeEstabs,
+      pendingEstabs,
+      totalProfessionals,
+      pendingProfessionals,
+      totalAppointments,
+      pendingReportsCount,
+      usersToday,
+      users7d,
+      users30d,
+      usersMonth,
+      appointmentsToday,
+      appointments7d,
+      appointments30d,
+      appointmentsMonth,
+      completedAppointments,
+      paidOrders,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.pet.count(),
+      prisma.establishmentProfile.count({ where: { status: ApprovalStatus.ACTIVE } }),
+      prisma.establishmentProfile.count({ where: { status: ApprovalStatus.PENDING_APPROVAL } }),
+      prisma.professionalProfile.count(),
+      prisma.professionalProfile.count({ where: { status: ApprovalStatus.PENDING_APPROVAL } }),
+      prisma.appointment.count(),
+      prisma.moderationReport.count({ where: { status: { in: [ReportStatus.NOVA, ReportStatus.EM_ANALISE] } } }),
+      prisma.user.count({ where: { createdAt: { gte: todayStart } } }),
+      prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
+      prisma.appointment.count({ where: { createdAt: { gte: todayStart } } }),
+      prisma.appointment.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      prisma.appointment.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.appointment.count({ where: { createdAt: { gte: monthStart } } }),
+      prisma.appointment.findMany({
+        where: { status: 'COMPLETED' },
+        include: { service: true },
+      }),
+      prisma.order.findMany({
+        where: { status: { in: ['PAID', 'DELIVERED', 'COMPLETED'] } },
+      }),
+    ]);
+
     const appRevenue = completedAppointments.reduce((sum, app) => sum + (app.service?.price || 0), 0);
-
-    const paidOrders = await prisma.order.findMany({
-      where: { status: { in: ['PAID', 'DELIVERED'] } },
-    });
     const orderRevenue = paidOrders.reduce((sum, ord) => sum + (ord.totalAmount || 0), 0);
-
     const revenue = appRevenue + orderRevenue;
+
+    const [topSpecies, recentAppointments] = await Promise.all([
+      prisma.pet.groupBy({
+        by: ['species'],
+        _count: { _all: true },
+        orderBy: { _count: { species: 'desc' } },
+        take: 5,
+      }),
+      prisma.appointment.findMany({
+        take: 5,
+        orderBy: { date: 'desc' },
+        include: {
+          tutor: { select: { name: true, avatar: true } },
+          pet: { select: { name: true, species: true } },
+          service: { select: { name: true, price: true } },
+          establishment: { select: { name: true } },
+        },
+      }),
+    ]);
 
     return reply.send({
       users: totalUsers,
+      pets: totalPets,
       activeEstablishments: activeEstabs,
       pendingEstablishments: pendingEstabs,
       professionals: totalProfessionals,
       pendingProfessionals,
       appointments: totalAppointments,
       revenue,
+      pendingReports: pendingReportsCount,
+      comparisons: {
+        users: {
+          today: usersToday,
+          last7Days: users7d,
+          last30Days: users30d,
+          currentMonth: usersMonth,
+        },
+        appointments: {
+          today: appointmentsToday,
+          last7Days: appointments7d,
+          last30Days: appointments30d,
+          currentMonth: appointmentsMonth,
+        },
+      },
+      rankings: {
+        topSpecies: topSpecies.map((s) => ({ species: s.species, count: s._count._all })),
+      },
+      recentAppointments: recentAppointments.map((a) => ({
+        id: a.id,
+        code: `#AGD-${a.id.slice(0, 6).toUpperCase()}`,
+        tutorName: a.tutor.name,
+        petName: a.pet.name,
+        serviceName: a.service?.name,
+        status: a.status,
+        date: a.date,
+        price: a.service?.price,
+      })),
     });
+  },
+
+  async getAlerts(request: FastifyRequest, reply: FastifyReply) {
+    const [pendingEstabs, pendingProfs, openReports, problemOrders] = await Promise.all([
+      prisma.establishmentProfile.count({ where: { status: ApprovalStatus.PENDING_APPROVAL } }),
+      prisma.professionalProfile.count({ where: { status: ApprovalStatus.PENDING_APPROVAL } }),
+      prisma.moderationReport.count({ where: { status: { in: [ReportStatus.NOVA, ReportStatus.EM_ANALISE] } } }),
+      prisma.order.count({ where: { status: 'CANCELLED' } }),
+    ]);
+
+    const alerts = [];
+
+    if (pendingEstabs > 0) {
+      alerts.push({
+        id: 'pending_establishments',
+        type: 'ESTABLISHMENT',
+        priority: 'ALTA',
+        title: 'Estabelecimentos aguardando aprovação',
+        count: pendingEstabs,
+        description: `${pendingEstabs} estabelecimento(s) solicitaram credenciamento e aguardam validação de documentos.`,
+        actionLabel: 'Avaliar estabelecimentos',
+        actionUrl: '/admin/estabelecimentos',
+      });
+    }
+
+    if (pendingProfs > 0) {
+      alerts.push({
+        id: 'pending_professionals',
+        type: 'PROFESSIONAL',
+        priority: 'ALTA',
+        title: 'Profissionais aguardando aprovação',
+        count: pendingProfs,
+        description: `${pendingProfs} profissional(is) autônomo(s) aguardam revisão de cadastro.`,
+        actionLabel: 'Avaliar profissionais',
+        actionUrl: '/admin/profissionais',
+      });
+    }
+
+    if (openReports > 0) {
+      alerts.push({
+        id: 'open_reports',
+        type: 'MODERATION',
+        priority: 'URGENTE',
+        title: 'Denúncias pendentes de moderação',
+        count: openReports,
+        description: `${openReports} denúncia(s) ativa(s) requerem intervenção ou parecer da moderação.`,
+        actionLabel: 'Analisar denúncias',
+        actionUrl: '/admin/moderacao',
+      });
+    }
+
+    if (problemOrders > 0) {
+      alerts.push({
+        id: 'problem_orders',
+        type: 'ORDER',
+        priority: 'MEDIA',
+        title: 'Pedidos cancelados / problemas',
+        count: problemOrders,
+        description: `${problemOrders} pedido(s) foram cancelados e podem demandar verificação de estorno.`,
+        actionLabel: 'Ver no financeiro',
+        actionUrl: '/admin/financeiro',
+      });
+    }
+
+    return reply.send(alerts);
+  },
+
+  async getPerformanceChart(request: FastifyRequest, reply: FastifyReply) {
+    const { period = '30d' } = request.query as any;
+    const now = new Date();
+    let days = 30;
+    if (period === '7d') days = 7;
+    else if (period === '30d') days = 30;
+    else if (period === '3m') days = 90;
+    else if (period === '6m') days = 180;
+    else if (period === '1y') days = 365;
+
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    const [users, appointments, orders] = await Promise.all([
+      prisma.user.findMany({
+        where: { createdAt: { gte: startDate } },
+        select: { createdAt: true },
+      }),
+      prisma.appointment.findMany({
+        where: { date: { gte: startDate } },
+        select: { date: true, status: true, service: { select: { price: true } } },
+      }),
+      prisma.order.findMany({
+        where: { createdAt: { gte: startDate }, status: { in: ['COMPLETED', 'DELIVERED'] } },
+        select: { createdAt: true, totalAmount: true },
+      }),
+    ]);
+
+    const pointsMap = new Map<string, { date: string; users: number; appointments: number; revenue: number }>();
+
+    const stepDays = days <= 30 ? 1 : days <= 90 ? 3 : 7;
+    for (let i = 0; i <= days; i += stepDays) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const key = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      if (!pointsMap.has(key)) {
+        pointsMap.set(key, { date: key, users: 0, appointments: 0, revenue: 0 });
+      }
+    }
+
+    users.forEach((u) => {
+      const key = u.createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const point = pointsMap.get(key);
+      if (point) point.users += 1;
+    });
+
+    appointments.forEach((a) => {
+      const key = a.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const point = pointsMap.get(key);
+      if (point) {
+        point.appointments += 1;
+        if (a.status === AppointmentStatus.COMPLETED) {
+          point.revenue += a.service?.price || 0;
+        }
+      }
+    });
+
+    orders.forEach((o) => {
+      const key = o.createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const point = pointsMap.get(key);
+      if (point) {
+        point.revenue += o.totalAmount || 0;
+      }
+    });
+
+    const data = Array.from(pointsMap.values()).map((p) => ({
+      ...p,
+      revenue: Number(p.revenue.toFixed(2)),
+    }));
+
+    return reply.send(data);
   },
 
   async listUsers(request: FastifyRequest, reply: FastifyReply) {

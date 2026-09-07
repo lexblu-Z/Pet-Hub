@@ -100,24 +100,32 @@ export interface AdminProfile extends User {
 export type PetSpecies = 'dog' | 'cat' | 'bird' | 'rabbit' | 'other';
 export type PetSex = 'male' | 'female';
 
+export interface PetVaccineItem {
+  name: string;
+  date?: string | null;
+}
+
 export interface Pet {
   id: string;
   tutorId: string;
   name: string;
   species: string;
-  breed?: string;
-  gender?: string;
+  breed?: string | null;
+  gender?: string | null;
   sex?: PetSex;
-  birthDate?: string;
-  approximateAge?: string;
-  vaccinationStatus?: 'UP_TO_DATE' | 'PENDING' | 'UNKNOWN' | string;
-  weight?: number;
-  photo?: string;
-  microchip?: string;
-  notes?: string;
+  birthDate?: string | null;
+  approximateAge?: string | null;
+  vaccinationStatus?: 'UP_TO_DATE' | 'PENDING' | 'UNCERTAIN' | 'UNKNOWN' | string | null;
+  weight?: number | null;
+  photo?: string | null;
+  microchip?: string | null;
+  notes?: string | null;
+  behaviorNotes?: string | null;
+  specialCareNotes?: string | null;
   allergies?: string[];
   medications?: string[];
-  isNeutered?: boolean;
+  isNeutered?: boolean | null;
+  vaccines?: PetVaccineItem[];
 }
 
 // Vaccine types

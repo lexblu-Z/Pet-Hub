@@ -243,7 +243,7 @@ export default function PreferencesPage() {
           <span className="flex items-center gap-2"><Globe size={14} /> Idioma</span>
         </h2>
         <div className="space-y-2">
-          {([['pt-BR', '🇧🇷  Português (Brasil)'], ['en', '🇺🇸  English']] as const).map(([val, label]) => (
+          {([['pt-BR', 'Português (Brasil)', 'PT-BR'], ['en', 'English', 'EN']] as const).map(([val, label, tag]) => (
             <button
               key={val}
               onClick={() => handleLanguageChange(val)}
@@ -253,7 +253,12 @@ export default function PreferencesPage() {
                   : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#E3E3E3] hover:border-neutral-300 dark:hover:border-[#444746]'
               }`}
             >
-              <span>{label}</span>
+              <span className="flex items-center gap-2.5">
+                <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-[#333538] text-neutral-600 dark:text-[#C4C7C5] font-mono">
+                  {tag}
+                </span>
+                <span>{label}</span>
+              </span>
               {language === val && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />}
             </button>
           ))}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Star, Calendar, ChevronRight, PawPrint, Dog, Cat, Heart, Bone, Stethoscope, DollarSign, ArrowDown } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Star, Calendar, ChevronRight, PawPrint, Dog, Cat, Heart, Bone, Stethoscope, DollarSign, ArrowDown } from 'lucide-react';
 import { FluidText } from '../components/ui/FluidText';
 
 const fadeUp = {
@@ -157,7 +157,11 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <div className="text-sm">
-                  <div className="flex text-orange-400 text-xs mb-0.5">★★★★★</div>
+                  <div className="flex gap-0.5 text-amber-400 mb-0.5">
+                    {[...Array(5)].map((_, idx) => (
+                      <Star key={idx} size={12} className="fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
                   <p className="text-neutral-500 font-medium">XxX tutores satisfeitos</p>
                 </div>
               </motion.div>
@@ -184,8 +188,9 @@ export default function LandingPage() {
                     <h3 className="text-white font-bold text-xl">Thor</h3>
                     <p className="text-neutral-400 text-sm">Golden Retriever · 3 anos</p>
                   </div>
-                  <div className="ml-auto px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold flex items-center gap-1 border border-green-500/30">
-                    ✓ Vacinas em dia
+                  <div className="ml-auto px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold flex items-center gap-1.5 border border-green-500/30">
+                    <CheckCircle2 size={12} />
+                    Vacinas em dia
                   </div>
                 </div>
 
@@ -334,8 +339,10 @@ export default function LandingPage() {
                 transition={{ delay: i * 0.15, type: 'spring', stiffness: 50 }}
                 className="bg-white rounded-3xl p-8 shadow-sm border border-neutral-100"
               >
-                <div className="flex text-amber-400 mb-4">
-                  {'★'.repeat(t.stars)}
+                <div className="flex gap-1 text-amber-400 mb-4">
+                  {[...Array(t.stars)].map((_, sIdx) => (
+                    <Star key={sIdx} size={16} className="fill-amber-400 text-amber-400" />
+                  ))}
                 </div>
                 <p className="text-neutral-600 mb-8 italic leading-relaxed">"{t.text}"</p>
                 <div className="flex items-center gap-4">
@@ -363,7 +370,9 @@ export default function LandingPage() {
           transition={{ duration: 0.8 }}
           className="relative max-w-3xl mx-auto px-4 text-center"
         >
-          <p className="text-6xl mb-6">🐾</p>
+          <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-orange-500/30">
+            <PawPrint size={40} className="text-white" />
+          </div>
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight">
             Pronto para cuidar melhor do seu pet?
           </h2>

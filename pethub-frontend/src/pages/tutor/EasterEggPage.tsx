@@ -16,6 +16,9 @@ import {
   Film,
   Camera,
   Grid,
+  ShieldAlert,
+  Eye,
+  PawPrint,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui';
@@ -152,9 +155,9 @@ export default function EasterEggPage() {
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base">🚫</span>
+                <ShieldAlert size={18} className="text-orange-500 shrink-0" />
                 <h1 className="text-base font-bold text-neutral-900 dark:text-white leading-tight">
-                  Easter Egg 🚫🚫🚫
+                  Galeria Secreta
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 uppercase tracking-wide">
                   Secreto
@@ -168,9 +171,9 @@ export default function EasterEggPage() {
 
           <button
             onClick={() => setShowUnlockModal(true)}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            Rever Pergunta 👀
+            <Eye size={14} /> Rever Pergunta
           </button>
         </div>
 
@@ -236,7 +239,9 @@ export default function EasterEggPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 p-8">
-            <p className="text-3xl mb-2">🐾</p>
+            <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-3 text-neutral-400">
+              <PawPrint size={24} />
+            </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
               Nenhum item nesta categoria
             </h3>
@@ -359,7 +364,7 @@ export default function EasterEggPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">🚫</span>
+                <ShieldAlert size={20} className="text-orange-400 shrink-0" />
                 <div>
                   <h3 className="text-sm font-bold text-white">
                     {activeItem.type === 'carousel'

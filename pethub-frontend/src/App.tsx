@@ -7,6 +7,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { TutorLayout } from '@/components/layout/TutorLayout';
 import { EstablishmentLayout } from '@/components/layout/EstablishmentLayout';
 import { ProfessionalLayout, AdminLayout } from '@/components/layout/OtherLayouts';
+import { LoginNotificationModal } from '@/components/shared/LoginNotificationModal';
 
 // Public Pages
 import LandingPage from '@/pages/LandingPage';
@@ -66,6 +67,13 @@ import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminEstablishmentsPage from '@/pages/admin/AdminEstablishmentsPage';
 import AdminProfessionalsPage from '@/pages/admin/AdminProfessionalsPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
+import AdminPetsPage from '@/pages/admin/AdminPetsPage';
+import AdminUniversalAppointmentsPage from '@/pages/admin/AdminUniversalAppointmentsPage';
+import AdminModerationPage from '@/pages/admin/AdminModerationPage';
+import AdminFinancialPage from '@/pages/admin/AdminFinancialPage';
+import AdminNotificationsPage from '@/pages/admin/AdminNotificationsPage';
+import AdminAuditLogPage from '@/pages/admin/AdminAuditLogPage';
+import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
   const { isAuthenticated, currentRole } = useAuthStore();
@@ -92,6 +100,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <LoginNotificationModal />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
@@ -137,6 +146,9 @@ export default function App() {
           <Route path="plans" element={<PlansPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="compras" element={<MyPurchasesPage />} />
+          <Route path="pedidos" element={<Navigate to="/tutor/compras" replace />} />
+          <Route path="minhas-compras" element={<Navigate to="/tutor/compras" replace />} />
+          <Route path="meus-pedidos" element={<Navigate to="/tutor/compras" replace />} />
           <Route path="pagamento" element={<PaymentMethodsPage />} />
           <Route path="seguranca" element={<SecurityPage />} />
           <Route path="preferencias" element={<PreferencesPage />} />
@@ -190,6 +202,13 @@ export default function App() {
           <Route path="profissionais" element={<AdminProfessionalsPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="users" element={<Navigate to="/admin/usuarios" replace />} />
+          <Route path="pets" element={<AdminPetsPage />} />
+          <Route path="agendamentos" element={<AdminUniversalAppointmentsPage />} />
+          <Route path="moderacao" element={<AdminModerationPage />} />
+          <Route path="financeiro" element={<AdminFinancialPage />} />
+          <Route path="notificacoes" element={<AdminNotificationsPage />} />
+          <Route path="auditoria" element={<AdminAuditLogPage />} />
+          <Route path="configuracoes" element={<AdminSettingsPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
 

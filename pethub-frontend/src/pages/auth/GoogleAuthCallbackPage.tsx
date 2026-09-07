@@ -49,7 +49,7 @@ export default function GoogleAuthCallbackPage() {
 
         const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
         login(token, user, frontRole);
-        toast.success(`Bem-vindo de volta, ${user.name}! 🐾`);
+        toast.success(`Bem-vindo de volta, ${user.name}!`);
         navigate(`/${frontRole}`);
       } catch (err: any) {
         console.error('Google callback error:', err);

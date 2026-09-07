@@ -1,18 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, Building2, MapPin, Search, Camera, Check, Upload, Trash2, Stethoscope, FileText, Sparkles, AlertTriangle } from 'lucide-react';
+import { PawPrint, User, Mail, Phone, Lock, ArrowRight, ArrowLeft, Building2, MapPin, Search, Camera, Check, Upload, Trash2, Stethoscope, FileText, Sparkles, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
 import { Input, Button, Progress } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
 import { formatPhone, validatePhone } from '@/utils/phone';
+import { formatCPF, formatDocumentAuto, validateCPF, validateDocument, normalizeDocument } from '@/utils/documentValidation';
+import { SPECIES_OPTIONS } from '@/utils/species';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 import type { UserRole } from '@/types';
 
 const roleOptions = [
-  { role: 'tutor' as UserRole, emoji: '🐾', title: 'Tutor', desc: 'Quero cuidar do meu pet e agendar serviços' },
-  { role: 'estabelecimento' as UserRole, emoji: '🏬', title: 'Estabelecimento', desc: 'Tenho um pet shop, clínica ou serviço pet' },
-  { role: 'profissional' as UserRole, emoji: '👨‍⚕️', title: 'Profissional', desc: 'Sou veterinário, tosador, adestrador ou passeador' },
+  { role: 'tutor' as UserRole, icon: PawPrint, title: 'Tutor', desc: 'Quero cuidar do meu pet e agendar serviços' },
+  { role: 'estabelecimento' as UserRole, icon: Building2, title: 'Estabelecimento', desc: 'Tenho um pet shop, clínica ou serviço pet' },
+  { role: 'profissional' as UserRole, icon: Stethoscope, title: 'Profissional', desc: 'Sou veterinário, tosador, adestrador ou passeador' },
 ];
 
 const establishmentTypes = [
@@ -64,6 +67,19 @@ export default function RegisterPage() {
   const [profSpecialty, setProfSpecialty] = useState(professionalSpecialties[0]);
   const [profBio, setProfBio] = useState('');
 
+  // Accepted species for Establishment & Professional
+  const [acceptedSpecies, setAcceptedSpecies] = useState<string[]>(['dog', 'cat']);
+
+  const handleToggleAcceptedSpecies = (speciesId: string) => {
+    setAcceptedSpecies(prev => {
+      if (prev.includes(speciesId)) {
+        return prev.filter(s => s !== speciesId);
+      } else {
+        return [...prev, speciesId];
+      }
+    });
+  };
+
   // STEP 3: Establishment Data
   const [businessName, setBusinessName] = useState('');
   const [establishmentType, setEstablishmentType] = useState('Pet shop');
@@ -89,6 +105,9 @@ export default function RegisterPage() {
   const [workplacePhoto, setWorkplacePhoto] = useState<string | null>(null);
   const [isUploadingWorkplacePhoto, setIsUploadingWorkplacePhoto] = useState(false);
   const workplacePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  // Mandatory Cashback Policy Terms Acceptance for Partners
+  const [acceptedCashbackTerms, setAcceptedCashbackTerms] = useState(false);
 
   // Email verification OTP modal states
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -234,12 +253,39 @@ export default function RegisterPage() {
         toast.error('Informe um e-mail válido (exemplo: usuario@email.com).');
         return;
       }
-      if (selectedRole !== 'tutor' && !document) {
-        toast.error(selectedRole === 'estabelecimento' ? 'O CNPJ/CPF é obrigatório.' : 'O CPF / Registro Profissional é obrigatório.');
-        return;
+      if (selectedRole === 'tutor') {
+        if (!document.trim()) {
+          toast.error('O CPF do tutor é obrigatório.');
+          return;
+        }
+        const docVal = validateCPF(document);
+        if (!docVal.isValid) {
+          toast.error(docVal.error || 'Informe um CPF válido.');
+          return;
+        }
+      } else if (selectedRole === 'profissional') {
+        if (!document.trim()) {
+          toast.error('O CPF do profissional é obrigatório.');
+          return;
+        }
+        const docVal = validateCPF(document);
+        if (!docVal.isValid) {
+          toast.error(docVal.error || 'Informe um CPF válido.');
+          return;
+        }
+      } else if (selectedRole === 'estabelecimento') {
+        if (!document.trim()) {
+          toast.error('O CNPJ ou CPF do responsável é obrigatório.');
+          return;
+        }
+        const docVal = validateDocument(document, 'auto');
+        if (!docVal.isValid) {
+          toast.error(docVal.error || 'Informe um CNPJ ou CPF válido.');
+          return;
+        }
       }
       if (password === '12345678') {
-        toast.error('Que senha merda (●\'◡\'●) 💩 Faz uma senha boa aí man!');
+        toast.error('Essa senha é muito comum. Por favor, escolha uma senha mais forte.');
         return;
       }
       if (password.length < 6) {
@@ -292,10 +338,18 @@ export default function RegisterPage() {
         toast.error('É obrigatório adicionar pelo menos 1 foto do estabelecimento para verificação.');
         return;
       }
+      if (!acceptedSpecies || acceptedSpecies.length === 0) {
+        toast.error('Selecione pelo menos uma espécie atendida pelo estabelecimento.');
+        return;
+      }
       handleRequestVerification();
     } else if (step === 3 && selectedRole === 'profissional') {
       if (!workplacePhoto) {
         toast.error('A foto do local de atendimento é obrigatória.');
+        return;
+      }
+      if (!acceptedSpecies || acceptedSpecies.length === 0) {
+        toast.error('Selecione pelo menos uma espécie que você atende.');
         return;
       }
       if (!cep || !street || !number || !neighborhood || !city || !state) {
@@ -347,7 +401,7 @@ export default function RegisterPage() {
         phone: phone.trim(),
         password,
         code: code || undefined,
-        document: document || undefined,
+        document: normalizeDocument(document) || undefined,
         role: roleMap[selectedRole] || 'TUTOR',
       };
 
@@ -370,6 +424,7 @@ export default function RegisterPage() {
         payload.businessPhone = phone;
         payload.businessEmail = email;
         payload.photos = establishmentPhotos;
+        payload.acceptedSpecies = acceptedSpecies;
       } else if (selectedRole === 'profissional') {
         payload.specialty = profSpecialty;
         payload.bio = profBio || undefined;
@@ -382,6 +437,15 @@ export default function RegisterPage() {
         payload.city = city || undefined;
         payload.state = state || undefined;
         payload.zipCode = cep || undefined;
+        payload.acceptedSpecies = acceptedSpecies;
+      }
+
+      if (selectedRole === 'estabelecimento' || selectedRole === 'profissional') {
+        if (!acceptedCashbackTerms) {
+          toast.error('É obrigatório aceitar os termos do programa de cashback universal (v1.0) para se cadastrar.');
+          return;
+        }
+        payload.acceptedCashbackTerms = true;
       }
 
       const response = await api.post('/auth/register', payload);
@@ -560,28 +624,33 @@ export default function RegisterPage() {
               <p className="text-neutral-500 dark:text-[#8E918F] mb-6">Selecione o perfil que melhor descreve você</p>
 
               <div className="space-y-3 mb-8">
-                {roleOptions.map((opt) => (
-                  <div
-                    key={opt.role}
-                    onClick={() => setSelectedRole(opt.role)}
-                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
-                      selectedRole === opt.role
-                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm'
-                        : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-neutral-300 dark:hover:border-neutral-600'
-                    }`}
-                  >
-                    <span className="text-3xl">{opt.emoji}</span>
-                    <div className="flex-1">
-                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{opt.title}</p>
-                      <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">{opt.desc}</p>
-                    </div>
-                    {selectedRole === opt.role && (
-                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                        <Check size={14} className="text-white" />
+                {roleOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <div
+                      key={opt.role}
+                      onClick={() => setSelectedRole(opt.role)}
+                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
+                        selectedRole === opt.role
+                          ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 shadow-sm'
+                          : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-neutral-300 dark:hover:border-neutral-600'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                        <Icon size={24} />
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div className="flex-1">
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{opt.title}</p>
+                        <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">{opt.desc}</p>
+                      </div>
+                      {selectedRole === opt.role && (
+                        <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+                          <Check size={14} className="text-white" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <Button fullWidth size="lg" onClick={handleNext} rightIcon={<ArrowRight size={18} />}>
@@ -611,7 +680,7 @@ export default function RegisterPage() {
 
               {selectedRole !== 'tutor' && (
                 <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl mb-6 flex items-start gap-3">
-                  <span className="text-xl">⏳</span>
+                  <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
                     Após o cadastro, a sua conta passará por uma análise administrativa antes de ter suas funcionalidades liberadas publicamente.
                   </p>
@@ -646,26 +715,65 @@ export default function RegisterPage() {
                   required
                 />
 
+                {selectedRole === 'tutor' && (
+                  <div>
+                    <Input
+                      label="CPF do Tutor *"
+                      value={document}
+                      onChange={(e) => setDocument(formatCPF(e.target.value))}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      required
+                    />
+                    {document.replace(/\D/g, '').length === 11 && !validateCPF(document).isValid && (
+                      <p className="text-[11px] text-red-500 font-medium mt-1">
+                        {validateCPF(document).error}
+                      </p>
+                    )}
+                    {document.replace(/\D/g, '').length > 0 && document.replace(/\D/g, '').length < 11 && (
+                      <p className="text-[11px] text-neutral-400 font-medium mt-1">
+                        Digite os 11 dígitos do CPF
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {selectedRole === 'estabelecimento' && (
-                  <Input
-                    label="CNPJ ou CPF do Responsável *"
-                    value={document}
-                    onChange={(e) => setDocument(e.target.value)}
-                    placeholder="00.000.000/0001-00"
-                    required
-                  />
+                  <div>
+                    <Input
+                      label="CNPJ ou CPF do Responsável *"
+                      value={document}
+                      onChange={(e) => setDocument(formatDocumentAuto(e.target.value))}
+                      placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                      maxLength={18}
+                      required
+                    />
+                    {document.replace(/\D/g, '').length >= 11 && !validateDocument(document, 'auto').isValid && (
+                      <p className="text-[11px] text-red-500 font-medium mt-1">
+                        {validateDocument(document, 'auto').error}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Professional Fields */}
                 {selectedRole === 'profissional' && (
                   <>
-                    <Input
-                      label="CPF / Registro Profissional (ex: CRMV) *"
-                      value={document}
-                      onChange={(e) => setDocument(e.target.value)}
-                      placeholder="000.000.000-00 ou CRMV-SP 12345"
-                      required
-                    />
+                    <div>
+                      <Input
+                        label="CPF do Profissional *"
+                        value={document}
+                        onChange={(e) => setDocument(formatCPF(e.target.value))}
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                        required
+                      />
+                      {document.replace(/\D/g, '').length === 11 && !validateCPF(document).isValid && (
+                        <p className="text-[11px] text-red-500 font-medium mt-1">
+                          {validateCPF(document).error}
+                        </p>
+                      )}
+                    </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
@@ -706,8 +814,8 @@ export default function RegisterPage() {
                 />
                 {password === '12345678' && (
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl text-xs space-y-1 animate-fade-in">
-                    <p className="font-bold text-amber-900 dark:text-amber-300">Que senha merda (●'◡'●) 💩</p>
-                    <p className="text-amber-800 dark:text-amber-400 font-medium">Faz uma senha boa aí man!</p>
+                    <p className="font-bold text-amber-900 dark:text-amber-300">Senha muito comum</p>
+                    <p className="text-amber-800 dark:text-amber-400 font-medium">Por favor, crie uma senha mais forte e segura.</p>
                   </div>
                 )}
                 <Input
@@ -886,6 +994,48 @@ export default function RegisterPage() {
                   </select>
                 </div>
 
+                {/* Accepted Species Selection */}
+                <div className="p-4 bg-white dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-2xl space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                      Quais tipos de animais seu estabelecimento atende? *
+                    </label>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                      Selecione todas as espécies que seu estabelecimento está apto a receber (mínimo 1)
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    {SPECIES_OPTIONS.map((opt) => {
+                      const isSelected = acceptedSpecies.includes(opt.id);
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handleToggleAcceptedSpecies(opt.id)}
+                          className={`flex items-center justify-between p-3 rounded-xl border text-sm font-medium transition-all ${
+                            isSelected
+                              ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-semibold shadow-sm'
+                              : 'bg-neutral-50 dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <SpeciesIcon speciesId={opt.id} size={16} className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-400'} />
+                            <span>{opt.label}</span>
+                          </span>
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+                            isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'border-neutral-300 dark:border-neutral-600'
+                          }`}>
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {acceptedSpecies.length === 0 && (
+                    <p className="text-xs text-red-500 font-medium">Selecione pelo menos 1 espécie atendida.</p>
+                  )}
+                </div>
+
                 {/* Mandatory Photos Section */}
                 <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
@@ -1037,6 +1187,25 @@ export default function RegisterPage() {
                     placeholder="Conte sobre os serviços, especialidades e diferenciais do seu pet shop ou clínica..."
                   />
                 </div>
+
+                {/* Mandatory Cashback Policy Terms Acceptance (v1.0) */}
+                <div className="p-4 bg-orange-50/60 dark:bg-[#282A2C] border border-orange-200/80 dark:border-[#313335] rounded-2xl space-y-2">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="cashback-terms-est"
+                      checked={acceptedCashbackTerms}
+                      onChange={(e) => setAcceptedCashbackTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <label htmlFor="cashback-terms-est" className="text-xs text-neutral-700 dark:text-[#C4C7C5] leading-relaxed cursor-pointer">
+                      <strong className="block text-neutral-900 dark:text-[#E3E3E3] font-bold mb-0.5">
+                        Termos do Programa de Cashback Universal PetHub (Versão 1.0) *
+                      </strong>
+                      Declaro que li e concordo com os Termos do Programa de Cashback Universal do PetHub (3% de cashback para tutores em compras de produtos e 5% em agendamentos de serviços, com liquidação e troco no ato do atendimento).
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <Button
@@ -1044,7 +1213,7 @@ export default function RegisterPage() {
                 size="lg"
                 onClick={handleNext}
                 isLoading={isLoading}
-                disabled={!!cityError || isCepLoading || isUploadingPhoto}
+                disabled={!!cityError || isCepLoading || isUploadingPhoto || !acceptedCashbackTerms}
                 rightIcon={<ArrowRight size={18} />}
               >
                 {isLoading ? 'Criando conta...' : 'Finalizar cadastro'}
@@ -1146,6 +1315,48 @@ export default function RegisterPage() {
                   )}
                 </div>
 
+                {/* Accepted Species Selection for Professional */}
+                <div className="p-4 bg-white dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-2xl space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                      Quais tipos de animais você atende? *
+                    </label>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                      Selecione todas as espécies com as quais você realiza atendimentos (mínimo 1)
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    {SPECIES_OPTIONS.map((opt) => {
+                      const isSelected = acceptedSpecies.includes(opt.id);
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handleToggleAcceptedSpecies(opt.id)}
+                          className={`flex items-center justify-between p-3 rounded-xl border text-sm font-medium transition-all ${
+                            isSelected
+                              ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-semibold shadow-sm'
+                              : 'bg-neutral-50 dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <SpeciesIcon speciesId={opt.id} size={16} className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-400'} />
+                            <span>{opt.label}</span>
+                          </span>
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+                            isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'border-neutral-300 dark:border-neutral-600'
+                          }`}>
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {acceptedSpecies.length === 0 && (
+                    <p className="text-xs text-red-500 font-medium">Selecione pelo menos 1 espécie atendida.</p>
+                  )}
+                </div>
+
                 {/* CEP with automatic lookup */}
                 <div className="relative">
                   <Input
@@ -1218,6 +1429,25 @@ export default function RegisterPage() {
                     />
                   </div>
                 </div>
+
+                {/* Mandatory Cashback Policy Terms Acceptance (v1.0) */}
+                <div className="p-4 bg-orange-50/60 dark:bg-[#282A2C] border border-orange-200/80 dark:border-[#313335] rounded-2xl space-y-2">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="cashback-terms-prof"
+                      checked={acceptedCashbackTerms}
+                      onChange={(e) => setAcceptedCashbackTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <label htmlFor="cashback-terms-prof" className="text-xs text-neutral-700 dark:text-[#C4C7C5] leading-relaxed cursor-pointer">
+                      <strong className="block text-neutral-900 dark:text-[#E3E3E3] font-bold mb-0.5">
+                        Termos do Programa de Cashback Universal PetHub (Versão 1.0) *
+                      </strong>
+                      Declaro que li e concordo com os Termos do Programa de Cashback Universal do PetHub (3% de cashback para tutores em compras de produtos e 5% em agendamentos de serviços, com liquidação e troco no ato do atendimento).
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <Button
@@ -1225,7 +1455,7 @@ export default function RegisterPage() {
                 size="lg"
                 onClick={handleNext}
                 isLoading={isLoading}
-                disabled={!workplacePhoto || isCepLoading || isUploadingWorkplacePhoto}
+                disabled={!workplacePhoto || isCepLoading || isUploadingWorkplacePhoto || !acceptedCashbackTerms}
                 rightIcon={<ArrowRight size={18} />}
               >
                 {isLoading ? 'Criando conta...' : 'Finalizar cadastro'}
@@ -1236,15 +1466,15 @@ export default function RegisterPage() {
           {/* STEP 4: Confirmation Screen */}
           {step === totalSteps && (
             <motion.div
-              key="confirmation"
-              initial={{ opacity: 0, scale: 0.9 }}
+              key="step4"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
               className="text-center"
             >
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl shadow-sm">
-                🎉
+              <div className="w-20 h-20 bg-green-100 dark:bg-emerald-950/40 text-green-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <CheckCircle2 size={40} />
               </div>
 
               {selectedRole === 'tutor' ? (
@@ -1264,7 +1494,7 @@ export default function RegisterPage() {
                   <div className="bg-neutral-50 dark:bg-[#282A2C] rounded-2xl p-5 mb-8 text-left space-y-3.5 border border-neutral-100 dark:border-[#313335]">
                     <div className="flex gap-3 items-start">
                       <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        ✓
+                        <Check size={13} />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Conta criada com sucesso</p>
@@ -1274,7 +1504,7 @@ export default function RegisterPage() {
 
                     <div className="flex gap-3 items-start">
                       <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        ⏳
+                        <Clock size={13} />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Aguardando aprovação</p>

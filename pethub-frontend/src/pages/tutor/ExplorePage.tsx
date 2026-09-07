@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { api } from '@/services/api';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe, Search, Droplets, Scissors, Stethoscope, Award, Home, Sparkles, Footprints, ShoppingBag, Heart, CheckCircle2, Wrench, Camera, Tag, Flag } from 'lucide-react';
 import { SearchBar, Badge, Rating, EmptyState } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
+import { formatAcceptedSpeciesBadges } from '@/utils/species';
+import { ReportModal } from '@/components/shared/ReportModal';
+import { ServiceLogo } from '@/components/shared/ServiceLogo';
 
 const categoryLabels: Record<string, string> = {
   banho: 'Banho', tosa: 'Tosa', veterinario: 'Veterinário',
@@ -30,15 +33,15 @@ export function ExplorePage() {
   const [favorites, setFavorites] = useState<string[]>(['est-1', 'est-3']);
 
   const categories = [
-    { id: 'all', label: 'Todos', emoji: '🔍' },
-    { id: 'banho', label: 'Banho', emoji: '🛁' },
-    { id: 'tosa', label: 'Tosa', emoji: '✂️' },
-    { id: 'veterinario', label: 'Veterinário', emoji: '🩺' },
-    { id: 'adestramento', label: 'Adestramento', emoji: '🐕' },
-    { id: 'hospedagem', label: 'Hospedagem', emoji: '🏡' },
-    { id: 'creche', label: 'Creche', emoji: '🎒' },
-    { id: 'passeio', label: 'Passeio', emoji: '🌳' },
-    { id: 'produtos', label: 'Produtos', emoji: '🛍️' },
+    { id: 'all', label: 'Todos', icon: Search },
+    { id: 'banho', label: 'Banho', icon: Droplets },
+    { id: 'tosa', label: 'Tosa', icon: Scissors },
+    { id: 'veterinario', label: 'Veterinário', icon: Stethoscope },
+    { id: 'adestramento', label: 'Adestramento', icon: Award },
+    { id: 'hospedagem', label: 'Hospedagem', icon: Home },
+    { id: 'creche', label: 'Creche', icon: Sparkles },
+    { id: 'passeio', label: 'Passeio', icon: Footprints },
+    { id: 'produtos', label: 'Produtos', icon: ShoppingBag },
   ];
 
   const [realEstablishments, setRealEstablishments] = useState<any[]>([]);
@@ -63,6 +66,7 @@ export function ExplorePage() {
           reviewCount: e.reviewCount || 15,
           isApproved: true,
           workingHours: e.workingHours || { saturday: { isOpen: true } },
+          acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
         }));
         setRealEstablishments(mapped);
       } catch (error) {
@@ -106,21 +110,24 @@ export function ExplorePage() {
 
       {/* Categories */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-6 -mx-4 px-4">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            className={[
-              'flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-all duration-200 border-2 shrink-0 cursor-pointer',
-              activeCategory === cat.id
-                ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
-                : 'bg-white dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#C4C7C5] hover:border-orange-200 dark:hover:border-orange-500/50',
-            ].join(' ')}
-          >
-            <span>{cat.emoji}</span>
-            {cat.label}
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const IconComponent = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={[
+                'flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-all duration-200 border-2 shrink-0 cursor-pointer',
+                activeCategory === cat.id
+                  ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                  : 'bg-white dark:bg-[#1E1F20] border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#C4C7C5] hover:border-orange-200 dark:hover:border-orange-500/50',
+              ].join(' ')}
+            >
+              <IconComponent size={15} className={activeCategory === cat.id ? 'text-white' : 'text-neutral-500 dark:text-[#8E918F]'} />
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Results */}
@@ -128,7 +135,7 @@ export function ExplorePage() {
 
       {filteredEstablishments.length === 0 ? (
         <EmptyState
-          emoji="🔍"
+          icon={<Search className="w-8 h-8 text-neutral-400 dark:text-[#8E918F]" />}
           title="Nenhum resultado encontrado"
           description="Tente uma busca diferente ou remova os filtros."
           action={{ label: 'Limpar filtros', onClick: () => { setSearch(''); setActiveCategory('all'); } }}
@@ -173,10 +180,11 @@ export function ExplorePage() {
                   onClick={(e) => toggleFavorite(est.id, e)}
                   className="absolute top-3 right-3 p-2 bg-black/40 backdrop-blur-sm rounded-xl text-white hover:bg-black/60 transition-colors"
                 >
-                  {favorites.includes(est.id) ? '❤️' : '🤍'}
+                  <Heart size={18} className={favorites.includes(est.id) ? "fill-red-500 text-red-500" : "text-white"} />
                 </button>
-                <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 text-white text-xs rounded-lg backdrop-blur-sm">
-                  {est.workingHours?.saturday?.isOpen !== false ? '🟢 Aberto' : '🔴 Fechado'}
+                <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 text-white text-xs rounded-lg backdrop-blur-sm flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${est.workingHours?.saturday?.isOpen !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <span>{est.workingHours?.saturday?.isOpen !== false ? 'Aberto' : 'Fechado'}</span>
                 </div>
               </div>
               <div className="p-4">
@@ -213,6 +221,10 @@ export function ExplorePage() {
                       : (est.address || 'Ourinhos, SP')} · 1,2 km
                   </span>
                 </div>
+                <div className="mt-2.5 pt-2 border-t border-neutral-100 dark:border-[#313335] flex items-center gap-1.5 text-xs text-neutral-600 dark:text-[#C4C7C5]">
+                  <span className="font-semibold text-neutral-500 dark:text-[#8E918F]">Animais atendidos:</span>
+                  <span className="font-medium text-neutral-800 dark:text-[#E3E3E3]">{formatAcceptedSpeciesBadges(est.acceptedSpecies)}</span>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -235,6 +247,7 @@ export function EstablishmentProfilePage() {
   const [est, setEst] = useState<any>(null);
   const [estServices, setEstServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -297,9 +310,9 @@ export function EstablishmentProfilePage() {
         </button>
         <button
           onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-4 right-4 p-2.5 bg-black/40 backdrop-blur-sm rounded-xl text-white hover:bg-black/60 transition-colors text-xl cursor-pointer"
+          className="absolute top-4 right-4 p-2.5 bg-black/40 backdrop-blur-sm rounded-xl text-white hover:bg-black/60 transition-colors cursor-pointer"
         >
-          {isFavorite ? '❤️' : '🤍'}
+          <Heart size={20} className={isFavorite ? "fill-red-500 text-red-500" : "text-white"} />
         </button>
       </div>
 
@@ -316,7 +329,17 @@ export function EstablishmentProfilePage() {
           <div className="pb-2 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] leading-tight truncate">{est.businessName}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-full font-medium">✓ Verificado</span>
+              <span className="text-xs px-2.5 py-0.5 bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 rounded-full font-medium inline-flex items-center gap-1">
+                <CheckCircle2 size={12} /> Verificado
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(true)}
+                className="text-xs px-2.5 py-0.5 text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                title="Denunciar perfil"
+              >
+                <Flag size={12} /> Denunciar
+              </button>
             </div>
           </div>
         </div>
@@ -330,7 +353,10 @@ export function EstablishmentProfilePage() {
             <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{est.reviewCount} avaliações</p>
           </div>
           <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] rounded-xl p-3">
-            <p className="text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] mb-1">{est.workingHours?.[weekdayNow]?.isOpen === false ? '🔴 Fechado' : '🟢 Aberto agora'}</p>
+            <p className="text-sm font-medium text-neutral-700 dark:text-[#E3E3E3] mb-1 flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${est.workingHours?.[weekdayNow]?.isOpen === false ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+              <span>{est.workingHours?.[weekdayNow]?.isOpen === false ? 'Fechado' : 'Aberto agora'}</span>
+            </p>
             <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{est.workingHours?.[weekdayNow]?.open ? `${est.workingHours[weekdayNow].open} - ${est.workingHours[weekdayNow].close}` : '08:00 - 18:00'}</p>
           </div>
         </div>
@@ -339,7 +365,12 @@ export function EstablishmentProfilePage() {
           <MapPin size={14} />
           <span>{typeof est.address === 'string' ? est.address : (est.address?.street ? `${est.address.street}, ${est.address.number || ''} · ${est.address.city || ''}` : `${est.city || 'Ourinhos'}, ${est.state || 'SP'}`)}</span>
         </div>
-        <p className="text-sm text-neutral-600 dark:text-[#C4C7C5] mb-4">{est.description || 'Estabelecimento parceiro dedicado aos melhores cuidados para o seu pet.'}</p>
+        <p className="text-sm text-neutral-600 dark:text-[#C4C7C5] mb-3">{est.description || 'Estabelecimento parceiro dedicado aos melhores cuidados para o seu pet.'}</p>
+
+        <div className="mb-4 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl flex items-center gap-2 text-xs border border-neutral-100 dark:border-[#313335]">
+          <span className="font-bold text-neutral-700 dark:text-[#E3E3E3]">Animais atendidos:</span>
+          <span className="text-neutral-600 dark:text-[#C4C7C5] font-medium">{formatAcceptedSpeciesBadges(est.acceptedSpecies || est.establishmentProfile?.acceptedSpecies)}</span>
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-neutral-100 dark:border-[#313335] overflow-x-auto scrollbar-hide -mx-4 px-4">
@@ -364,16 +395,19 @@ export function EstablishmentProfilePage() {
         {activeTab === 'servicos' && (
           <div className="space-y-3">
             {estServices.length === 0 ? (
-              <EmptyState emoji="🔧" title="Nenhum serviço cadastrado" />
+              <EmptyState icon={<Wrench className="w-8 h-8 text-neutral-400 dark:text-[#8E918F]" />} title="Nenhum serviço cadastrado" />
             ) : (
               estServices.map((svc) => (
                 <div key={svc.id} className="bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335] p-4 flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{svc.name}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <ServiceLogo category={svc.category} name={svc.name} size="sm" showBadge={true} />
+                      <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{svc.name}</p>
+                    </div>
                     <p className="text-sm text-neutral-400 dark:text-[#8E918F] mt-0.5 line-clamp-2">{svc.description}</p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-neutral-400 dark:text-[#8E918F]">
-                      <span>⏱ {svc.duration >= 60 ? `${Math.round(svc.duration / 60)}h` : `${svc.duration}min`}</span>
-                      <span className="capitalize">📂 {categoryLabels[svc.category] || svc.category}</span>
+                      <span className="flex items-center gap-1"><Clock size={12} /> {svc.duration >= 60 ? `${Math.round(svc.duration / 60)}h` : `${svc.duration}min`}</span>
+                      <span className="capitalize flex items-center gap-1"><Tag size={12} /> {categoryLabels[svc.category] || svc.category}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -394,7 +428,7 @@ export function EstablishmentProfilePage() {
         {activeTab === 'fotos' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {est.photos.length === 0 ? (
-              <EmptyState emoji="📷" title="Nenhuma foto" className="col-span-3" />
+              <EmptyState icon={<Camera className="w-8 h-8 text-neutral-400 dark:text-[#8E918F]" />} title="Nenhuma foto" className="col-span-3" />
             ) : (
               est.photos.map((photo, i) => (
                 <div key={i} className="aspect-square rounded-xl overflow-hidden bg-neutral-900">
@@ -412,7 +446,11 @@ export function EstablishmentProfilePage() {
               <div className="flex items-center gap-6">
                 <div className="text-center">
                   <p className="text-5xl font-bold text-neutral-900 dark:text-[#E3E3E3]">{est.rating}</p>
-                  <div className="flex text-amber-400 justify-center mt-1">{'★'.repeat(5)}</div>
+                  <div className="flex text-amber-400 justify-center mt-1 gap-0.5">
+                    {[...Array(5)].map((_, idx) => (
+                      <Star key={idx} size={14} className="fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
                   <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-1">{est.reviewCount} avaliações</p>
                 </div>
                 <div className="flex-1 space-y-1">
@@ -445,7 +483,11 @@ export function EstablishmentProfilePage() {
                     )}
                     <div>
                       <p className="font-medium text-sm text-neutral-900 dark:text-[#E3E3E3]">{rev.userName}</p>
-                      <div className="flex text-amber-400 text-xs">{'★'.repeat(rev.rating || 5)}</div>
+                      <div className="flex text-amber-400 text-xs gap-0.5 mt-0.5">
+                        {[...Array(rev.rating || 5)].map((_, idx) => (
+                          <Star key={idx} size={12} className="fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
                       {rev.date && (
                         <p className="text-xs text-neutral-400 dark:text-[#8E918F]">{new Date(rev.date).toLocaleDateString('pt-BR')}</p>
                       )}
@@ -507,6 +549,15 @@ export function EstablishmentProfilePage() {
           Agendar serviço no {est.businessName.split(' ')[0]}
         </button>
       </div>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="ESTABLISHMENT"
+        reportedEstablishmentId={est.id}
+        reportedUserId={est.userId}
+        targetName={est.businessName}
+      />
     </div>
   );
 }

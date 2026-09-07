@@ -84,7 +84,7 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
       const startIso = apt.date.includes('T') ? apt.date : `${apt.date}T${apt.time || '09:00'}:00`;
       return {
         id: `pethub-${apt.id}`,
-        summary: `🐾 ${apt.serviceName || 'Atendimento'} • ${apt.petName || 'Pet'}`,
+        summary: `${apt.serviceName || 'Atendimento'} • ${apt.petName || 'Pet'}`,
         description: `Estabelecimento: ${apt.establishmentName || 'PetHub'} | Status: ${apt.status}`,
         start: startIso,
         end: startIso,
@@ -347,14 +347,18 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                             {dayEvents.slice(0, 2).map((ev) => (
                               <div
                                 key={ev.id}
-                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md truncate ${
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md truncate flex items-center gap-1 ${
                                   ev.isPetHub
                                     ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-800 dark:text-orange-300'
                                     : 'bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300'
                                 }`}
                               >
-                                {ev.isPetHub ? '🐶 ' : '📅 '}
-                                {ev.summary}
+                                {ev.isPetHub ? (
+                                  <PawPrint size={10} className="shrink-0 text-orange-600" />
+                                ) : (
+                                  <CalendarIcon size={10} className="shrink-0 text-blue-600" />
+                                )}
+                                <span className="truncate">{ev.summary}</span>
                               </div>
                             ))}
                             {dayEvents.length > 2 && (
@@ -402,7 +406,11 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                             >
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-xs">{ev.isPetHub ? '🐶' : '📅'}</span>
+                                  {ev.isPetHub ? (
+                                    <PawPrint size={14} className="text-orange-500 shrink-0" />
+                                  ) : (
+                                    <CalendarIcon size={14} className="text-blue-500 shrink-0" />
+                                  )}
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                     ev.isPetHub ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'
                                   }`}>
@@ -482,7 +490,11 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                                 }`}
                               >
                                 <div className="flex items-center gap-1 font-bold text-[10px]">
-                                  <span>{ev.isPetHub ? '🐶' : '📅'}</span>
+                                  {ev.isPetHub ? (
+                                    <PawPrint size={11} className="text-orange-500 shrink-0" />
+                                  ) : (
+                                    <CalendarIcon size={11} className="text-blue-500 shrink-0" />
+                                  )}
                                   <span>
                                     {ev.start ? new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                                   </span>
@@ -534,7 +546,11 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
                         >
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-base">{ev.isPetHub ? '🐶' : '📅'}</span>
+                              {ev.isPetHub ? (
+                                <PawPrint size={16} className="text-orange-500 shrink-0" />
+                              ) : (
+                                <CalendarIcon size={16} className="text-blue-500 shrink-0" />
+                              )}
                               <span
                                 className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                                   ev.isPetHub ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'
@@ -587,10 +603,10 @@ export const GoogleCalendarViewModal: React.FC<GoogleCalendarViewModalProps> = (
         <div className="p-3 sm:p-4 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-200/80 dark:border-[#313335] flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-[#C4C7C5]">
-              <span className="w-3 h-3 rounded-full bg-orange-500 inline-block" /> 🐶 Agendamentos PetHub (Principal)
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" /> Agendamentos PetHub (Principal)
             </span>
             <span className="flex items-center gap-1.5 font-semibold text-neutral-700 dark:text-[#C4C7C5]">
-              <span className="w-3 h-3 rounded-full bg-blue-600 inline-block" /> 📅 Google Calendar
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" /> Google Calendar
             </span>
           </div>
 

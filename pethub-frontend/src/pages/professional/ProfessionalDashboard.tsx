@@ -10,7 +10,9 @@ import {
   AlertTriangle, 
   Stethoscope,
   CalendarDays,
-  User
+  User,
+  Pause,
+  CheckCircle2
 } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
@@ -131,13 +133,13 @@ export default function ProfessionalDashboard() {
           />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {userName} 👋</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {userName}</h1>
               {isSuspended ? (
-                <Badge variant="warning">⏸️ Suspenso</Badge>
+                <Badge variant="warning" className="inline-flex items-center gap-1"><Pause size={11} /> Suspenso</Badge>
               ) : isPendingApproval ? (
-                <Badge variant="default">⏳ Em Análise</Badge>
+                <Badge variant="default" className="inline-flex items-center gap-1"><Clock size={11} /> Em Análise</Badge>
               ) : (
-                <Badge variant="success">✓ Ativo</Badge>
+                <Badge variant="success" className="inline-flex items-center gap-1"><CheckCircle2 size={11} /> Ativo</Badge>
               )}
             </div>
             <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
@@ -281,7 +283,11 @@ export default function ProfessionalDashboard() {
                 <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
                   {data.averageRating.toFixed(1)}
                 </span>
-                <span className="text-xs text-neutral-400 dark:text-[#8E918F] font-medium ml-2">★★★★★</span>
+                <span className="inline-flex items-center text-amber-400 gap-0.5 ml-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={11} className="fill-amber-400 text-amber-400" />
+                  ))}
+                </span>
               </>
             ) : (
               <>

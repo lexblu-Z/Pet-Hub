@@ -14,6 +14,7 @@ model User {
   password                    String
   hasPassword                 Boolean               @default(false)
   phone                       String?
+  document                    String?
   role                        Role                  @default(TUTOR)
   createdAt                   DateTime              @default(now())
   updatedAt                   DateTime              @updatedAt
@@ -48,6 +49,12 @@ model User {
   conversationsAsP1           Conversation[]            @relation("ConversationParticipant1")
   conversationsAsP2           Conversation[]            @relation("ConversationParticipant2")
   messagesSent                Message[]
+  reportsCreated              ModerationReport[]        @relation("ReportsCreated")
+  reportsReceived             ModerationReport[]        @relation("ReportsReceived")
+  reportsResolved             ModerationReport[]        @relation("ReportsResolved")
+  adminAuditLogs              AdminAuditLog[]
+  termsAcceptances            TermsAcceptance[]
+  cashbackVouchers            CashbackVoucher[]
 }
 
 model Pet {
@@ -62,6 +69,10 @@ model Pet {
   vaccinationStatus String? @default("UNKNOWN")
   notes        String?
   photo        String?
+  isNeutered        Boolean?
+  behaviorNotes     String?
+  specialCareNotes  String?
+  vaccines          Json?         @default("[]")
   tutorId      String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -87,11 +98,13 @@ model EstablishmentProfile {
   email            String?
   workingHours     Json?
   photos           String[]
+  acceptedSpecies  String[]          @default([])
   rejectionReason  String?
   suspendedUntil   DateTime?
   suspensionReason String?
   suspendedAt      DateTime?
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportsReceived  ModerationReport[]
 }
 
 model ProfessionalProfile {
@@ -99,6 +112,7 @@ model ProfessionalProfile {
   userId           String         @unique
   specialty        String?
   bio              String?
+  acceptedSpecies  String[]       @default([])
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   document         String?
@@ -205,11 +219,24 @@ model Appointment {
   establishmentId String
   professionalId  String?
   employeeId      String?
-  date            DateTime
-  status          AppointmentStatus @default(PENDING)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  establishment   User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id], onDelete: Cascade)
+  date                   DateTime
+  status                 AppointmentStatus @default(PENDING)
+  paymentMethod          String?
+  paymentStatus          String?           @default("PENDING")
+  totalAmount            Float?
+  discountAmount         Float?            @default(0)
+  cashbackCodeApplied    String?
+  cashbackDiscount       Float?            @default(0)
+  finalAmount            Float?
+  needsChange            Boolean?          @default(false)
+  changeFor              Float?
+  cashbackCredited       Boolean           @default(false)
+  cashbackAmountCredited Float?
+  confirmedByTutor       Boolean           @default(false)
+  confirmedByTutorAt     DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  establishment          User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id], onDelete: Cascade)
   pet             Pet               @relation(fields: [petId], references: [id], onDelete: Cascade)
   professional    User?             @relation("ProfessionalAppointments", fields: [professionalId], references: [id], onDelete: Cascade)
   employee        Employee?         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -235,11 +262,17 @@ model Product {
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  tutorId         String
-  totalAmount     Float
-  status          OrderStatus @default(PENDING)
-  paymentMethod   String?
+  id                     String      @id @default(uuid())
+  tutorId                String
+  totalAmount            Float
+  subtotalAmount         Float?
+  discountAmount         Float?      @default(0)
+  cashbackCodeApplied    String?
+  cashbackDiscount       Float?      @default(0)
+  cashbackCredited       Boolean     @default(false)
+  cashbackAmountCredited Float?
+  status                 OrderStatus @default(PENDING)
+  paymentMethod          String?
   deliveryMethod  String?     // 'DELIVERY' | 'PICKUP'
   deliveryAddress Json?
   needsChange     Boolean?    @default(false)
@@ -325,15 +358,57 @@ model PaymentMethod {
 }
 
 model CashbackTransaction {
-  id          String   @id @default(uuid())
-  userId      String
-  amount      Float
-  type        String   // 'EARNED' | 'REDEEMED'
-  description String
-  code        String?  // Unique single-use code for redemption
-  status      String   @default("COMPLETED")
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  userId         String
+  amount         Float
+  type           String   // 'EARNED' | 'REDEEMED'
+  description    String
+  code           String?  // Unique single-use code for redemption
+  originType     String?  // 'ORDER' | 'APPOINTMENT' | 'REDEMPTION'
+  orderId        String?
+  appointmentId  String?
+  rate           Float?
+  eligibleAmount Float?
+  status         String   @default("COMPLETED")
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model CashbackVoucher {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  tutorId       String
+  amount        Float
+  status        String    @default("ACTIVE") // 'ACTIVE' | 'USED' | 'CANCELLED'
+  usedAt        DateTime?
+  orderId       String?
+  appointmentId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tutor         User      @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@index([tutorId])
+  @@index([code])
+  @@index([status])
+}
+
+model TermsAcceptance {
+  id         String   @id @default(uuid())
+  userId     String
+  termType   String   // 'CASHBACK_POLICY'
+  version    String   // '1.0'
+  accepted   Boolean  @default(true)
+  ipAddress  String?
+  userAgent  String?
+  acceptedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, termType, version])
+  @@index([userId])
 }
 
 model Employee {
@@ -416,3 +491,73 @@ model Message {
   @@index([conversationId])
   @@index([senderId])
 }
+
+enum ReportTargetType {
+  USER
+  ESTABLISHMENT
+  PROFESSIONAL
+  REVIEW
+  CONTENT
+}
+
+enum ReportStatus {
+  NOVA
+  EM_ANALISE
+  RESOLVIDA
+  ARQUIVADA
+}
+
+enum ReportPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model ModerationReport {
+  id                      String                @id @default(uuid())
+  reportNumber            Int                   @default(autoincrement())
+  reporterId              String
+  reportedUserId          String?
+  reportedEstablishmentId String?
+  targetType              ReportTargetType
+  reason                  String
+  description             String
+  status                  ReportStatus          @default(NOVA)
+  priority                ReportPriority        @default(MEDIA)
+  adminNotes              String?
+  decisionReason          String?
+  resolvedById            String?
+  resolvedAt              DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  reporter                User                  @relation("ReportsCreated", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser            User?                 @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  reportedEstablishment   EstablishmentProfile? @relation(fields: [reportedEstablishmentId], references: [id], onDelete: SetNull)
+  resolvedBy              User?                 @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([targetType])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+

@@ -21,11 +21,14 @@ import {
   Plus,
   Sun,
   Moon,
+  Package,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import { useThemeStore } from '@/store/themeStore';
 import { Avatar, Badge } from '@/components/ui';
+import { api } from '@/services/api';
 
 interface NavItem {
   to: string;
@@ -34,19 +37,6 @@ interface NavItem {
   end?: boolean;
   badge?: number;
 }
-
-const navItems: NavItem[] = [
-  { to: '/tutor', icon: <Home size={20} />, label: 'Início', end: true },
-  { to: '/tutor/pets', icon: <PawPrint size={20} />, label: 'Meus Pets' },
-  { to: '/tutor/explore', icon: <Search size={20} />, label: 'Explorar' },
-  { to: '/tutor/appointments', icon: <Calendar size={20} />, label: 'Agendamentos' },
-  { to: '/tutor/shop', icon: <ShoppingBag size={20} />, label: 'Loja' },
-  { to: '/tutor/cashback', icon: <Coins size={20} />, label: 'Cashback' },
-  { to: '/tutor/chat', icon: <MessageCircle size={20} />, label: 'Chat', badge: 1 },
-  { to: '/tutor/favorites', icon: <Heart size={20} />, label: 'Favoritos' },
-  { to: '/tutor/notifications', icon: <Bell size={20} />, label: 'Notificações', badge: 3 },
-  { to: '/tutor/profile', icon: <User size={20} />, label: 'Perfil' },
-];
 
 const bottomNavItems: NavItem[] = [
   { to: '/tutor', icon: <Home size={22} />, label: 'Início', end: true },
@@ -59,10 +49,48 @@ const bottomNavItems: NavItem[] = [
 export const TutorLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState<number>(0);
   const { currentUser, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const { addToast } = useToastStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function fetchUnread() {
+      try {
+        const res = await api.get('/notifications');
+        if (Array.isArray(res.data)) {
+          setUnreadNotifs(res.data.filter((n: any) => !n.read).length);
+        }
+      } catch {}
+    }
+    fetchUnread();
+
+    const handleNew = () => setUnreadNotifs((prev) => prev + 1);
+    const handleUpdated = () => fetchUnread();
+
+    window.addEventListener('pethub:new_notification', handleNew);
+    window.addEventListener('pethub:notifications_updated', handleUpdated);
+
+    return () => {
+      window.removeEventListener('pethub:new_notification', handleNew);
+      window.removeEventListener('pethub:notifications_updated', handleUpdated);
+    };
+  }, []);
+
+  const navItems: NavItem[] = [
+    { to: '/tutor', icon: <Home size={20} />, label: 'Início', end: true },
+    { to: '/tutor/pets', icon: <PawPrint size={20} />, label: 'Meus Pets' },
+    { to: '/tutor/explore', icon: <Search size={20} />, label: 'Explorar' },
+    { to: '/tutor/appointments', icon: <Calendar size={20} />, label: 'Agendamentos' },
+    { to: '/tutor/shop', icon: <ShoppingBag size={20} />, label: 'Loja' },
+    { to: '/tutor/compras', icon: <Package size={20} />, label: 'Minhas Compras' },
+    { to: '/tutor/cashback', icon: <Coins size={20} />, label: 'Cashback' },
+    { to: '/tutor/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
+    { to: '/tutor/favorites', icon: <Heart size={20} />, label: 'Favoritos' },
+    { to: '/tutor/notifications', icon: <Bell size={20} />, label: 'Notificações', badge: unreadNotifs > 0 ? unreadNotifs : undefined },
+    { to: '/tutor/profile', icon: <User size={20} />, label: 'Perfil' },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -353,7 +381,11 @@ export const TutorLayout: React.FC = () => {
               className="relative p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]"
             >
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
+              {unreadNotifs > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                </span>
+              )}
             </NavLink>
             <NavLink to="/tutor/profile">
               <Avatar

@@ -73,7 +73,7 @@ export function ForgotPasswordPage() {
     }
 
     if (newPassword === '12345678') {
-      toast.error('Que senha merda (●\'◡\'●) 💩 Faz uma senha boa aí man!');
+      toast.error('Essa senha é muito previsível. Por favor, escolha uma senha mais forte.');
       return;
     }
 
@@ -142,7 +142,7 @@ export function ForgotPasswordPage() {
               className="space-y-6"
             >
               <div className="text-center space-y-1.5">
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Esqueceu a senha? 🔐</h1>
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Esqueceu a senha?</h1>
                 <p className="text-sm text-neutral-500 dark:text-[#8E918F]">
                   Informe o e-mail da sua conta para receber um código seguro de 6 dígitos via Resend.
                 </p>
@@ -243,8 +243,8 @@ export function ForgotPasswordPage() {
 
                   {newPassword === '12345678' && (
                     <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl text-xs space-y-1 animate-fade-in">
-                      <p className="font-bold text-amber-900 dark:text-amber-300">Que senha merda (●'◡'●) 💩</p>
-                      <p className="text-amber-800 dark:text-amber-400 font-medium">Faz uma senha boa aí man!</p>
+                      <p className="font-bold text-amber-900 dark:text-amber-300">Essa senha é muito previsível</p>
+                      <p className="text-amber-800 dark:text-amber-400 font-medium">Por favor, utilize uma senha mais forte para proteger sua conta.</p>
                     </div>
                   )}
 
@@ -346,7 +346,7 @@ export function ForgotPasswordPage() {
               </div>
 
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Senha alterada com sucesso! 🎉</h1>
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Senha alterada com sucesso!</h1>
                 <p className="text-sm text-neutral-500 dark:text-[#8E918F] leading-relaxed">
                   Sua conta foi atualizada e sua nova senha já está ativa. Agora você pode entrar com total segurança.
                 </p>

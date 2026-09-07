@@ -5,10 +5,12 @@ import {
   ClipboardList, Package, User, Calendar, DollarSign, Search, 
   CheckCircle, Clock, Truck, XCircle, Store, Copy, Check, Phone, 
   MapPin, AlertTriangle, MessageSquare, RefreshCw, X, Ban,
-  ChevronRight, ChevronDown, ChevronsUpDown
+  ChevronRight, ChevronDown, ChevronsUpDown, CheckCircle2
 } from 'lucide-react';
 import { Input, Button, Badge, Avatar } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 
 interface OrderItemDetail {
   id: string;
@@ -239,25 +241,25 @@ export default function EstablishmentOrdersPage() {
       order.changeFor
     ) {
       const changeAmount = order.changeFor - order.totalAmount;
-      changeInfo = `\n💵 Troco para: R$ ${order.changeFor
+      changeInfo = `\n- Troco para: R$ ${order.changeFor
         .toFixed(2)
         .replace('.', ',')} (Devolver ao cliente: R$ ${changeAmount
         .toFixed(2)
         .replace('.', ',')})`;
     }
 
-    const text = `📦 PEDIDO #${order.orderNumber}
-👤 Cliente: ${order.tutor.name}
-📞 Contato: ${order.tutor.phone || 'Não informado'}
-📍 Tipo: ${isDelivery ? 'Entrega em domicílio' : 'Retirada na loja'}
-${isDelivery ? `🏠 Endereço: ${addressStr}` : ''}
-💳 Forma de Pagamento: ${order.paymentMethod || 'A combinar'}${changeInfo}
-${order.notes ? `📝 Obs: ${order.notes}` : ''}
+    const text = `PEDIDO #${order.orderNumber}
+Cliente: ${order.tutor.name}
+Contato: ${order.tutor.phone || 'Não informado'}
+Tipo: ${isDelivery ? 'Entrega em domicílio' : 'Retirada na loja'}
+${isDelivery ? `Endereço: ${addressStr}` : ''}
+Forma de Pagamento: ${order.paymentMethod || 'A combinar'}${changeInfo}
+${order.notes ? `Observações: ${order.notes}` : ''}
 
-🛒 ITENS:
+ITENS:
 ${itemsStr}
 
-💰 TOTAL: R$ ${order.totalAmount.toFixed(2).replace('.', ',')}`;
+TOTAL: R$ ${order.totalAmount.toFixed(2).replace('.', ',')}`;
 
     navigator.clipboard.writeText(text);
     setCopiedId(order.id);
@@ -536,8 +538,9 @@ ${itemsStr}
                             {order.cancellationNotes && (
                               <p><span className="font-semibold">Detalhes:</span> {order.cancellationNotes}</p>
                             )}
-                            <p className="text-[11px] text-rose-600 dark:text-rose-400">
-                              ✓ Os produtos deste pedido foram estornados automaticamente para o estoque do estabelecimento.
+                            <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                              <CheckCircle2 size={12} className="shrink-0" />
+                              <span>Os produtos deste pedido foram estornados automaticamente para o estoque do estabelecimento.</span>
                             </p>
                           </div>
                         )}
@@ -562,7 +565,7 @@ ${itemsStr}
                                     className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1 mt-0.5"
                                     title="Abrir conversa no WhatsApp"
                                   >
-                                    <Phone size={11} />
+                                    <WhatsAppIcon size={14} />
                                     {order.tutor.phone} (WhatsApp)
                                   </a>
                                 ) : (
@@ -578,12 +581,12 @@ ${itemsStr}
                               <span className="text-[10px] font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider block">
                                 Recebimento
                               </span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
                                 isDelivery 
                                   ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300' 
                                   : 'bg-neutral-200 dark:bg-[#313335] text-neutral-700 dark:text-[#C4C7C5]'
                               }`}>
-                                {isDelivery ? '🚚 Entrega em Domicílio' : '🏪 Retirada na Loja'}
+                                {isDelivery ? <><Truck size={11} /> Entrega em Domicílio</> : <><Store size={11} /> Retirada na Loja</>}
                               </span>
                             </div>
 
@@ -618,14 +621,16 @@ ${itemsStr}
                               Forma de Pagamento
                             </span>
                             <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900 dark:text-[#E3E3E3]">
-                              <DollarSign size={14} className="text-orange-500" />
-                              {order.paymentMethod || 'A combinar'}
+                              <PaymentLogo method={order.paymentMethod} size="xs" />
+                              <span>{order.paymentMethod || 'A combinar'}</span>
                             </div>
 
                             {isCash ? (
                               order.needsChange && order.changeFor ? (
                                 <div className="p-2 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-900 dark:text-amber-300">
-                                  <p className="font-bold">⚠️ Precisa de troco:</p>
+                                  <p className="font-bold flex items-center gap-1">
+                                    <AlertTriangle size={12} className="text-amber-600 dark:text-amber-400" /> Precisa de troco:
+                                  </p>
                                   <p>Troco para: R$ {order.changeFor.toFixed(2).replace('.', ',')}</p>
                                   <p className="font-bold text-emerald-600 dark:text-emerald-400">
                                     Devolver ao cliente: R$ {(order.changeFor - order.totalAmount).toFixed(2).replace('.', ',')}

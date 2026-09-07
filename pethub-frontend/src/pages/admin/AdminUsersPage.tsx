@@ -59,14 +59,14 @@ export default function AdminUsersPage() {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return <Badge variant="brand">🛡️ Admin</Badge>;
+        return <Badge variant="brand" className="inline-flex items-center gap-1"><Shield size={11} /> Admin</Badge>;
       case 'ESTABLISHMENT':
-        return <Badge variant="warning">🏬 Estabelecimento</Badge>;
+        return <Badge variant="warning" className="inline-flex items-center gap-1"><Building2 size={11} /> Estabelecimento</Badge>;
       case 'PROFESSIONAL':
-        return <Badge variant="info">👨‍⚕️ Profissional</Badge>;
+        return <Badge variant="info" className="inline-flex items-center gap-1"><Stethoscope size={11} /> Profissional</Badge>;
       case 'TUTOR':
       default:
-        return <Badge variant="success">🐾 Tutor</Badge>;
+        return <Badge variant="success" className="inline-flex items-center gap-1"><PawPrint size={11} /> Tutor</Badge>;
     }
   };
 
@@ -99,10 +99,10 @@ export default function AdminUsersPage() {
         <div className="flex flex-wrap gap-2 text-xs font-semibold">
           {[
             { id: 'ALL', label: 'Todos' },
-            { id: 'TUTOR', label: 'Tutores 🐾' },
-            { id: 'ESTABLISHMENT', label: 'Estabelecimentos 🏬' },
-            { id: 'PROFESSIONAL', label: 'Profissionais 👨‍⚕️' },
-            { id: 'ADMIN', label: 'Admins 🛡️' },
+            { id: 'TUTOR', label: 'Tutores' },
+            { id: 'ESTABLISHMENT', label: 'Estabelecimentos' },
+            { id: 'PROFESSIONAL', label: 'Profissionais' },
+            { id: 'ADMIN', label: 'Admins' },
           ].map((r) => (
             <button
               key={r.id}

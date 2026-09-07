@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, Check } from 'lucide-react';
 
 // ---- Rating ----
 export interface RatingProps {
@@ -184,8 +184,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     {imageUrl && (
       <img src={imageUrl} alt={title} className="w-32 h-32 object-cover rounded-full shadow-lg border-4 border-white dark:border-[#1E1F20] mb-6" />
     )}
-    {!imageUrl && emoji && <div className="text-6xl mb-4">{emoji}</div>}
-    {!imageUrl && !emoji && icon && <div className="mb-4 text-neutral-300 dark:text-neutral-600">{icon}</div>}
+    {icon && (
+      <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-[#2A2B2D] border border-neutral-200/80 dark:border-[#313335] flex items-center justify-center text-neutral-400 dark:text-[#8E918F] mb-4 shadow-xs">
+        {icon}
+      </div>
+    )}
+    {!icon && !imageUrl && emoji && <div className="text-5xl mb-4 opacity-80">{emoji}</div>}
     <h3 className="text-lg font-semibold text-neutral-700 dark:text-[#E3E3E3] mb-2">{title}</h3>
     {description && <p className="text-sm text-neutral-400 dark:text-[#C4C7C5] max-w-xs mb-6">{description}</p>}
     {action && (
@@ -251,7 +255,7 @@ export const Stepper: React.FC<StepperProps> = ({
                   : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-400 dark:text-[#8E918F]',
               ].join(' ')}
             >
-              {step.id < currentStep ? '✓' : step.id}
+              {step.id < currentStep ? <Check size={14} className="stroke-[3]" /> : step.id}
             </div>
             <span
               className={[

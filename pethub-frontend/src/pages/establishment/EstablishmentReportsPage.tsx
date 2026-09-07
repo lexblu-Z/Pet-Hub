@@ -16,8 +16,11 @@ import {
   Calendar,
   Sparkles,
   PawPrint,
+  Smartphone,
+  Banknote,
 } from 'lucide-react';
 import { ReportLayout } from '@/components/reports/ReportLayout';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
 import type { ReportTab } from '@/components/reports/ReportLayout';
 import { ReportFilters, DATE_PRESETS } from '@/components/reports/ReportFilters';
 import { ReportSummaryCard } from '@/components/reports/ReportSummaryCard';
@@ -457,19 +460,27 @@ export const EstablishmentReportsPage: React.FC = () => {
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center border-b border-neutral-100 pb-2 dark:border-neutral-800">
-                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">📱 Pix</span>
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 inline-flex items-center gap-1.5">
+                        <PaymentLogo method="pix" size="xs" /> Pix
+                      </span>
                       <span className="text-xs font-bold">{fmtMoney(financialData.paymentMethodBreakdown.PIX)}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-neutral-100 pb-2 dark:border-neutral-800">
-                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">💳 Cartão de Crédito</span>
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 inline-flex items-center gap-1.5">
+                        <PaymentLogo method="credito" size="xs" /> Cartão de Crédito
+                      </span>
                       <span className="text-xs font-bold">{fmtMoney(financialData.paymentMethodBreakdown.CREDIT_CARD)}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-neutral-100 pb-2 dark:border-neutral-800">
-                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">💳 Cartão de Débito</span>
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 inline-flex items-center gap-1.5">
+                        <PaymentLogo method="debito" size="xs" /> Cartão de Débito
+                      </span>
                       <span className="text-xs font-bold">{fmtMoney(financialData.paymentMethodBreakdown.DEBIT_CARD)}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-neutral-100 pb-2 dark:border-neutral-800">
-                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">💵 Dinheiro</span>
+                      <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 inline-flex items-center gap-1.5">
+                        <PaymentLogo method="dinheiro" size="xs" /> Dinheiro
+                      </span>
                       <span className="text-xs font-bold">{fmtMoney(financialData.paymentMethodBreakdown.CASH)}</span>
                     </div>
                   </div>

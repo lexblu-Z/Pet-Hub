@@ -19,5 +19,6 @@ export const appointmentsRoutes: FastifyPluginAsync = async (fastify: FastifyIns
     authGroup.get('/provider', appointmentsController.listForProvider);
     authGroup.post('/', appointmentsController.create);
     authGroup.put('/:id/status', appointmentsController.updateStatus);
+    authGroup.post('/:id/confirm-completion', appointmentsController.confirmCompletion);
   });
 };

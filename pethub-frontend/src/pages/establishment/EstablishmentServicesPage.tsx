@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Wrench, Plus, Edit2, Trash2, Clock, DollarSign, Users, Check, Upload, Scissors } from 'lucide-react';
+import { Wrench, Plus, Edit2, Trash2, Clock, DollarSign, Users, Check, Upload, Scissors, PawPrint } from 'lucide-react';
 import { Input, Button, Modal } from '@/components/ui';
+import { ServiceLogo } from '@/components/shared/ServiceLogo';
 
 interface ServiceItem {
   id: string;
@@ -247,11 +248,15 @@ export default function EstablishmentServicesPage() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded">
                       {s.category || 'Geral'}
                     </span>
-                    <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] font-medium">
-                      {s.animalType === 'dog' ? '🐶 Cães' : s.animalType === 'cat' ? '🐱 Gatos' : '🐾 Cães & Gatos'}
+                    <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] font-medium inline-flex items-center gap-1">
+                      <PawPrint size={11} className="text-neutral-400" />
+                      {s.animalType === 'dog' ? 'Cães' : s.animalType === 'cat' ? 'Gatos' : 'Cães & Gatos'}
                     </span>
                   </div>
-                  <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{s.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <ServiceLogo category={s.category} name={s.name} size="sm" showBadge={true} />
+                    <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{s.name}</h3>
+                  </div>
                   <p className="text-xs text-neutral-500 dark:text-[#8E918F] line-clamp-2 leading-relaxed">
                     {s.description || 'Sem descrição cadastrada.'}
                   </p>

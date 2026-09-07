@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronRight, X, Plus } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, X, Plus, Stethoscope, Scissors, PawPrint, DollarSign } from 'lucide-react';
 import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState, Modal, Button } from '@/components/ui';
 import { GoogleCalendarPromptModal } from '@/components/shared/GoogleCalendarPromptModal';
@@ -10,6 +10,8 @@ import { GoogleCalendarViewModal } from '@/components/shared/GoogleCalendarViewM
 import { useToast } from '@/store/toastStore';
 import { useBookingStore } from '@/store/bookingStore';
 import { formatAppointmentTime, formatBrasiliaDate } from '@/utils/date';
+import { ServiceLogo } from '@/components/shared/ServiceLogo';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'error' }> = {
   CONFIRMED: { label: 'Confirmado', variant: 'success' },
@@ -198,7 +200,7 @@ export default function AppointmentsPage() {
         <EmptyState
           imageUrl={activeTab === 'upcoming' ? '/zeca_macaque_1788367569922.jpg' : '/beicinho_pitbull_1788367520420.jpg'}
           title={activeTab === 'upcoming' ? 'Nenhum agendamento futuro' : 'Nenhum histórico'}
-          description={activeTab === 'upcoming' ? 'Nenhum agendamento por aqui ainda 🐾 Que tal marcar um horário?' : 'Você ainda não realizou nenhum serviço.'}
+          description={activeTab === 'upcoming' ? 'Nenhum agendamento por aqui ainda. Que tal marcar um horário?' : 'Você ainda não realizou nenhum serviço.'}
           action={{ label: 'Fazer novo agendamento', onClick: handleNewBooking }}
         />
       ) : (
@@ -233,13 +235,13 @@ export default function AppointmentsPage() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${
-                        isConsultation ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-orange-50 dark:bg-orange-950/40'
-                      }`}
-                    >
-                      {isConsultation ? '🩺' : '✂️'}
-                    </div>
+                    <ServiceLogo
+                      category={apt.serviceCategory || apt.service?.category}
+                      name={serviceName}
+                      size="md"
+                      showBadge={true}
+                      className="w-12 h-12"
+                    />
                     <div>
                       <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{serviceName}</h3>
                       <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{providerName}</p>
@@ -252,19 +254,27 @@ export default function AppointmentsPage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl mb-3">
                   <div>
-                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
+                      <PawPrint size={12} /> Pet
+                    </p>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{petName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">📅 Data</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
+                      <Calendar size={12} /> Data
+                    </p>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{dateDisplay}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">⏰ Horário</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
+                      <Clock size={12} /> Horário
+                    </p>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{timeDisplay}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor</p>
+                    <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
+                      <DollarSign size={12} /> Valor
+                    </p>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">R${price.toFixed(2)}</p>
                   </div>
                 </div>
@@ -331,18 +341,26 @@ export default function AppointmentsPage() {
           <div className="space-y-4 text-sm font-sans">
             {/* Header do Agendamento */}
             <div className="flex items-center justify-between p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl border border-neutral-100 dark:border-[#313335]">
-              <div>
-                <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">
-                  {selectedAppointment.service?.name || selectedAppointment.serviceName || 'Serviço'}
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
-                  {selectedAppointment.professional?.name
-                    ? `Dr(a). ${selectedAppointment.professional.name}`
-                    : selectedAppointment.establishment?.establishmentProfile?.businessName ||
-                      selectedAppointment.establishment?.name ||
-                      selectedAppointment.establishmentName ||
-                      'Prestador'}
-                </p>
+              <div className="flex items-center gap-3">
+                <ServiceLogo
+                  category={selectedAppointment.serviceCategory || selectedAppointment.service?.category}
+                  name={selectedAppointment.service?.name || selectedAppointment.serviceName}
+                  size="sm"
+                  showBadge={true}
+                />
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3]">
+                    {selectedAppointment.service?.name || selectedAppointment.serviceName || 'Serviço'}
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                    {selectedAppointment.professional?.name
+                      ? `Dr(a). ${selectedAppointment.professional.name}`
+                      : selectedAppointment.establishment?.establishmentProfile?.businessName ||
+                        selectedAppointment.establishment?.name ||
+                        selectedAppointment.establishmentName ||
+                        'Prestador'}
+                  </p>
+                </div>
               </div>
               <Badge variant={getStatusObj(selectedAppointment.status).variant}>
                 {getStatusObj(selectedAppointment.status).label}
@@ -352,7 +370,9 @@ export default function AppointmentsPage() {
             {/* Informações detalhadas */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335]">
-                <p className="text-neutral-400 dark:text-[#8E918F] mb-1">🐾 Pet Atendido</p>
+                <p className="text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
+                  <PawPrint size={12} /> Pet Atendido
+                </p>
                 <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">
                   {selectedAppointment.pet?.name || selectedAppointment.petName || 'Pet'}
                 </p>
@@ -362,7 +382,9 @@ export default function AppointmentsPage() {
               </div>
 
               <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335]">
-                <p className="text-neutral-400 dark:text-[#8E918F] mb-1">💰 Valor Total</p>
+                <p className="text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1.5">
+                  <PaymentLogo method="dinheiro" size="xs" /> Valor Total
+                </p>
                 <p className="font-bold text-orange-600 dark:text-orange-400 text-sm">
                   R${Number(selectedAppointment.service?.price ?? selectedAppointment.price ?? 0).toFixed(2)}
                 </p>

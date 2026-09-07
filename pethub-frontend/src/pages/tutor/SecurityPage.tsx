@@ -44,7 +44,7 @@ export default function SecurityPage() {
     }
 
     if (newPassword === '12345678') {
-      toast.error('Que senha merda (●\'◡\'●) 💩 Faz uma senha boa aí man!');
+      toast.error('Essa senha é muito previsível. Escolha uma senha mais forte.');
       return;
     }
 
@@ -160,8 +160,8 @@ export default function SecurityPage() {
 
           {newPassword === '12345678' && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 animate-fade-in">
-              <p className="font-bold text-amber-900">Que senha merda (●'◡'●) 💩</p>
-              <p className="text-amber-800 font-medium">Faz uma senha boa aí man!</p>
+              <p className="font-bold text-amber-900">Essa senha é muito previsível</p>
+              <p className="text-amber-800 font-medium">Por favor, utilize uma senha mais forte para proteger sua conta.</p>
             </div>
           )}
 

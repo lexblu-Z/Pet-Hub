@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 360" fill="none" width="100%" height="100%">
+  <!-- Note 1 (Back, rotated ~ -20deg) -->
+  <g transform="translate(240, 200) rotate(-22) translate(-175, -80)">
+    <rect width="350" height="170" rx="8" fill="#1B5E52"/>
+    <rect x="8" y="8" width="334" height="154" rx="6" fill="none" stroke="#2D7A6D" stroke-width="3"/>
+    <circle cx="20" cy="20" r="5" fill="#2D7A6D"/>
+    <circle cx="330" cy="20" r="5" fill="#2D7A6D"/>
+    <circle cx="20" cy="150" r="5" fill="#2D7A6D"/>
+    <circle cx="330" cy="150" r="5" fill="#2D7A6D"/>
+  </g>
+
+  <!-- Note 2 (Middle, rotated ~ -10deg) -->
+  <g transform="translate(245, 195) rotate(-11) translate(-175, -80)">
+    <rect width="350" height="170" rx="8" fill="#2D7A6D"/>
+    <rect x="8" y="8" width="334" height="154" rx="6" fill="none" stroke="#3D9B8C" stroke-width="3"/>
+    <circle cx="20" cy="20" r="5" fill="#3D9B8C"/>
+    <circle cx="330" cy="20" r="5" fill="#3D9B8C"/>
+    <circle cx="20" cy="150" r="5" fill="#3D9B8C"/>
+    <circle cx="330" cy="150" r="5" fill="#3D9B8C"/>
+  </g>
+
+  <!-- Note 3 (Front, horizontal) -->
+  <g transform="translate(75, 105)">
+    <!-- Base Note -->
+    <rect width="350" height="170" rx="8" fill="#48A999"/>
+    
+    <!-- Border Inset -->
+    <rect x="10" y="10" width="330" height="150" rx="6" fill="none" stroke="#328275" stroke-width="3.5"/>
+    <rect x="16" y="16" width="318" height="138" rx="4" fill="none" stroke="#328275" stroke-width="1.5"/>
+    
+    <!-- Corner Dots -->
+    <circle cx="26" cy="26" r="6" fill="#328275"/>
+    <circle cx="324" cy="26" r="6" fill="#328275"/>
+    <circle cx="26" cy="144" r="6" fill="#328275"/>
+    <circle cx="324" cy="144" r="6" fill="#328275"/>
+    
+    <!-- Center Medallion Oval -->
+    <ellipse cx="175" cy="85" rx="48" ry="60" fill="#328275"/>
+    <ellipse cx="175" cy="85" rx="42" ry="54" fill="#48A999"/>
+    
+    <!-- Dollar Currency Symbol -->
+    <text x="175" y="104" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="bold" fill="#FFFFFF" text-anchor="middle">$</text>
+    
+    <!-- Side Horizontal Stripe Accents -->
+    <line x1="38" y1="72" x2="105" y2="72" stroke="#6DC2B4" stroke-width="7" stroke-linecap="round"/>
+    <line x1="38" y1="98" x2="105" y2="98" stroke="#6DC2B4" stroke-width="7" stroke-linecap="round"/>
+    <line x1="245" y1="72" x2="312" y2="72" stroke="#6DC2B4" stroke-width="7" stroke-linecap="round"/>
+    <line x1="245" y1="98" x2="312" y2="98" stroke="#6DC2B4" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -50,8 +50,33 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
+
+    const handleNewNotification = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const newNotif = customEvent.detail;
+      if (newNotif && newNotif.id) {
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === newNotif.id)) return prev;
+          return [newNotif, ...prev];
+        });
+      }
+    };
+
+    const handleUpdated = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('pethub:new_notification', handleNewNotification);
+    window.addEventListener('pethub:notifications_updated', handleUpdated);
+
+    // Occasional fallback sync every 60s
+    const interval = setInterval(fetchNotifications, 60000);
+
+    return () => {
+      window.removeEventListener('pethub:new_notification', handleNewNotification);
+      window.removeEventListener('pethub:notifications_updated', handleUpdated);
+      clearInterval(interval);
+    };
   }, []);
 
   // Close on Escape or click outside

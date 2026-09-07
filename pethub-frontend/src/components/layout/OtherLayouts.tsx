@@ -1,11 +1,39 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
-import { LayoutDashboard, Calendar, ClipboardList, User, Star, LogOut, PawPrint, Stethoscope, Sun, Moon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  Stethoscope,
+  PawPrint,
+  Calendar,
+  ShieldAlert,
+  DollarSign,
+  Bell,
+  FileText,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
+  Menu,
+  X,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { Avatar } from '@/components/ui';
+import { NotificationPopover } from '@/components/shared/NotificationPopover';
 
 export { ProfessionalLayout } from './ProfessionalLayout';
+
+interface NavGroup {
+  title?: string;
+  items: {
+    to: string;
+    icon: React.ReactNode;
+    label: string;
+    end?: boolean;
+  }[];
+}
 
 export const AdminLayout: React.FC = () => {
   const { currentUser, logout } = useAuthStore();
@@ -13,11 +41,42 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-  const navItems = [
-    { to: '/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard', end: true },
-    { to: '/admin/estabelecimentos', icon: <Star size={18} />, label: 'Estabelecimentos' },
-    { to: '/admin/profissionais', icon: <Stethoscope size={18} />, label: 'Profissionais' },
-    { to: '/admin/usuarios', icon: <User size={18} />, label: 'Usuários' },
+  const navGroups: NavGroup[] = [
+    {
+      items: [
+        { to: '/admin', icon: <LayoutDashboard size={18} />, label: 'Dashboard', end: true },
+      ],
+    },
+    {
+      title: 'GESTÃO',
+      items: [
+        { to: '/admin/usuarios', icon: <Users size={18} />, label: 'Usuários' },
+        { to: '/admin/estabelecimentos', icon: <Building2 size={18} />, label: 'Estabelecimentos' },
+        { to: '/admin/profissionais', icon: <Stethoscope size={18} />, label: 'Profissionais' },
+        { to: '/admin/pets', icon: <PawPrint size={18} />, label: 'Pets' },
+      ],
+    },
+    {
+      title: 'OPERAÇÃO',
+      items: [
+        { to: '/admin/agendamentos', icon: <Calendar size={18} />, label: 'Agendamentos' },
+        { to: '/admin/moderacao', icon: <ShieldAlert size={18} />, label: 'Moderação' },
+      ],
+    },
+    {
+      title: 'FINANCEIRO',
+      items: [
+        { to: '/admin/financeiro', icon: <DollarSign size={18} />, label: 'Financeiro' },
+      ],
+    },
+    {
+      title: 'SISTEMA',
+      items: [
+        { to: '/admin/notificacoes', icon: <Bell size={18} />, label: 'Notificações' },
+        { to: '/admin/auditoria', icon: <FileText size={18} />, label: 'Auditoria' },
+        { to: '/admin/configuracoes', icon: <Settings size={18} />, label: 'Configurações' },
+      ],
+    },
   ];
 
   return (
@@ -28,9 +87,15 @@ export const AdminLayout: React.FC = () => {
           <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
             <PawPrint size={16} className="text-white" />
           </div>
-          <span className="text-lg font-bold text-white">Pet<span className="text-orange-400">Hub</span> <span className="text-xs font-normal text-white/50 border border-white/20 px-1.5 py-0.5 rounded ml-1">Admin</span></span>
+          <span className="text-lg font-bold text-white">
+            Pet<span className="text-orange-400">Hub</span>{' '}
+            <span className="text-xs font-normal text-white/50 border border-white/20 px-1.5 py-0.5 rounded ml-1">
+              Admin
+            </span>
+          </span>
         </Link>
         <div className="flex items-center gap-2">
+          <NotificationPopover isMobile />
           <button
             onClick={toggleTheme}
             className="p-2 text-white/70 hover:text-white rounded-lg hover:bg-white/10 dark:hover:bg-[#282A2C]"
@@ -42,33 +107,49 @@ export const AdminLayout: React.FC = () => {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 text-white/80 hover:text-white rounded-lg hover:bg-white/10 dark:hover:bg-[#282A2C]"
+            aria-label="Menu"
           >
-            {mobileMenuOpen ? '✕' : '☰'}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
 
       {/* Mobile Dropdown Navigation */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-neutral-900 dark:bg-[#1E1F20] border-b border-white/10 dark:border-[#313335] px-4 py-3 space-y-1 z-20">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive ? 'bg-orange-500/20 text-orange-400' : 'text-white/70 hover:text-white hover:bg-white/5 dark:hover:bg-[#282A2C]'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
+        <div className="lg:hidden bg-neutral-900 dark:bg-[#1E1F20] border-b border-white/10 dark:border-[#313335] px-4 py-3 space-y-3 z-20 max-h-[80vh] overflow-y-auto">
+          {navGroups.map((group, gIdx) => (
+            <div key={gIdx} className="space-y-1">
+              {group.title && (
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  {group.title}
+                </p>
+              )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-orange-500/20 text-orange-400'
+                        : 'text-white/70 hover:text-white hover:bg-white/5 dark:hover:bg-[#282A2C]'
+                    }`
+                  }
+                >
+                  {item.icon}
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
           <button
-            onClick={() => { setMobileMenuOpen(false); logout(); navigate('/auth/login'); }}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              logout();
+              navigate('/auth/login');
+            }}
             className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
           >
             <LogOut size={16} /> Sair da conta
@@ -78,31 +159,50 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <aside className="w-64 bg-neutral-900 dark:bg-[#1E1F20] border-r border-white/10 dark:border-[#313335] flex flex-col hidden lg:flex shrink-0">
-        <div className="h-16 flex items-center px-4 border-b border-white/10 dark:border-[#313335]">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 dark:border-[#313335]">
           <Link to="/admin" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
               <PawPrint size={18} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-white">Pet<span className="text-orange-400">Hub</span> <span className="text-xs font-normal text-white/50 border border-white/20 px-1.5 py-0.5 rounded ml-1">Admin</span></span>
+            <span className="text-xl font-bold text-white">
+              Pet<span className="text-orange-400">Hub</span>{' '}
+              <span className="text-xs font-normal text-white/50 border border-white/20 px-1.5 py-0.5 rounded ml-1">
+                Admin
+              </span>
+            </span>
           </Link>
+          <NotificationPopover />
         </div>
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive ? 'bg-orange-500/20 text-orange-400' : 'text-white/60 hover:text-white/90 hover:bg-white/5 dark:hover:bg-[#282A2C]'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
+
+        <nav className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+          {navGroups.map((group, gIdx) => (
+            <div key={gIdx} className="space-y-1">
+              {group.title && (
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1">
+                  {group.title}
+                </p>
+              )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-orange-500/20 text-orange-400'
+                        : 'text-white/60 hover:text-white/90 hover:bg-white/5 dark:hover:bg-[#282A2C]'
+                    }`
+                  }
+                >
+                  {item.icon}
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
+
         <div className="p-3 border-t border-white/10 dark:border-[#313335]">
           <div className="flex items-center gap-3 p-2 mb-2">
             <Avatar src={currentUser?.avatar} name={currentUser?.name || ''} size="sm" />
@@ -121,7 +221,10 @@ export const AdminLayout: React.FC = () => {
               <span>{theme === 'dark' ? 'Claro' : 'Escuro'}</span>
             </button>
             <button
-              onClick={() => { logout(); navigate('/auth/login'); }}
+              onClick={() => {
+                logout();
+                navigate('/auth/login');
+              }}
               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-white/10 dark:border-[#313335]"
             >
               <LogOut size={15} /> Sair

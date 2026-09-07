@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PawPrint } from 'lucide-react';
+import { PawPrint, Building2, Stethoscope, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import type { UserRole } from '@/types';
 
@@ -38,30 +38,33 @@ export default function WelcomePage() {
 
         <div className="space-y-4">
           {[
-            { role: 'tutor' as UserRole, emoji: '🐾', title: 'Sou Tutor', desc: 'Quero cuidar do meu pet', color: 'from-orange-500 to-orange-600' },
-            { role: 'estabelecimento' as UserRole, emoji: '🏪', title: 'Sou Estabelecimento', desc: 'Tenho um pet shop ou clínica', color: 'from-blue-500 to-blue-600' },
-            { role: 'profissional' as UserRole, emoji: '👨‍⚕️', title: 'Sou Profissional', desc: 'Trabalho com pets', color: 'from-green-500 to-green-600' },
-            { role: 'admin' as UserRole, emoji: '⚙️', title: 'Administrador', desc: 'Acesso admin PetHub', color: 'from-purple-500 to-purple-600' },
-          ].map((item, i) => (
-            <motion.button
-              key={item.role}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 + i * 0.1 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleRoleSelect(item.role)}
-              className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl transition-all duration-200 text-left"
-            >
-              <div className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center text-2xl shrink-0`}>
-                {item.emoji}
-              </div>
-              <div>
-                <p className="text-white font-semibold">{item.title}</p>
-                <p className="text-white/40 text-sm">{item.desc}</p>
-              </div>
-            </motion.button>
-          ))}
+            { role: 'tutor' as UserRole, icon: PawPrint, title: 'Sou Tutor', desc: 'Quero cuidar do meu pet', color: 'from-orange-500 to-orange-600' },
+            { role: 'estabelecimento' as UserRole, icon: Building2, title: 'Sou Estabelecimento', desc: 'Tenho um pet shop ou clínica', color: 'from-blue-500 to-blue-600' },
+            { role: 'profissional' as UserRole, icon: Stethoscope, title: 'Sou Profissional', desc: 'Trabalho com pets', color: 'from-green-500 to-green-600' },
+            { role: 'admin' as UserRole, icon: Shield, title: 'Administrador', desc: 'Acesso admin PetHub', color: 'from-purple-500 to-purple-600' },
+          ].map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.button
+                key={item.role}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 + i * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleRoleSelect(item.role)}
+                className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl transition-all duration-200 text-left"
+              >
+                <div className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center text-white shrink-0 shadow-inner`}>
+                  <Icon size={22} />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">{item.title}</p>
+                  <p className="text-white/40 text-sm">{item.desc}</p>
+                </div>
+              </motion.button>
+            );
+          })}
         </div>
 
         <p className="mt-8 text-white/30 text-sm">

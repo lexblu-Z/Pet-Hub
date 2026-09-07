@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Package, Plus, Edit2, Trash2, DollarSign, AlertCircle, Search, Image as ImageIcon, Upload } from 'lucide-react';
+import { Package, Plus, Edit2, Trash2, DollarSign, AlertCircle, Search, Image as ImageIcon, Upload, AlertTriangle } from 'lucide-react';
 import { Input, Button, Modal, Badge } from '@/components/ui';
 
 const getFullImageUrl = (url?: string | null) => {
@@ -256,8 +256,8 @@ export default function EstablishmentProductsPage() {
                         Esgotado
                       </span>
                     ) : isLowStock ? (
-                      <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                        ⚠️ Restam {p.stock}
+                      <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow inline-flex items-center gap-1">
+                        <AlertTriangle size={10} /> Restam {p.stock}
                       </span>
                     ) : (
                       <span className="bg-neutral-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded">

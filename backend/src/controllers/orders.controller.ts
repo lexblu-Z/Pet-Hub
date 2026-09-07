@@ -3,6 +3,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { z } from 'zod';
+import { calculateCashback, normalizeCashbackCode } from '../utils/cashback';
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Rua é obrigatória'),
@@ -24,6 +25,7 @@ const createOrderSchema = z.object({
   paymentMethod: z.string().min(1, 'Forma de pagamento é obrigatória'),
   needsChange: z.boolean().optional().default(false),
   changeFor: z.number().positive().optional().nullable(),
+  cashbackCode: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -121,6 +123,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
     paymentMethod,
     needsChange,
     changeFor,
+    cashbackCode,
     notes,
   } = parseResult.data;
 
@@ -136,7 +139,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
     where: { id: { in: productIds } },
   });
 
-  let totalAmount = 0;
+  let subtotalAmount = 0;
   const orderItemsData: any[] = [];
   const establishmentIds = new Set<string>();
 
@@ -149,7 +152,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
       return reply.status(400).send({ error: `Estoque insuficiente para "${prod.name}" (disponível: ${prod.stock}).` });
     }
     const itemSubtotal = prod.price * item.quantity;
-    totalAmount += itemSubtotal;
+    subtotalAmount += itemSubtotal;
     establishmentIds.add(prod.establishmentId);
 
     orderItemsData.push({
@@ -160,19 +163,47 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
     });
   }
 
-  // Validate change if cash
-  const isCash = paymentMethod.toLowerCase().includes('dinheiro') || paymentMethod.toUpperCase() === 'CASH';
-  if (isCash && needsChange) {
-    if (!changeFor || changeFor < totalAmount) {
-      return reply.status(400).send({
-        error: `O valor para troco (R$ ${changeFor?.toFixed(2) || 0}) deve ser maior ou igual ao total do pedido (R$ ${totalAmount.toFixed(2)}).`
-      });
-    }
-  }
-
   try {
     const order = await prisma.$transaction(async (tx) => {
-      // 1. Atomically verify and decrement stock for each item
+      // 1. Process cashback voucher if provided
+      let appliedVoucherId: string | null = null;
+      let appliedVoucherCode: string | null = null;
+      let cashbackDiscount = 0;
+
+      if (cashbackCode) {
+        const normalized = normalizeCashbackCode(cashbackCode);
+        const voucher = await tx.cashbackVoucher.findUnique({
+          where: { code: normalized },
+        });
+
+        if (!voucher) {
+          throw new Error('Código de cashback inválido ou inexistente.');
+        }
+        if (voucher.tutorId !== user.sub) {
+          throw new Error('Este código de cashback não pertence a esta conta.');
+        }
+        if (voucher.status !== 'ACTIVE') {
+          throw new Error('Este código de cashback já foi utilizado ou não está disponível.');
+        }
+
+        cashbackDiscount = Math.min(voucher.amount, subtotalAmount);
+        appliedVoucherId = voucher.id;
+        appliedVoucherCode = voucher.code;
+      }
+
+      const finalAmount = Math.max(0, Math.round((subtotalAmount - cashbackDiscount) * 100) / 100);
+
+      // Validate change if cash against final amount
+      const isCash = paymentMethod.toLowerCase().includes('dinheiro') || paymentMethod.toUpperCase() === 'CASH';
+      if (isCash && needsChange) {
+        if (!changeFor || changeFor < finalAmount) {
+          throw new Error(
+            `O valor para troco (R$ ${changeFor?.toFixed(2) || 0}) deve ser maior ou igual ao total a pagar (R$ ${finalAmount.toFixed(2)}).`
+          );
+        }
+      }
+
+      // 2. Atomically verify and decrement stock for each item
       for (const item of items) {
         const updateResult = await tx.product.updateMany({
           where: {
@@ -190,11 +221,16 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
         }
       }
 
-      // 2. Create Order with items - status is PENDING (real offline payment, no fake gateway)
+      // 3. Create Order with items and applied cashback
       const newOrder = await tx.order.create({
         data: {
           tutorId: user.sub,
-          totalAmount,
+          totalAmount: finalAmount,
+          subtotalAmount: subtotalAmount,
+          discountAmount: cashbackDiscount,
+          cashbackCodeApplied: appliedVoucherCode,
+          cashbackDiscount: cashbackDiscount,
+          cashbackCredited: false,
           status: OrderStatus.PENDING,
           paymentMethod,
           deliveryMethod,
@@ -212,13 +248,26 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
         },
       });
 
-      // 3. Clean cart items for this tutor
+      // 4. Mark cashback voucher as USED
+      if (appliedVoucherId) {
+        await tx.cashbackVoucher.update({
+          where: { id: appliedVoucherId },
+          data: {
+            status: 'USED',
+            usedAt: new Date(),
+            orderId: newOrder.id,
+          },
+        });
+      }
+
+      // 5. Clean cart items for this tutor
       await tx.cartItem.deleteMany({
         where: { tutorId: user.sub, productId: { in: productIds } },
       });
 
       return newOrder;
     });
+
 
     // Create real notifications for establishments
     try {
@@ -270,8 +319,14 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
   if (!order) return reply.status(404).send({ error: 'Pedido não encontrado.' });
   if (order.tutorId !== user.sub) return reply.status(403).send({ error: 'Acesso negado.' });
 
-  if (order.status === OrderStatus.COMPLETED) {
-    return reply.status(400).send({ error: 'Este pedido já foi concluído anteriormente.' });
+  // Idempotency check: if already completed or credited, return existing state gracefully
+  if (order.cashbackCredited || order.status === OrderStatus.COMPLETED) {
+    return reply.send({
+      message: 'Pedido já concluído anteriormente.',
+      order,
+      cashbackCredited: true,
+      cashbackAmount: order.cashbackAmountCredited || 0,
+    });
   }
 
   if (order.status === OrderStatus.CANCELLED) {
@@ -314,6 +369,41 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
         throw new Error('Não foi possível confirmar o recebimento devido a uma alteração de status simultânea.');
       }
 
+      const freshOrder = await tx.order.findUniqueOrThrow({ where: { id } });
+
+      // Idempotent Cashback Credit: 3% on eligible amount (excluding any cashback voucher discount!)
+      let earnedCashback = 0;
+      if (!freshOrder.cashbackCredited) {
+        const eligibleAmount = Math.max(0, freshOrder.totalAmount);
+        const cashbackResult = calculateCashback('PRODUCT', eligibleAmount);
+        earnedCashback = cashbackResult.cashbackAmount;
+
+        if (earnedCashback > 0) {
+          const orderShortId = id.slice(0, 8).toUpperCase();
+          await tx.cashbackTransaction.create({
+            data: {
+              userId: user.sub,
+              amount: earnedCashback,
+              type: 'EARNED',
+              description: `Cashback Compra #${orderShortId} (3%)`,
+              originType: 'ORDER',
+              orderId: freshOrder.id,
+              rate: 0.03,
+              eligibleAmount,
+              status: 'COMPLETED',
+            },
+          });
+        }
+
+        await tx.order.update({
+          where: { id: freshOrder.id },
+          data: {
+            cashbackCredited: true,
+            cashbackAmountCredited: earnedCashback,
+          },
+        });
+      }
+
       return tx.order.findUniqueOrThrow({ where: { id } });
     });
 
@@ -334,7 +424,28 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
       }
     }
 
-    return reply.send({ success: true, order: updated });
+    // Notify tutor about cashback earned if applicable
+    if (updated.cashbackAmountCredited && updated.cashbackAmountCredited > 0) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: user.sub,
+            title: `Você recebeu R$ ${updated.cashbackAmountCredited.toFixed(2).replace('.', ',')} de cashback!`,
+            message: `Seu recebimento do pedido #${orderShortId} foi confirmado. O saldo de cashback de 3% já está disponível na sua carteira.`,
+            type: 'ORDER',
+          },
+        });
+      } catch (notifErr) {
+        request.log.error(notifErr, 'Erro ao notificar tutor sobre cashback');
+      }
+    }
+
+    return reply.send({
+      success: true,
+      order: updated,
+      cashbackCredited: updated.cashbackCredited,
+      cashbackAmount: updated.cashbackAmountCredited || 0,
+    });
   } catch (err: any) {
     return reply.status(400).send({ error: err.message || 'Erro ao confirmar recebimento.' });
   }
@@ -421,7 +532,23 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
         });
       }
 
-      // 3. Create notification for establishment
+      // 3. Reactivate cashback voucher if one was applied
+      if (order.cashbackCodeApplied) {
+        await tx.cashbackVoucher.updateMany({
+          where: {
+            code: order.cashbackCodeApplied,
+            tutorId: user.sub,
+            status: 'USED',
+          },
+          data: {
+            status: 'ACTIVE',
+            usedAt: null,
+            orderId: null,
+          },
+        });
+      }
+
+      // 4. Create notification for establishment
       const orderShortId = id.slice(0, 8).toUpperCase();
       const establishmentId = order.items[0]?.establishmentId;
       if (establishmentId) {

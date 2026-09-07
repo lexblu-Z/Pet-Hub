@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { User, Mail, Phone, Camera, Check, Clock, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, Camera, Check, Clock, Trash2, PawPrint } from 'lucide-react';
 import { Button, Input, Card, Avatar } from '@/components/ui';
+import { SPECIES_OPTIONS } from '@/utils/species';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
@@ -15,14 +17,37 @@ export default function ProfessionalProfilePage() {
   const [specialty, setSpecialty] = useState(profProfile?.specialty || 'Clínico Geral Veterinário');
   const [document, setDocument] = useState(profProfile?.document || '');
   const [bio, setBio] = useState(profProfile?.bio || '');
+  const [acceptedSpecies, setAcceptedSpecies] = useState<string[]>(
+    Array.isArray(profProfile?.acceptedSpecies) && profProfile.acceptedSpecies.length > 0
+      ? profProfile.acceptedSpecies
+      : ['dog', 'cat']
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleToggleAcceptedSpecies = (speciesId: string) => {
+    setAcceptedSpecies(prev => {
+      if (prev.includes(speciesId)) {
+        if (prev.length === 1) {
+          toast.error('Você deve selecionar pelo menos 1 espécie atendida.');
+          return prev;
+        }
+        return prev.filter(s => s !== speciesId);
+      } else {
+        return [...prev, speciesId];
+      }
+    });
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedSpecies || acceptedSpecies.length === 0) {
+      toast.error('Selecione pelo menos uma espécie de animal atendida.');
+      return;
+    }
     setIsSaving(true);
     try {
       await api.put('/users/me/profile', {
@@ -31,6 +56,7 @@ export default function ProfessionalProfilePage() {
         specialty,
         bio,
         document,
+        acceptedSpecies,
       });
 
       if (setUser && currentUser) {
@@ -43,6 +69,7 @@ export default function ProfessionalProfilePage() {
             specialty,
             document,
             bio,
+            acceptedSpecies,
           },
         } as any);
       }
@@ -238,6 +265,51 @@ export default function ProfessionalProfilePage() {
             onChange={(e) => setSpecialty(e.target.value)}
             placeholder="Ex: Cirurgia Veterinária, Oftalmologia, Acupuntura..."
           />
+        </div>
+
+        {/* Accepted Species Section */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase">
+                Espécies que você atende *
+              </label>
+              <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">
+                Indique com quais espécies de animais você realiza consultas e atendimentos
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full border border-orange-200/50 dark:border-orange-900/30">
+              {acceptedSpecies.length} selecionada(s)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {SPECIES_OPTIONS.map((opt) => {
+              const isSelected = acceptedSpecies.includes(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => handleToggleAcceptedSpecies(opt.id)}
+                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-medium transition-all ${
+                    isSelected
+                      ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-bold shadow-xs'
+                      : 'bg-neutral-50/50 dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <SpeciesIcon speciesId={opt.id} size={16} className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-400'} />
+                    <span>{opt.label}</span>
+                  </span>
+                  <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors ${
+                    isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'border-neutral-300 dark:border-neutral-600'
+                  }`}>
+                    {isSelected && <Check size={10} className="stroke-[3]" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div>

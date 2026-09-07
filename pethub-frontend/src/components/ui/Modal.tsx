@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, Info } from 'lucide-react';
 import { Button } from './Button';
 
 // ---- Modal ----
@@ -139,16 +139,24 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   variant = 'danger',
   isLoading = false,
 }) => {
-  const icons = {
-    danger: '🚨',
-    warning: '⚠️',
-    info: 'ℹ️',
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm" hideClose>
       <div className="text-center py-2">
-        <div className="text-4xl mb-4">{icons[variant]}</div>
+        <div className="flex justify-center mb-4">
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-xs ${
+              variant === 'danger'
+                ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900/50 dark:text-rose-400'
+                : variant === 'warning'
+                ? 'bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-950/40 dark:border-amber-900/50 dark:text-amber-400'
+                : 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-950/40 dark:border-blue-900/50 dark:text-blue-400'
+            }`}
+          >
+            {variant === 'danger' && <X size={24} strokeWidth={2.5} />}
+            {variant === 'warning' && <AlertTriangle size={24} strokeWidth={2} />}
+            {variant === 'info' && <Info size={24} strokeWidth={2} />}
+          </div>
+        </div>
         <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">{title}</h3>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">{description || message}</p>
         <div className="flex gap-3">

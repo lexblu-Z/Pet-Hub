@@ -16,8 +16,12 @@ import {
   PauseCircle,
   PlayCircle,
   AlertTriangle,
+  CheckCircle2,
+  Pause,
+  Edit3,
 } from 'lucide-react';
 import { Input, Button, Badge, Modal, Avatar } from '@/components/ui';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 
 export default function AdminEstablishmentsPage() {
   const [establishments, setEstablishments] = useState<any[]>([]);
@@ -268,14 +272,14 @@ export default function AdminEstablishmentsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return <Badge variant="success">✓ Aprovado</Badge>;
+        return <Badge variant="success" className="inline-flex items-center gap-1"><CheckCircle2 size={11} /> Aprovado</Badge>;
       case 'SUSPENDED':
-        return <Badge variant="warning">⏸️ Suspenso</Badge>;
+        return <Badge variant="warning" className="inline-flex items-center gap-1"><Pause size={11} /> Suspenso</Badge>;
       case 'REJECTED':
-        return <Badge variant="error">✕ Reprovado</Badge>;
+        return <Badge variant="error" className="inline-flex items-center gap-1"><XCircle size={11} /> Reprovado</Badge>;
       case 'PENDING_APPROVAL':
       default:
-        return <Badge variant="default">⏳ Pendente</Badge>;
+        return <Badge variant="default" className="inline-flex items-center gap-1"><Clock size={11} /> Pendente</Badge>;
     }
   };
 
@@ -317,10 +321,10 @@ export default function AdminEstablishmentsPage() {
         <div className="flex flex-wrap gap-2 text-xs font-semibold">
           {[
             { id: 'ALL', label: 'Todos' },
-            { id: 'PENDING_APPROVAL', label: 'Pendentes ⏳' },
-            { id: 'ACTIVE', label: 'Aprovados ✓' },
-            { id: 'SUSPENDED', label: 'Suspensos ⏸️' },
-            { id: 'REJECTED', label: 'Reprovados ✕' },
+            { id: 'PENDING_APPROVAL', label: 'Pendentes' },
+            { id: 'ACTIVE', label: 'Aprovados' },
+            { id: 'SUSPENDED', label: 'Suspensos' },
+            { id: 'REJECTED', label: 'Reprovados' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -623,7 +627,10 @@ export default function AdminEstablishmentsPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-neutral-400 dark:text-[#8E918F] block font-semibold">Telefone / WhatsApp:</span>
+                  <span className="text-neutral-400 dark:text-[#8E918F] flex items-center gap-1.5 font-semibold">
+                    <WhatsAppIcon size={14} />
+                    <span>Telefone / WhatsApp:</span>
+                  </span>
                   <span className="text-neutral-800 dark:text-[#C4C7C5] font-medium">
                     {selectedEstab.phone || selectedEstab.establishmentProfile?.phone || 'Não informado'}
                   </span>
@@ -790,7 +797,7 @@ export default function AdminEstablishmentsPage() {
                       : 'bg-white dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#313335]'
                   }`}
                 >
-                  <span>✏️ Outro período personalizado</span>
+                  <span className="inline-flex items-center gap-1.5"><Edit3 size={13} /> Outro período personalizado</span>
                   {suspendPeriod === 'custom' && <span className="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded">Selecionado</span>}
                 </button>
 

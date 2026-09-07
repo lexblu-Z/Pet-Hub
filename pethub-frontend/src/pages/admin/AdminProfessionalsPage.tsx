@@ -17,8 +17,13 @@ import {
   MapPin,
   Camera,
   ExternalLink,
+  CheckCircle2,
+  Pause,
+  Clock,
+  Edit3,
 } from 'lucide-react';
 import { Input, Button, Badge, Modal, Avatar } from '@/components/ui';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 
@@ -275,14 +280,14 @@ export default function AdminProfessionalsPage() {
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'ACTIVE':
-        return <Badge variant="success">✓ Ativo</Badge>;
+        return <Badge variant="success" className="inline-flex items-center gap-1"><CheckCircle2 size={11} /> Ativo</Badge>;
       case 'SUSPENDED':
-        return <Badge variant="warning">⏸️ Suspenso</Badge>;
+        return <Badge variant="warning" className="inline-flex items-center gap-1"><Pause size={11} /> Suspenso</Badge>;
       case 'REJECTED':
-        return <Badge variant="error">✕ Reprovado</Badge>;
+        return <Badge variant="error" className="inline-flex items-center gap-1"><XCircle size={11} /> Reprovado</Badge>;
       case 'PENDING_APPROVAL':
       default:
-        return <Badge variant="default">⏳ Pendente</Badge>;
+        return <Badge variant="default" className="inline-flex items-center gap-1"><Clock size={11} /> Pendente</Badge>;
     }
   };
 
@@ -321,10 +326,10 @@ export default function AdminProfessionalsPage() {
         <div className="flex flex-wrap gap-2 text-xs font-semibold">
           {[
             { id: 'ALL', label: 'Todos' },
-            { id: 'PENDING_APPROVAL', label: 'Pendentes ⏳' },
-            { id: 'ACTIVE', label: 'Ativos ✓' },
-            { id: 'SUSPENDED', label: 'Suspensos ⏸️' },
-            { id: 'REJECTED', label: 'Reprovados ✕' },
+            { id: 'PENDING_APPROVAL', label: 'Pendentes' },
+            { id: 'ACTIVE', label: 'Ativos' },
+            { id: 'SUSPENDED', label: 'Suspensos' },
+            { id: 'REJECTED', label: 'Reprovados' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -625,7 +630,10 @@ export default function AdminProfessionalsPage() {
                 <span className="font-medium text-neutral-900 dark:text-[#E3E3E3]">{selectedProf.email}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
-                <span className="text-neutral-500 dark:text-[#8E918F]">Telefone:</span>
+                <span className="text-neutral-500 dark:text-[#8E918F] flex items-center gap-1">
+                  <WhatsAppIcon size={13} />
+                  <span>Telefone / WhatsApp:</span>
+                </span>
                 <span className="font-medium text-neutral-900 dark:text-[#E3E3E3]">{selectedProf.phone || 'Não informado'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-neutral-50 dark:border-[#313335]">
@@ -790,7 +798,7 @@ export default function AdminProfessionalsPage() {
                       : 'bg-white dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#313335]'
                   }`}
                 >
-                  <span>✏️ Outro período personalizado</span>
+                  <span className="inline-flex items-center gap-1.5"><Edit3 size={13} /> Outro período personalizado</span>
                   {suspendPeriod === 'custom' && <span className="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded">Selecionado</span>}
                 </button>
 

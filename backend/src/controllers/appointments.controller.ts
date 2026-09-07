@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { Role, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
+import { normalizeSpecies, SPECIES_LABELS, isPetCompatibleWithService, isPetCompatibleWithProvider } from '../utils/species';
+import { calculateCashback, normalizeCashbackCode } from '../utils/cashback';
 
 const createAppointmentSchema = z.object({
   petId: z.string(),
@@ -11,6 +13,10 @@ const createAppointmentSchema = z.object({
   professionalId: z.string().nullable().optional(),
   employeeId: z.string().nullable().optional(),
   date: z.string().datetime(), // e.g. "2026-10-10T14:00:00Z"
+  paymentMethod: z.string().optional().default('CREDIT_CARD'),
+  needsChange: z.boolean().optional().default(false),
+  changeFor: z.number().positive().optional().nullable(),
+  cashbackCode: z.string().optional().nullable(),
 });
 
 const updateAppointmentStatusSchema = z.object({
@@ -353,6 +359,42 @@ export const appointmentsController = {
         }
       }
 
+      // Fetch pet to verify existence and check species compatibility
+      const pet = await prisma.pet.findFirst({
+        where: { id: data.petId, tutorId: user.sub },
+      });
+      if (!pet) {
+        return reply.status(404).send({ error: 'Pet não encontrado.' });
+      }
+
+      const petSpeciesName = SPECIES_LABELS[normalizeSpecies(pet.species)] || pet.species;
+
+      // 1. Compatibility Check: Pet Species vs Service animalType
+      if (!isPetCompatibleWithService(pet.species, service.animalType)) {
+        return reply.status(400).send({
+          error: `Este serviço não está disponível para a espécie de ${pet.name} (${petSpeciesName}).`,
+        });
+      }
+
+      // 2. Compatibility Check: Pet Species vs Establishment acceptedSpecies
+      if (estUser.establishmentProfile) {
+        if (!isPetCompatibleWithProvider(pet.species, estUser.establishmentProfile.acceptedSpecies)) {
+          return reply.status(400).send({
+            error: `O estabelecimento selecionado não atende a espécie de ${pet.name} (${petSpeciesName}).`,
+          });
+        }
+      }
+
+      // 3. Compatibility Check: Pet Species vs Professional acceptedSpecies
+      const targetProfProfile = profUser?.professionalProfile || (isProfActive ? estUser.professionalProfile : null);
+      if (targetProfProfile) {
+        if (!isPetCompatibleWithProvider(pet.species, targetProfProfile.acceptedSpecies)) {
+          return reply.status(400).send({
+            error: `O profissional selecionado não atende a espécie de ${pet.name} (${petSpeciesName}).`,
+          });
+        }
+      }
+
       // Check working hours and breaks
       const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const ptDayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
@@ -441,16 +483,97 @@ export const appointmentsController = {
           }
         }
       }
-      
-      const appointment = await prisma.appointment.create({
-        data: {
-          ...data,
-          tutorId: user.sub,
-        },
-        include: {
-          pet: true,
-          service: true,
+
+      const servicePrice = service.price || 0;
+      const subtotalAmount = servicePrice;
+
+      const isCash = (data.paymentMethod || '').toLowerCase().includes('dinheiro') || (data.paymentMethod || '').toUpperCase() === 'CASH';
+
+      const appointment = await prisma.$transaction(async (tx) => {
+        let appliedVoucherId: string | null = null;
+        let appliedVoucherCode: string | null = null;
+        let cashbackDiscount = 0;
+
+        if (data.cashbackCode) {
+          const normalized = normalizeCashbackCode(data.cashbackCode);
+          const voucher = await tx.cashbackVoucher.findUnique({
+            where: { code: normalized },
+          });
+
+          if (!voucher) {
+            throw new Error('Código de cashback inválido ou inexistente.');
+          }
+          if (voucher.tutorId !== user.sub) {
+            throw new Error('Este código de cashback não pertence a esta conta.');
+          }
+          if (voucher.status !== 'ACTIVE') {
+            throw new Error('Este código de cashback já foi utilizado ou não está disponível.');
+          }
+
+          cashbackDiscount = Math.min(voucher.amount, subtotalAmount);
+          appliedVoucherId = voucher.id;
+          appliedVoucherCode = voucher.code;
         }
+
+        const finalAmount = Math.max(0, Math.round((subtotalAmount - cashbackDiscount) * 100) / 100);
+
+        if (isCash && data.needsChange) {
+          if (!data.changeFor || data.changeFor < finalAmount) {
+            throw new Error(
+              `O valor para troco (R$ ${data.changeFor?.toFixed(2) || 0}) deve ser maior ou igual ao total a pagar (R$ ${finalAmount.toFixed(2)}).`
+            );
+          }
+        }
+
+        const apt = await tx.appointment.create({
+          data: {
+            tutorId: user.sub,
+            petId: data.petId,
+            serviceId: data.serviceId,
+            establishmentId: data.establishmentId,
+            professionalId: data.professionalId || null,
+            employeeId: data.employeeId || null,
+            date: newStart,
+            status: AppointmentStatus.PENDING,
+            paymentMethod: data.paymentMethod || 'CREDIT_CARD',
+            paymentStatus: 'PENDING',
+            totalAmount: subtotalAmount,
+            discountAmount: cashbackDiscount,
+            cashbackCodeApplied: appliedVoucherCode,
+            cashbackDiscount: cashbackDiscount,
+            finalAmount: finalAmount,
+            needsChange: isCash ? !!data.needsChange : false,
+            changeFor: isCash && data.needsChange ? data.changeFor : null,
+            cashbackCredited: false,
+          },
+          include: {
+            pet: true,
+            service: true,
+            establishment: {
+              include: {
+                establishmentProfile: true,
+              }
+            },
+            professional: {
+              include: {
+                professionalProfile: true,
+              }
+            },
+          }
+        });
+
+        if (appliedVoucherId) {
+          await tx.cashbackVoucher.update({
+            where: { id: appliedVoucherId },
+            data: {
+              status: 'USED',
+              usedAt: new Date(),
+              appointmentId: apt.id,
+            }
+          });
+        }
+
+        return apt;
       });
 
       // Generate notifications
@@ -526,6 +649,26 @@ export const appointmentsController = {
       }
     });
 
+    // If cancelled and voucher was used, restore the voucher
+    if (data.status === AppointmentStatus.CANCELLED && existing.cashbackCodeApplied) {
+      try {
+        await prisma.cashbackVoucher.updateMany({
+          where: {
+            code: existing.cashbackCodeApplied,
+            status: 'USED',
+            appointmentId: existing.id,
+          },
+          data: {
+            status: 'ACTIVE',
+            usedAt: null,
+            appointmentId: null,
+          }
+        });
+      } catch (voucherErr) {
+        request.log.error('Error restoring cashback voucher on cancellation:', voucherErr);
+      }
+    }
+
     // Notify parties about status change
     try {
       const statusLabels: Record<string, string> = {
@@ -581,5 +724,104 @@ export const appointmentsController = {
     });
 
     return reply.send(appointment);
+  },
+
+  async confirmCompletion(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = request.user as any;
+    const { id } = request.params;
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        service: true,
+        pet: true,
+        establishment: { include: { establishmentProfile: true } },
+        professional: { include: { professionalProfile: true } },
+      },
+    });
+
+    if (!appointment) {
+      return reply.status(404).send({ error: 'Agendamento não encontrado.' });
+    }
+
+    if (appointment.tutorId !== user.sub) {
+      return reply.status(403).send({ error: 'Apenas o tutor responsável pode confirmar a realização do serviço.' });
+    }
+
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      return reply.status(400).send({ error: 'Não é possível confirmar um agendamento cancelado.' });
+    }
+
+    // Idempotency: if already credited, return without re-crediting
+    if (appointment.cashbackCredited) {
+      return reply.send({
+        message: 'Agendamento já confirmado anteriormente.',
+        appointment,
+        cashbackCredited: true,
+        cashbackAmount: appointment.cashbackAmountCredited || 0,
+      });
+    }
+
+    // Calculate cashback: 5% on eligible amount (finalAmount or totalAmount - cashbackDiscount)
+    const eligibleAmount = appointment.finalAmount ?? Math.max(0, (appointment.totalAmount || 0) - (appointment.cashbackDiscount || 0));
+    const cashbackCalc = calculateCashback(eligibleAmount, 'SERVICE');
+    const cashbackAmount = cashbackCalc.cashbackAmount;
+
+    const result = await prisma.$transaction(async (tx) => {
+      if (cashbackAmount > 0) {
+        await tx.cashbackTransaction.create({
+          data: {
+            userId: appointment.tutorId,
+            type: 'EARNED',
+            amount: cashbackAmount,
+            originType: 'SERVICE',
+            appointmentId: appointment.id,
+            rate: 0.05,
+            eligibleAmount: eligibleAmount,
+            description: `Cashback 5% - Serviço ${appointment.service?.name || 'Veterinário/Estética'}`,
+          },
+        });
+      }
+
+      const updatedAppointment = await tx.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          status: AppointmentStatus.COMPLETED,
+          confirmedByTutor: true,
+          confirmedByTutorAt: new Date(),
+          paymentStatus: 'PAID',
+          cashbackCredited: true,
+          cashbackAmountCredited: cashbackAmount,
+        },
+        include: {
+          service: true,
+          pet: true,
+        },
+      });
+
+      return { updatedAppointment, cashbackAmount };
+    });
+
+    if (result.cashbackAmount > 0) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: appointment.tutorId,
+            title: 'Cashback Creditado!',
+            message: `Você recebeu R$ ${result.cashbackAmount.toFixed(2)} de cashback (5%) pela realização do serviço "${appointment.service?.name || 'Serviço'}".`,
+            type: 'CASHBACK',
+          },
+        });
+      } catch (nErr) {
+        request.log.error(nErr);
+      }
+    }
+
+    return reply.send({
+      message: 'Agendamento concluído e cashback creditado com sucesso!',
+      appointment: result.updatedAppointment,
+      cashbackCredited: true,
+      cashbackAmount: result.cashbackAmount,
+    });
   }
 };

@@ -2,8 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Building2, MapPin, Phone, Mail, Clock, Camera, Plus, Trash2, CheckCircle, Search, ShieldCheck, Upload } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Clock, Camera, Plus, Trash2, CheckCircle, Search, ShieldCheck, Upload, PawPrint } from 'lucide-react';
 import { Input, Button, Badge } from '@/components/ui';
+import { SPECIES_OPTIONS } from '@/utils/species';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 
 const getFullImageUrl = (url?: string | null) => {
   if (!url) return '';
@@ -49,6 +51,23 @@ export default function EstablishmentProfilePage() {
   const [state, setState] = useState('SP');
   const [isCepLoading, setIsCepLoading] = useState(false);
 
+  // Accepted Species
+  const [acceptedSpecies, setAcceptedSpecies] = useState<string[]>(['dog', 'cat']);
+
+  const handleToggleAcceptedSpecies = (speciesId: string) => {
+    setAcceptedSpecies(prev => {
+      if (prev.includes(speciesId)) {
+        if (prev.length === 1) {
+          toast.error('O estabelecimento precisa atender pelo menos 1 espécie.');
+          return prev;
+        }
+        return prev.filter(s => s !== speciesId);
+      } else {
+        return [...prev, speciesId];
+      }
+    });
+  };
+
   // Photos
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoInput, setPhotoInput] = useState('');
@@ -79,6 +98,7 @@ export default function EstablishmentProfilePage() {
       setCity(p.city || 'Ourinhos');
       setState(p.state || 'SP');
       setPhotos(p.photos || []);
+      setAcceptedSpecies(Array.isArray(p.acceptedSpecies) && p.acceptedSpecies.length > 0 ? p.acceptedSpecies : ['dog', 'cat']);
 
       const hoursRes = await api.get('/establishment/hours');
       if (hoursRes.data && typeof hoursRes.data === 'object') {
@@ -98,27 +118,18 @@ export default function EstablishmentProfilePage() {
 
   const handleCepLookup = async (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 8);
-    setCep(raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw);
-
+    setCep(raw);
     if (raw.length === 8) {
       setIsCepLoading(true);
       try {
         const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
         const data = await res.json();
-        if (data.erro) {
-          toast.error('CEP não encontrado.');
-          return;
+        if (data && !data.erro) {
+          setAddress(`${data.logradouro || ''}, , ${data.bairro || ''}`);
+          toast.success('Endereço preenchido!');
         }
-        if (data.localidade?.toLowerCase() !== 'ourinhos' || data.uf?.toUpperCase() !== 'SP') {
-          toast.error('Apenas endereços de Ourinhos - SP são permitidos.');
-          return;
-        }
-        setAddress(`${data.logradouro || ''}, - ${data.bairro || ''}`);
-        setCity('Ourinhos');
-        setState('SP');
-        toast.success('Endereço localizado via ViaCEP!');
-      } catch (err) {
-        toast.error('Erro ao consultar CEP.');
+      } catch (e) {
+        // silent fail
       } finally {
         setIsCepLoading(false);
       }
@@ -126,8 +137,12 @@ export default function EstablishmentProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!businessName.trim()) {
+    if (!businessName) {
       toast.error('Nome do estabelecimento é obrigatório.');
+      return;
+    }
+    if (!acceptedSpecies || acceptedSpecies.length === 0) {
+      toast.error('Selecione pelo menos uma espécie de animal atendida.');
       return;
     }
     setSaving(true);
@@ -142,6 +157,7 @@ export default function EstablishmentProfilePage() {
         state: 'SP',
         phone,
         email,
+        acceptedSpecies,
       });
 
       await api.put('/establishment/hours', workingHours);
@@ -315,6 +331,51 @@ export default function EstablishmentProfilePage() {
             placeholder="Conte a história, os diferenciais e a dedicação da sua equipe aos pets..."
             className="w-full border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-xl p-3 text-xs text-neutral-800 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
           />
+        </div>
+      </div>
+
+      {/* 2. Accepted Species */}
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-[#313335]">
+          <div className="flex items-center gap-2.5 font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
+            <PawPrint size={20} className="text-orange-500" />
+            <span>Espécies Atendidas</span>
+          </div>
+          <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-full border border-orange-200/50 dark:border-orange-900/30">
+            {acceptedSpecies.length} selecionada(s)
+          </span>
+        </div>
+
+        <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+          Indique quais espécies de animais seu estabelecimento tem capacidade técnica e estrutura para receber. Isso garante que os tutores encontrem você e apenas agendem para pets compatíveis.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+          {SPECIES_OPTIONS.map((opt) => {
+            const isSelected = acceptedSpecies.includes(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleToggleAcceptedSpecies(opt.id)}
+                className={`flex items-center justify-between p-3.5 rounded-xl border text-sm font-medium transition-all ${
+                  isSelected
+                    ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 font-bold shadow-xs'
+                    : 'bg-neutral-50/50 dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <SpeciesIcon speciesId={opt.id} size={17} className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-400'} />
+                  <span>{opt.label}</span>
+                </span>
+                <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
+                  isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'border-neutral-300 dark:border-neutral-600'
+                }`}>
+                  {isSelected && <CheckCircle size={12} className="stroke-[3]" />}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
+import { ItemLogo } from '@/components/shared/ServiceLogo';
 
 interface OrderItem {
   id: string;
@@ -174,7 +176,7 @@ export default function MyPurchasesPage() {
       case 'DELIVERED': 
         return { label: 'Entregue (Aguardando sua confirmação)', icon: <CheckCircle size={14} />, color: 'warning' };
       case 'COMPLETED': 
-        return { label: 'Concluído ✓', icon: <CheckCircle size={14} />, color: 'success' };
+        return { label: 'Concluído', icon: <CheckCircle size={14} />, color: 'success' };
       case 'CANCELLED': 
         return { label: 'Cancelado', icon: <XCircle size={14} />, color: 'error' };
       default: 
@@ -197,7 +199,9 @@ export default function MyPurchasesPage() {
 
       {orders.length === 0 ? (
         <div className="bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-100 dark:border-[#313335] p-12 flex flex-col items-center justify-center text-center shadow-sm">
-          <div className="text-5xl mb-4">🐾</div>
+          <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-4">
+            <ShoppingBag size={32} />
+          </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Você ainda não fez nenhuma compra</h2>
           <p className="text-neutral-500 dark:text-[#8E918F] mb-6 max-w-sm">
             Encontre produtos reais para o seu pet nas lojas parceiras do PetHub.
@@ -230,8 +234,8 @@ export default function MyPurchasesPage() {
                     <span className="text-xs font-mono font-bold text-neutral-500 dark:text-[#8E918F]">
                       #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
                     </span>
-                    <span className="text-[10px] bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] px-2 py-0.5 rounded-md font-semibold">
-                      {isDelivery ? '🚚 Entrega' : '🏪 Retirada no Balcão'}
+                    <span className="text-[10px] bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1">
+                      {isDelivery ? <><Truck size={11} /> Entrega</> : <><Store size={11} /> Retirada no Balcão</>}
                     </span>
                   </div>
 
@@ -383,13 +387,17 @@ export default function MyPurchasesPage() {
                   </Badge>
                 </div>
                 {selectedOrder.deliveryMethod === 'DELIVERY' && selectedOrder.deliveryAddress ? (
-                  <p className="text-neutral-700 dark:text-[#C4C7C5]">
-                    📍 {selectedOrder.deliveryAddress.street}, {selectedOrder.deliveryAddress.number}
-                    {selectedOrder.deliveryAddress.complement ? ` (${selectedOrder.deliveryAddress.complement})` : ''} - {selectedOrder.deliveryAddress.neighborhood}, {selectedOrder.deliveryAddress.city} - {selectedOrder.deliveryAddress.state}
+                  <p className="text-neutral-700 dark:text-[#C4C7C5] flex items-start gap-1.5">
+                    <MapPin size={14} className="shrink-0 mt-0.5 text-neutral-400" />
+                    <span>
+                      {selectedOrder.deliveryAddress.street}, {selectedOrder.deliveryAddress.number}
+                      {selectedOrder.deliveryAddress.complement ? ` (${selectedOrder.deliveryAddress.complement})` : ''} - {selectedOrder.deliveryAddress.neighborhood}, {selectedOrder.deliveryAddress.city} - {selectedOrder.deliveryAddress.state}
+                    </span>
                   </p>
                 ) : (
-                  <p className="text-neutral-700 dark:text-[#C4C7C5]">
-                    🏪 Retirada no balcão da loja parceira. Apresente o código do pedido ao atendente.
+                  <p className="text-neutral-700 dark:text-[#C4C7C5] flex items-start gap-1.5">
+                    <Store size={14} className="shrink-0 mt-0.5 text-neutral-400" />
+                    <span>Retirada no balcão da loja parceira. Apresente o código do pedido ao atendente.</span>
                   </p>
                 )}
               </div>
@@ -412,7 +420,10 @@ export default function MyPurchasesPage() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{item.productName || item.product?.name || 'Produto'}</h4>
+                        <div className="flex items-center gap-1.5">
+                          <ItemLogo size="xs" />
+                          <h4 className="font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{item.productName || item.product?.name || 'Produto'}</h4>
+                        </div>
                         <p className="text-neutral-500 dark:text-[#8E918F]">{item.quantity}x R$ {item.priceAtTime.toFixed(2).replace('.', ',')}</p>
                       </div>
                     </div>
@@ -427,9 +438,12 @@ export default function MyPurchasesPage() {
               <div className="border-t border-neutral-100 dark:border-[#313335] pt-3 text-xs space-y-1.5">
                 <div className="flex justify-between items-center text-neutral-500 dark:text-[#8E918F]">
                   <span>Forma de pagamento</span>
-                  <span className="font-semibold text-neutral-800 dark:text-[#E3E3E3]">
-                    {selectedOrder.paymentMethod || 'Presencial'}
-                    {selectedOrder.needsChange && selectedOrder.changeFor ? ` (Troco p/ R$ ${selectedOrder.changeFor.toFixed(2).replace('.', ',')})` : ''}
+                  <span className="font-semibold text-neutral-800 dark:text-[#E3E3E3] inline-flex items-center gap-1.5">
+                    <PaymentLogo method={selectedOrder.paymentMethod} size="xs" />
+                    <span>
+                      {selectedOrder.paymentMethod || 'Presencial'}
+                      {selectedOrder.needsChange && selectedOrder.changeFor ? ` (Troco p/ R$ ${selectedOrder.changeFor.toFixed(2).replace('.', ',')})` : ''}
+                    </span>
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-base font-bold text-neutral-900 dark:text-[#E3E3E3] pt-1">

@@ -34,7 +34,7 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
   // Update profile (name, phone, avatar, and professional fields)
   fastify.put('/me/profile', async (request, reply) => {
     const user = request.user as any;
-    const { name, phone, avatar, specialty, bio, document } = (request.body as any) || {};
+    const { name, phone, avatar, specialty, bio, document, acceptedSpecies } = (request.body as any) || {};
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -50,11 +50,12 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
       },
     });
 
-    if (user.role === 'PROFESSIONAL' && (specialty !== undefined || bio !== undefined || document !== undefined)) {
+    if (user.role === 'PROFESSIONAL' && (specialty !== undefined || bio !== undefined || document !== undefined || acceptedSpecies !== undefined)) {
       const profUpdate: any = {};
       if (specialty !== undefined) profUpdate.specialty = specialty;
       if (bio !== undefined) profUpdate.bio = bio;
       if (document !== undefined) profUpdate.document = document;
+      if (acceptedSpecies !== undefined) profUpdate.acceptedSpecies = acceptedSpecies;
 
       const updatedProf = await prisma.professionalProfile.upsert({
         where: { userId: user.sub },

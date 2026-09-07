@@ -18,7 +18,9 @@ import {
   CalendarCheck2,
   SlidersHorizontal,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Calendar,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
@@ -323,8 +325,9 @@ export default function ProfessionalSchedulePage() {
             variant={showGoogleCard ? 'primary' : 'outline'}
             onClick={() => setShowGoogleCard(!showGoogleCard)}
             className="flex items-center gap-1.5 text-xs font-bold"
+            leftIcon={<Calendar size={13} />}
           >
-            🗓️ Google Calendar
+            Google Calendar
           </Button>
 
           {/* Recarregar */}
@@ -746,8 +749,8 @@ export default function ProfessionalSchedulePage() {
                       </Button>
                     )}
                     {apt.status === 'COMPLETED' && (
-                      <span className="text-xs font-semibold text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-green-200 dark:border-emerald-800/50">
-                        ✓ Atendimento Concluído
+                      <span className="text-xs font-semibold text-green-700 dark:text-emerald-300 bg-green-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-green-200 dark:border-emerald-800/50 inline-flex items-center gap-1">
+                        <CheckCircle size={12} /> Atendimento Concluído
                       </span>
                     )}
                   </div>
@@ -775,7 +778,7 @@ export default function ProfessionalSchedulePage() {
                 onClick={() => setSelectedApt(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F] transition-colors cursor-pointer"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Sparkles, KeyRound, ArrowRight, CheckCircle2, Laugh } from 'lucide-react';
+import { X, Lock, Sparkles, KeyRound, ArrowRight, CheckCircle2, Laugh, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 
@@ -78,10 +78,10 @@ export const EasterEggUnlockModal: React.FC<EasterEggUnlockModalProps> = ({
             <div className="space-y-6">
               {/* Header */}
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-500 text-2xl mb-1 shadow-xs">
-                  👀
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-500 mb-1 shadow-xs">
+                  <Eye size={26} />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight">Área secreta 👀</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Área confidencial</h2>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
                   Apenas os dignos podem prosseguir. Responda à pergunta confidencial para destravar.
                 </p>
@@ -141,17 +141,17 @@ export const EasterEggUnlockModal: React.FC<EasterEggUnlockModalProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-6 py-4"
             >
-              <div className="inline-flex items-center justify-center w-18 h-18 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 text-4xl shadow-inner animate-bounce">
-                👌
+              <div className="inline-flex items-center justify-center w-18 h-18 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 shadow-inner">
+                <Sparkles size={36} />
               </div>
 
               <div className="space-y-3">
                 <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 space-y-2">
                   <p className="text-lg font-extrabold text-amber-900 dark:text-amber-200 leading-snug">
-                    KKKKKK todas estavam certas bobinho 👌👌
+                    Todas as alternativas estavam corretas!
                   </p>
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                    eu também não sei isso 😂
+                    Acesso desbloqueado com sucesso.
                   </p>
                 </div>
                 <p className="text-xs text-neutral-400 dark:text-neutral-500">
@@ -166,7 +166,7 @@ export const EasterEggUnlockModal: React.FC<EasterEggUnlockModalProps> = ({
                 rightIcon={<ArrowRight size={18} />}
                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-500/20"
               >
-                Abrir Galeria Secreta 🎉
+                Abrir Galeria Secreta
               </Button>
             </motion.div>
           )}

@@ -15,7 +15,12 @@ import {
   Package, 
   TrendingUp, 
   ChevronRight,
-  Plus
+  Plus,
+  Pause,
+  CheckCircle2,
+  BarChart2,
+  Star,
+  Trophy
 } from 'lucide-react';
 import { Button, Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
@@ -163,13 +168,13 @@ export default function EstablishmentDashboard() {
           />
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {businessName} 👋</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Olá, {businessName}</h1>
               {isSuspended ? (
-                <Badge variant="warning">⏸️ Suspenso</Badge>
+                <Badge variant="warning" className="inline-flex items-center gap-1"><Pause size={11} /> Suspenso</Badge>
               ) : isPendingApproval ? (
-                <Badge variant="default">⏳ Em Análise</Badge>
+                <Badge variant="default" className="inline-flex items-center gap-1"><Clock size={11} /> Em Análise</Badge>
               ) : (
-                <Badge variant="success">✓ Ativo</Badge>
+                <Badge variant="success" className="inline-flex items-center gap-1"><CheckCircle2 size={11} /> Ativo</Badge>
               )}
             </div>
             <p className="text-neutral-500 dark:text-[#8E918F] text-sm mt-0.5">
@@ -331,7 +336,9 @@ export default function EstablishmentDashboard() {
           </div>
           <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
             <span>{data?.petsCount || 0} pets atendidos</span>
-            <span className="text-amber-600 dark:text-amber-400 font-semibold">★ {data?.averageRating.toFixed(1) || '5.0'}</span>
+            <span className="text-amber-600 dark:text-amber-400 font-semibold inline-flex items-center gap-1">
+              <Star size={12} className="fill-amber-400 text-amber-400" /> {data?.averageRating.toFixed(1) || '5.0'}
+            </span>
           </div>
         </div>
       </div>
@@ -359,8 +366,8 @@ export default function EstablishmentDashboard() {
               {/* Subtle watermark notice when empty */}
               {(!data?.hasData || data.revenue === 0) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-4 text-center">
-                  <span className="text-xs font-semibold text-neutral-500 dark:text-[#C4C7C5] bg-white/90 dark:bg-[#282A2C]/90 px-3 py-1.5 rounded-full border border-neutral-200/80 dark:border-[#313335] shadow-xs">
-                    📊 Ainda não há dados suficientes para exibir tendências
+                  <span className="text-xs font-semibold text-neutral-500 dark:text-[#C4C7C5] bg-white/90 dark:bg-[#282A2C]/90 px-3 py-1.5 rounded-full border border-neutral-200/80 dark:border-[#313335] shadow-xs inline-flex items-center gap-1.5">
+                    <BarChart2 size={13} className="text-neutral-400" /> Ainda não há dados suficientes para exibir tendências
                   </span>
                   <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-1 max-w-sm">
                     Conforme seus agendamentos e vendas forem concluídos, a curva de faturamento real aparecerá aqui.
@@ -441,8 +448,6 @@ export default function EstablishmentDashboard() {
           ) : (
             <div className="space-y-2.5">
               {data.topProducts.map((prod, idx) => {
-                const medals = ['🥇', '🥈', '🥉'];
-                const isPodium = idx < 3;
                 return (
                   <div 
                     key={idx} 
@@ -456,8 +461,18 @@ export default function EstablishmentDashboard() {
                         : 'bg-white dark:bg-[#1E1F20] border-transparent hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
                     }`}
                   >
-                    <div className="w-7 text-center font-bold text-sm shrink-0">
-                      {isPodium ? medals[idx] : <span className="text-xs text-neutral-400">#{idx + 1}</span>}
+                    <div className="w-7 flex items-center justify-center shrink-0">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                        idx === 0
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                          : idx === 1
+                          ? 'bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
+                          : idx === 2
+                          ? 'bg-amber-200/60 text-amber-900 dark:bg-amber-950/60 dark:text-amber-400'
+                          : 'text-neutral-400 dark:text-[#8E918F]'
+                      }`}>
+                        {idx + 1}
+                      </span>
                     </div>
 
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335] shadow-2xs">

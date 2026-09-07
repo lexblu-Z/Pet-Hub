@@ -9,6 +9,11 @@ build
 .DS_Store
 *.log
 coverage
-uploads/
+# Runtime user uploads (keep ignored, allow official assets)
+uploads/*
+!uploads/icones/
+!uploads/pgmntos/
+!uploads/easter-egg´s/
 backend/uploads/
 *.exe
+*.lnk

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { PawPrint, Mail, Lock, ArrowRight, ArrowLeft, KeyRound, Sparkles, Eye, EyeOff, AlertCircle, User, Star } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
@@ -121,7 +121,7 @@ export default function LoginPage() {
         };
         const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
         login(token, user, frontRole);
-        toast.success(`Bem-vindo de volta, ${user.name}! 🐾`);
+        toast.success(`Bem-vindo de volta, ${user.name}!`);
         navigate(`/${frontRole}`);
       }
     } catch (err: any) {
@@ -167,7 +167,7 @@ export default function LoginPage() {
       const frontRole = (roleRouteMap[user.role] || user.role.toLowerCase()) as UserRole;
       login(token, user, frontRole);
 
-      toast.success('Bem-vindo de volta! 🐶');
+      toast.success('Bem-vindo de volta!');
       navigate(`/${frontRole}`);
     } catch (error: any) {
       console.error(error);
@@ -237,7 +237,7 @@ export default function LoginPage() {
               <div className="min-w-0">
                 <p className="text-white text-sm font-semibold truncate">Mel & Bob</p>
                 <span className="inline-flex items-center gap-1 text-[11px] text-orange-300 font-medium">
-                  ⭐ 4.9 Tutor VIP
+                  <Star size={11} className="fill-orange-400 text-orange-400" /> 4.9 Tutor VIP
                 </span>
               </div>
             </div>
@@ -274,7 +274,7 @@ export default function LoginPage() {
             <span className="text-xl font-bold text-neutral-900 dark:text-white">Pet<span className="text-orange-500">Hub</span></span>
           </div>
 
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Bem-vindo de volta! 👋</h2>
+          <h2 className="text-3xl font-bold text-neutral-900 dark:text-[#E3E3E3] mb-2">Bem-vindo de volta!</h2>
           <p className="text-neutral-500 dark:text-[#C4C7C5] mb-6">Entre na sua conta para continuar</p>
 
 

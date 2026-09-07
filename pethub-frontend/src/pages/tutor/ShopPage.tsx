@@ -6,6 +6,7 @@ import { useToast } from '@/store/toastStore';
 import { Button, SearchBar, Badge } from '@/components/ui';
 import { api } from '@/services/api';
 import { CheckoutModal } from '@/components/shared/CheckoutModal';
+import { ItemLogo } from '@/components/shared/ServiceLogo';
 
 interface RealProduct {
   id: string;
@@ -489,7 +490,10 @@ export default function ShopPage() {
                     <div key={item.product.id} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl">
                       <img src={item.product.photos?.[0] || '/romeu_e_julieta_1788367558045.jpg'} alt="" className="w-14 h-14 rounded-xl object-cover bg-white dark:bg-[#1E1F20]" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] truncate">{item.product.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <ItemLogo size="xs" />
+                          <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] truncate">{item.product.name}</p>
+                        </div>
                         <p className="text-sm text-orange-600 dark:text-orange-400 font-bold mt-0.5">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.product.price)}
                         </p>

@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import { Role, ApprovalStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { emailService } from '../services/email.service';
+import { validateAndNormalizeDocument } from '../utils/documentValidation';
 
 const cleanEnv = (val?: string) => (val ? val.replace(/^["'\[]+|["'\]]+$/g, '').trim() : '');
 const GOOGLE_CLIENT_ID = cleanEnv(process.env.GOOGLE_CLIENT_ID) || '';
@@ -104,9 +105,11 @@ const registerSchema = z.object({
   businessEmail: z.string().optional(),
   photos: z.array(z.string()).optional(),
   workplacePhoto: z.string().optional(),
+  acceptedSpecies: z.array(z.string()).optional(),
   number: z.string().optional(),
   complement: z.string().optional(),
   neighborhood: z.string().optional(),
+  acceptedCashbackTerms: z.boolean().optional(),
 });
 
 const loginSchema = z.object({
@@ -208,6 +211,15 @@ export const authController = {
         });
       }
 
+      // Strict validation for partners: Terms of Universal Cashback program v1.0 must be accepted
+      if (data.role === Role.ESTABLISHMENT || data.role === Role.PROFESSIONAL) {
+        if (!data.acceptedCashbackTerms) {
+          return reply.status(400).send({
+            error: 'É obrigatório aceitar os termos do programa de cashback universal (v1.0) para se cadastrar.',
+          });
+        }
+      }
+
       // Strict validation for establishments: only Ourinhos - SP is accepted
       if (data.role === Role.ESTABLISHMENT) {
         if (data.city && data.city.trim().toLowerCase() !== 'ourinhos') {
@@ -288,6 +300,57 @@ export const authController = {
       const normalizedPhone = validateAndNormalizePhone(data.phone).normalized || data.phone;
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
+      let cleanDocument: string | null = null;
+      if (data.role === Role.TUTOR || data.role === Role.PROFESSIONAL) {
+        if (!data.document || !data.document.trim()) {
+          return reply.status(400).send({
+            error: data.role === Role.TUTOR ? 'O CPF do tutor é obrigatório.' : 'CPF é obrigatório para profissionais.',
+          });
+        }
+        const docResult = validateAndNormalizeDocument(data.document, 'cpf');
+        if (!docResult.isValid) {
+          return reply.status(400).send({ error: docResult.error || 'CPF inválido.' });
+        }
+        cleanDocument = docResult.normalized;
+
+        const existingUserDoc = await prisma.user.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingProfDoc = await prisma.professionalProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingEstabDoc = await prisma.establishmentProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        if (existingUserDoc || existingProfDoc || existingEstabDoc) {
+          return reply.status(409).send({ error: 'Este CPF já está associado a uma conta existente na plataforma.' });
+        }
+      } else if (data.role === Role.ESTABLISHMENT) {
+        if (!data.document || !data.document.trim()) {
+          return reply.status(400).send({
+            error: 'CNPJ ou CPF é obrigatório para estabelecimentos.',
+          });
+        }
+        const docResult = validateAndNormalizeDocument(data.document, 'auto');
+        if (!docResult.isValid) {
+          return reply.status(400).send({ error: docResult.error || 'Documento inválido.' });
+        }
+        cleanDocument = docResult.normalized;
+
+        const existingEstabDoc = await prisma.establishmentProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingProfDoc = await prisma.professionalProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingUserDoc = await prisma.user.findFirst({
+          where: { document: cleanDocument },
+        });
+        if (existingEstabDoc || existingProfDoc || existingUserDoc) {
+          return reply.status(409).send({ error: 'Este documento (CPF/CNPJ) já está cadastrado na plataforma.' });
+        }
+      }
+
       const newUser = await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: {
@@ -296,6 +359,7 @@ export const authController = {
             password: hashedPassword,
             hasPassword: true,
             phone: normalizedPhone,
+            document: cleanDocument,
             role: data.role,
             defaultAvatar: getRandomDefaultAvatar(),
             address: data.address?.trim() || null,
@@ -314,7 +378,7 @@ export const authController = {
               userId: user.id,
               description: data.description || null,
               address: data.address || null,
-              document: data.document || null,
+              document: cleanDocument,
               businessName: data.businessName || data.name,
               type: data.establishmentType || null,
               city: data.city || 'Ourinhos',
@@ -323,6 +387,7 @@ export const authController = {
               phone: data.businessPhone ? (validateAndNormalizePhone(data.businessPhone).normalized || data.businessPhone) : normalizedPhone,
               email: data.businessEmail || data.email || null,
               photos: data.photos || [],
+              acceptedSpecies: data.acceptedSpecies || [],
               status: ApprovalStatus.PENDING_APPROVAL,
             },
           });
@@ -332,7 +397,7 @@ export const authController = {
               userId: user.id,
               specialty: data.specialty || null,
               bio: data.bio || null,
-              document: data.document || null,
+              document: cleanDocument,
               workplacePhoto: data.workplacePhoto?.trim() || null,
               address: data.address?.trim() || null,
               number: data.number?.trim() || null,
@@ -341,7 +406,21 @@ export const authController = {
               city: data.city?.trim() || 'Ourinhos',
               state: data.state?.trim() || 'SP',
               zipCode: data.zipCode?.trim() || null,
+              acceptedSpecies: data.acceptedSpecies || [],
               status: ApprovalStatus.PENDING_APPROVAL,
+            },
+          });
+        }
+
+        if (data.role === Role.ESTABLISHMENT || data.role === Role.PROFESSIONAL) {
+          await tx.termsAcceptance.create({
+            data: {
+              userId: user.id,
+              termType: 'CASHBACK_POLICY',
+              version: '1.0',
+              accepted: true,
+              ipAddress: (request.headers['x-forwarded-for'] as string) || request.ip || null,
+              userAgent: (request.headers['user-agent'] as string) || null,
             },
           });
         }
@@ -377,6 +456,7 @@ export const authController = {
           email: newUser.email,
           role: newUser.role,
           phone: newUser.phone,
+          document: newUser.document,
           avatar: newUser.avatar,
           defaultAvatar: newUser.defaultAvatar,
           address: newUser.address,
@@ -513,6 +593,7 @@ export const authController = {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        document: user.document,
         role: user.role,
         avatar: user.avatar,
         defaultAvatar: user.defaultAvatar || getStableAvatar(user.id),
@@ -569,6 +650,7 @@ export const authController = {
           name: true,
           email: true,
           phone: true,
+          document: true,
           role: true,
           avatar: true,
           defaultAvatar: true,
@@ -624,11 +706,26 @@ export const authController = {
         }
       }
 
+      let cashbackBalance = 0;
+      if (user.role === 'TUTOR') {
+        const txs = await prisma.cashbackTransaction.findMany({
+          where: { userId: user.id },
+          select: { type: true, amount: true },
+        });
+        let earned = 0;
+        let redeemed = 0;
+        for (const t of txs) {
+          if (t.type === 'EARNED') earned += t.amount;
+          else if (t.type === 'REDEEMED') redeemed += t.amount;
+        }
+        cashbackBalance = Math.max(0, Math.round((earned - redeemed) * 100) / 100);
+      }
+
       if (!user.defaultAvatar) {
         user = { ...user, defaultAvatar: getStableAvatar(user.id) };
       }
 
-      return reply.send(user);
+      return reply.send({ ...user, cashbackBalance });
     } catch (error) {
       return reply.status(500).send({ error: 'Erro interno no servidor.' });
     }
@@ -796,6 +893,33 @@ export const authController = {
         },
       });
 
+      let cleanDocument: string | null = null;
+      if (role === Role.ESTABLISHMENT || role === Role.PROFESSIONAL) {
+        if (!data.document || !data.document.trim()) {
+          return reply.status(400).send({
+            error: role === Role.ESTABLISHMENT ? 'CNPJ ou CPF é obrigatório para estabelecimentos.' : 'CPF é obrigatório para profissionais.',
+          });
+        }
+        const docResult = validateAndNormalizeDocument(
+          data.document,
+          role === Role.PROFESSIONAL ? 'cpf' : 'auto'
+        );
+        if (!docResult.isValid) {
+          return reply.status(400).send({ error: docResult.error || 'Documento inválido.' });
+        }
+        cleanDocument = docResult.normalized;
+
+        const existingEstabDoc = await prisma.establishmentProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingProfDoc = await prisma.professionalProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        if (existingEstabDoc || existingProfDoc) {
+          return reply.status(409).send({ error: 'Este documento (CPF/CNPJ) já está cadastrado na plataforma.' });
+        }
+      }
+
       if (!user) {
         const randomPassword = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
 
@@ -824,7 +948,7 @@ export const authController = {
                         phone: normalizedPhone,
                         email: googleEmail,
                         photos: data.photos || [],
-                        document: data.document || null,
+                        document: cleanDocument,
                         status: ApprovalStatus.PENDING_APPROVAL,
                       },
                     }
@@ -835,7 +959,7 @@ export const authController = {
                       create: {
                         specialty: data.specialty || null,
                         bio: data.bio || null,
-                        document: data.document || null,
+                        document: cleanDocument,
                         status: ApprovalStatus.PENDING_APPROVAL,
                       },
                     }
@@ -1146,6 +1270,33 @@ export const authController = {
         },
       });
 
+      let cleanDocument: string | null = null;
+      if (role === Role.ESTABLISHMENT || role === Role.PROFESSIONAL) {
+        if (!data.document || !data.document.trim()) {
+          return reply.status(400).send({
+            error: role === Role.ESTABLISHMENT ? 'CNPJ ou CPF é obrigatório para estabelecimentos.' : 'CPF é obrigatório para profissionais.',
+          });
+        }
+        const docResult = validateAndNormalizeDocument(
+          data.document,
+          role === Role.PROFESSIONAL ? 'cpf' : 'auto'
+        );
+        if (!docResult.isValid) {
+          return reply.status(400).send({ error: docResult.error || 'Documento inválido.' });
+        }
+        cleanDocument = docResult.normalized;
+
+        const existingEstabDoc = await prisma.establishmentProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        const existingProfDoc = await prisma.professionalProfile.findFirst({
+          where: { document: cleanDocument },
+        });
+        if (existingEstabDoc || existingProfDoc) {
+          return reply.status(409).send({ error: 'Este documento (CPF/CNPJ) já está cadastrado na plataforma.' });
+        }
+      }
+
       if (!user) {
         const hashedPassword = password
           ? await bcrypt.hash(password, 10)
@@ -1176,7 +1327,7 @@ export const authController = {
                         phone: normalizedPhone,
                         email,
                         photos: data.photos || [],
-                        document: data.document || null,
+                        document: cleanDocument,
                         status: ApprovalStatus.PENDING_APPROVAL,
                       },
                     }
@@ -1187,7 +1338,7 @@ export const authController = {
                       create: {
                         specialty: data.specialty || null,
                         bio: data.bio || null,
-                        document: data.document || null,
+                        document: cleanDocument,
                         status: ApprovalStatus.PENDING_APPROVAL,
                       },
                     }

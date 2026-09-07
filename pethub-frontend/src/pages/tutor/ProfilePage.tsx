@@ -7,6 +7,7 @@ import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui';
 import { formatPhone } from '@/utils/phone';
+import { formatCPF } from '@/utils/documentValidation';
 import { EasterEggUnlockModal } from '@/components/shared/EasterEggUnlockModal';
 import type { TutorProfile } from '@/types';
 
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    cpf: '123.456.789-00', // Mock CPF
+    cpf: (user as any)?.document ? formatCPF((user as any).document) : '',
   });
 
   const handleLogout = () => {
@@ -234,15 +235,15 @@ export default function ProfilePage() {
                     onClick={() => setShowEasterEggModal(true)}
                     className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors group cursor-pointer"
                   >
-                    <div className="w-10 h-10 bg-neutral-100 dark:bg-[#282A2C] rounded-xl flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
-                      🚫
+                    <div className="w-10 h-10 bg-neutral-100 dark:bg-[#282A2C] rounded-xl flex items-center justify-center text-neutral-500 dark:text-neutral-400 group-hover:scale-110 transition-transform">
+                      <Lock size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] group-hover:text-orange-500 transition-colors flex items-center gap-1.5">
-                        Easter Egg 🚫🚫🚫
+                      <p className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3] group-hover:text-orange-500 transition-colors">
+                        Recursos Experimentais
                       </p>
                       <p className="text-xs text-neutral-400 dark:text-[#8E918F]">
-                        Área confidencial. Não clique aqui...
+                        Área de desenvolvimento e recursos especiais
                       </p>
                     </div>
                     <ChevronRight size={18} className="text-neutral-300 dark:text-neutral-600 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />

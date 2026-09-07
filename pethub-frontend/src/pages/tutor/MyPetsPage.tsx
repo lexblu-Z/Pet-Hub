@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MoreVertical, Calendar, Edit, Trash2, HelpCircle, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react';
+import { Plus, MoreVertical, Calendar, Edit, Trash2, HelpCircle, ArrowRight, ShieldAlert, Sparkles, PawPrint, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { usePetStore } from '@/store/petStore';
 import { EmptyState, SkeletonCard, Badge, ConfirmModal, Button } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
-
-const speciesEmoji: Record<string, string> = {
-  dog: '🐕', cat: '🐱', bird: '🦜', rabbit: '🐰', rodent: '🐹', fish: '🐠', reptile: '🦎', other: '🐾',
-};
 
 export default function MyPetsPage() {
   const navigate = useNavigate();
@@ -24,12 +20,12 @@ export default function MyPetsPage() {
   const getVaccineInfo = (pet: any) => {
     const status = pet.vaccinationStatus || 'UNKNOWN';
     if (status === 'UP_TO_DATE') {
-      return { label: 'Vacinas em dia', variant: 'success' as const, icon: '✓' };
+      return { label: 'Vacinas em dia', variant: 'success' as const, icon: <CheckCircle2 size={12} className="inline mr-1" /> };
     }
     if (status === 'PENDING') {
-      return { label: 'Vacinas pendentes', variant: 'warning' as const, icon: '⚠️' };
+      return { label: 'Vacinas pendentes', variant: 'warning' as const, icon: <AlertTriangle size={12} className="inline mr-1" /> };
     }
-    return { label: 'Vacinas: não informado', variant: 'info' as const, icon: '❓' };
+    return { label: 'Vacinas: não informado', variant: 'info' as const, icon: <HelpCircle size={12} className="inline mr-1" /> };
   };
 
   const formatAge = (pet: any) => {
@@ -149,14 +145,15 @@ export default function MyPetsPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   
                   <div className="absolute top-3 left-3">
-                    <Badge variant={vInfo.variant} size="sm">
+                    <Badge variant={vInfo.variant} size="sm" className="inline-flex items-center">
                       {vInfo.icon} {vInfo.label}
                     </Badge>
                   </div>
 
                   <div className="absolute bottom-0 left-0 p-4">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-1.5">
-                      <span>{speciesEmoji[pet.species] || '🐾'}</span> {pet.name}
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <PawPrint size={18} className="text-white/80 shrink-0" />
+                      <span>{pet.name}</span>
                     </h3>
                     <p className="text-white/80 text-xs mt-0.5">{pet.breed || 'Raça não informada'} · {formatAge(pet)}</p>
                   </div>
@@ -208,7 +205,7 @@ export default function MyPetsPage() {
                 {/* Footer action */}
                 <div className="p-3 bg-neutral-50 dark:bg-[#1E1F20] border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between text-xs">
                   <span className="text-neutral-500 dark:text-[#C4C7C5] font-medium">
-                    {pet.gender === 'FEMALE' ? '♀️ Fêmea' : '♂️ Macho'} {pet.weight ? `· ${pet.weight} kg` : ''}
+                    {pet.gender === 'FEMALE' ? 'Fêmea' : pet.gender === 'MALE' ? 'Macho' : 'Não informado'} {pet.weight ? `· ${pet.weight} kg` : ''}
                   </span>
                   <button
                     onClick={() => navigate(`/tutor/pets/${pet.id}`)}

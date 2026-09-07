@@ -5,6 +5,7 @@ import { CreditCard, Plus, Trash2, Shield, ArrowLeft, CheckCircle, Star } from '
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 import { Button, Input, Card, Modal } from '@/components/ui';
+import { PaymentLogo } from '@/components/shared/PaymentLogo';
 
 interface PaymentMethod {
   id: string;
@@ -19,11 +20,6 @@ const brandColors: Record<string, string> = {
   Mastercard: 'bg-red-600',
   Elo: 'bg-yellow-500',
   Desconhecido: 'bg-neutral-500',
-};
-
-const brandIcon = (brand: string) => {
-  const colors: Record<string, string> = { Visa: '💳', Mastercard: '💳', Elo: '💳' };
-  return colors[brand] || '💳';
 };
 
 const detectBrand = (number: string) => {
@@ -222,8 +218,11 @@ export default function PaymentMethodsPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-sm p-4 flex items-center gap-4"
             >
-              <div className={`w-12 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${brandColors[method.brand] || 'bg-neutral-400'}`}>
-                {method.brand.slice(0, 4).toUpperCase()}
+              <div className="flex items-center gap-3">
+                <PaymentLogo method="credito" size="md" />
+                <div className={`w-12 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 ${brandColors[method.brand] || 'bg-neutral-400'}`}>
+                  {method.brand.slice(0, 4).toUpperCase()}
+                </div>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">{method.brand} •••• {method.lastFour}</p>

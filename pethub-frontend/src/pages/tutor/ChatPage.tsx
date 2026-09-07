@@ -14,7 +14,9 @@ import {
   Phone,
   Store,
   CheckCheck,
+  MessageCircle,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
 import { Button, Modal, Avatar } from '@/components/ui';
 
 interface Contact {
@@ -395,8 +397,8 @@ export default function ChatPage() {
       >
         {!activeContact ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <div className="w-20 h-20 bg-white dark:bg-[#1E1F20] rounded-full shadow-sm flex items-center justify-center mb-4 text-3xl">
-              💬
+            <div className="w-20 h-20 bg-orange-50 dark:bg-orange-950/30 text-orange-500 rounded-full shadow-sm flex items-center justify-center mb-4">
+              <MessageSquare size={36} />
             </div>
             <h2 className="text-lg font-bold text-neutral-800 dark:text-[#E3E3E3] mb-1">Suas mensagens</h2>
             <p className="text-neutral-400 dark:text-[#8E918F] text-xs max-w-sm mb-4">
@@ -451,7 +453,8 @@ export default function ChatPage() {
                   onClick={() => handleOpenWhatsApp(activeContact.phone)}
                   className="flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/60 text-green-700 dark:text-green-300 text-xs font-semibold px-3 py-2 rounded-xl transition-colors cursor-pointer"
                 >
-                  <span>💬 WhatsApp</span>
+                  <WhatsAppIcon size={16} />
+                  <span>WhatsApp</span>
                 </button>
               )}
             </div>
@@ -541,7 +544,7 @@ export default function ChatPage() {
       <Modal
         isOpen={newChatModalOpen}
         onClose={() => setNewChatModalOpen(false)}
-        title="➕ Iniciar Nova Conversa"
+        title="Iniciar Nova Conversa"
         size="md"
       >
         <div className="space-y-4">
@@ -677,10 +680,11 @@ export default function ChatPage() {
               {activeContact.phone ? (
                 <Button
                   fullWidth
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
                   onClick={() => handleOpenWhatsApp(activeContact.phone)}
+                  leftIcon={<WhatsAppIcon size={18} />}
                 >
-                  Conversar no WhatsApp 💬
+                  Conversar no WhatsApp
                 </Button>
               ) : (
                 <p className="text-xs text-neutral-400 dark:text-[#8E918F] text-center">

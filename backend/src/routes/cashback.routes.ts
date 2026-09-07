@@ -7,5 +7,7 @@ export const cashbackRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
   });
 
   fastify.get('/cashback/me', cashbackController.getMyCashback);
+  fastify.get('/cashback/balance', cashbackController.getMyCashback);
   fastify.post('/cashback/redeem', cashbackController.redeem);
+  fastify.post('/cashback/validate', cashbackController.validateCode);
 };

@@ -17,11 +17,13 @@ import {
   AlertTriangle,
   Sparkles,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button, Input } from '@/components/ui';
+import { formatCPF, formatDocumentAuto, validateCPF, validateDocument } from '@/utils/documentValidation';
 import { formatPhone, validatePhone } from '@/utils/phone';
 import type { UserRole } from '@/types';
 
@@ -29,7 +31,7 @@ type RoleOption = 'TUTOR' | 'ESTABLISHMENT' | 'PROFESSIONAL';
 
 interface RoleCard {
   role: RoleOption;
-  emoji: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
   subtitle: string;
   description: string;
@@ -39,7 +41,7 @@ interface RoleCard {
 const roleOptions: RoleCard[] = [
   {
     role: 'TUTOR',
-    emoji: '🐶',
+    icon: PawPrint,
     title: 'Tutor de Pets',
     subtitle: 'Para pais e mães de pet',
     description: 'Cadastre seus pets, agende banhos, tosas, consultas e vacinas, e compre produtos com cashback.',
@@ -47,7 +49,7 @@ const roleOptions: RoleCard[] = [
   },
   {
     role: 'ESTABLISHMENT',
-    emoji: '🏢',
+    icon: Building2,
     title: 'Estabelecimento',
     subtitle: 'Pet shop, clínica ou banho & tosa',
     description: 'Divulgue sua empresa para milhares de tutores de Ourinhos, receba agendamentos e venda produtos.',
@@ -55,7 +57,7 @@ const roleOptions: RoleCard[] = [
   },
   {
     role: 'PROFESSIONAL',
-    emoji: '👨‍⚕️',
+    icon: Stethoscope,
     title: 'Profissional Autônomo',
     subtitle: 'Veterinário, tosador ou adestrador',
     description: 'Gerencie sua agenda de atendimentos, receba confirmações em tempo real e atenda com flexibilidade.',
@@ -269,6 +271,11 @@ export default function SelectRolePage() {
         toast.error('Informe o CNPJ ou CPF do responsável.');
         return;
       }
+      const estabDocVal = validateDocument(estabDocument, 'auto');
+      if (!estabDocVal.isValid) {
+        toast.error(estabDocVal.error || 'Informe um CNPJ ou CPF válido.');
+        return;
+      }
       if (!street || !number || !neighborhood) {
         toast.error('Preencha o endereço completo do estabelecimento.');
         return;
@@ -285,7 +292,12 @@ export default function SelectRolePage() {
 
     if (selectedRole === 'PROFESSIONAL') {
       if (!profDocument.trim()) {
-        toast.error('Informe seu CPF ou Registro Profissional (ex: CRMV).');
+        toast.error('Informe o CPF do profissional.');
+        return;
+      }
+      const profDocVal = validateCPF(profDocument);
+      if (!profDocVal.isValid) {
+        toast.error(profDocVal.error || 'Informe um CPF válido para o profissional.');
         return;
       }
     }
@@ -397,18 +409,18 @@ export default function SelectRolePage() {
         <div className="grid grid-cols-4 gap-2 pt-1 pb-2 border-b border-neutral-100 dark:border-[#313335]">
           <div className="text-center">
             <div className="h-1.5 rounded-full bg-green-500 mb-1.5" />
-            <span className="text-[11px] font-bold text-green-700 dark:text-green-400">1. Método ✓</span>
+            <span className="text-[11px] font-bold text-green-700 dark:text-green-400">1. Método</span>
           </div>
           <div className="text-center">
             <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'role' ? 'bg-orange-500' : 'bg-green-500'}`} />
             <span className={`text-[11px] font-bold ${stage === 'role' ? 'text-orange-600 dark:text-orange-400' : 'text-green-700 dark:text-green-400'}`}>
-              2. Perfil {stage !== 'role' ? '✓' : ''}
+              2. Perfil
             </span>
           </div>
           <div className="text-center">
             <div className={`h-1.5 rounded-full mb-1.5 ${stage === 'profile' ? 'bg-orange-500' : stage === 'success' ? 'bg-green-500' : 'bg-neutral-200 dark:bg-[#313335]'}`} />
             <span className={`text-[11px] font-bold ${stage === 'profile' ? 'text-orange-600 dark:text-orange-400' : stage === 'success' ? 'text-green-700 dark:text-green-400' : 'text-neutral-400 dark:text-[#8E918F]'}`}>
-              3. Dados {stage === 'success' ? '✓' : ''}
+              3. Dados
             </span>
           </div>
           <div className="text-center">
@@ -444,6 +456,7 @@ export default function SelectRolePage() {
               <div className="grid grid-cols-1 gap-3.5">
                 {roleOptions.map((card) => {
                   const isSelected = selectedRole === card.role;
+                  const IconComp = card.icon;
                   return (
                     <div
                       key={card.role}
@@ -455,9 +468,9 @@ export default function SelectRolePage() {
                       }`}
                     >
                       <div className="flex items-start gap-4">
-                        <span className="text-3xl sm:text-4xl shrink-0 p-2 bg-neutral-100 dark:bg-[#282A2C] rounded-2xl">
-                          {card.emoji}
-                        </span>
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 border border-orange-200/40 dark:border-orange-900/40">
+                          <IconComp size={24} />
+                        </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{card.title}</h3>
@@ -472,9 +485,9 @@ export default function SelectRolePage() {
                             {card.features.map((f, i) => (
                               <span
                                 key={i}
-                                className="text-[10px] text-neutral-600 dark:text-[#C4C7C5] bg-neutral-100/80 dark:bg-[#282A2C] px-2 py-0.5 rounded-md font-medium"
+                                className="text-[10px] text-neutral-600 dark:text-[#C4C7C5] bg-neutral-100/80 dark:bg-[#282A2C] px-2 py-0.5 rounded-md font-medium inline-flex items-center gap-1"
                               >
-                                ✓ {f}
+                                <Check size={10} className="text-emerald-600 dark:text-emerald-400" /> {f}
                               </span>
                             ))}
                           </div>
@@ -530,10 +543,10 @@ export default function SelectRolePage() {
                 >
                   <ArrowLeft size={16} /> Voltar para seleção de perfil
                 </button>
-                <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-900/50">
-                  {selectedRole === 'TUTOR' && '🐶 Perfil Tutor'}
-                  {selectedRole === 'ESTABLISHMENT' && '🏢 Perfil Estabelecimento'}
-                  {selectedRole === 'PROFESSIONAL' && '👨‍⚕️ Perfil Profissional'}
+                <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-900/50 inline-flex items-center gap-1.5">
+                  {selectedRole === 'TUTOR' && <><PawPrint size={12} /> Perfil Tutor</>}
+                  {selectedRole === 'ESTABLISHMENT' && <><Building2 size={12} /> Perfil Estabelecimento</>}
+                  {selectedRole === 'PROFESSIONAL' && <><Stethoscope size={12} /> Perfil Profissional</>}
                 </span>
               </div>
 
@@ -693,13 +706,21 @@ export default function SelectRolePage() {
                       </select>
                     </div>
 
-                    <Input
-                      label="CNPJ ou CPF do Responsável *"
-                      placeholder="00.000.000/0001-00"
-                      value={estabDocument}
-                      onChange={(e) => setEstabDocument(e.target.value)}
-                      required
-                    />
+                    <div>
+                      <Input
+                        label="CNPJ ou CPF do Responsável *"
+                        placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                        value={estabDocument}
+                        onChange={(e) => setEstabDocument(formatDocumentAuto(e.target.value))}
+                        maxLength={18}
+                        required
+                      />
+                      {estabDocument.replace(/\D/g, '').length >= 11 && !validateDocument(estabDocument, 'auto').isValid && (
+                        <p className="text-[11px] text-red-500 font-medium mt-1">
+                          {validateDocument(estabDocument, 'auto').error}
+                        </p>
+                      )}
+                    </div>
 
                     {/* CEP & ViaCEP */}
                     <div className="relative">
@@ -864,13 +885,21 @@ export default function SelectRolePage() {
                       </p>
                     </div>
 
-                    <Input
-                      label="CPF ou Registro Profissional (ex: CRMV) *"
-                      placeholder="000.000.000-00 ou CRMV-SP 12345"
-                      value={profDocument}
-                      onChange={(e) => setProfDocument(e.target.value)}
-                      required
-                    />
+                    <div>
+                      <Input
+                        label="CPF do Profissional *"
+                        placeholder="000.000.000-00"
+                        value={profDocument}
+                        onChange={(e) => setProfDocument(formatCPF(e.target.value))}
+                        maxLength={14}
+                        required
+                      />
+                      {profDocument.replace(/\D/g, '').length === 11 && !validateCPF(profDocument).isValid && (
+                        <p className="text-[11px] text-red-500 font-medium mt-1">
+                          {validateCPF(profDocument).error}
+                        </p>
+                      )}
+                    </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] mb-1.5">
@@ -932,8 +961,8 @@ export default function SelectRolePage() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-6"
             >
-              <div className="w-20 h-20 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 rounded-full flex items-center justify-center mx-auto text-4xl shadow-xs">
-                {selectedRole === 'TUTOR' ? '🎉' : '⏳'}
+              <div className="w-20 h-20 bg-green-100 dark:bg-emerald-950/40 text-green-700 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-xs">
+                {selectedRole === 'TUTOR' ? <CheckCircle2 size={40} /> : <Clock size={40} />}
               </div>
 
               {selectedRole === 'TUTOR' ? (
@@ -960,7 +989,7 @@ export default function SelectRolePage() {
               <div className="bg-neutral-50 dark:bg-[#282A2C] rounded-2xl p-5 text-left space-y-3.5 border border-neutral-200/80 dark:border-[#313335]">
                 <div className="flex gap-3 items-start">
                   <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                    ✓
+                    <Check size={13} />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Conta registrada no PetHub</p>
@@ -972,7 +1001,7 @@ export default function SelectRolePage() {
 
                 <div className="flex gap-3 items-start">
                   <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                    ✓
+                    <Check size={13} />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Telefone verificado</p>
@@ -985,7 +1014,7 @@ export default function SelectRolePage() {
                 {selectedRole !== 'TUTOR' && (
                   <div className="flex gap-3 items-start">
                     <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                      ⏳
+                      <Clock size={13} />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Aprovação em andamento</p>

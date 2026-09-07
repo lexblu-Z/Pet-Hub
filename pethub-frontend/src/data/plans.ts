@@ -30,7 +30,7 @@ export const availablePlans: Plan[] = [
     ],
     isActive: true,
     color: 'blue',
-    icon: '🛁',
+    icon: 'bath',
   },
   {
     id: 'plan-2',
@@ -69,7 +69,7 @@ export const availablePlans: Plan[] = [
     ],
     isActive: true,
     color: 'orange',
-    icon: '⭐',
+    icon: 'star',
   },
   {
     id: 'plan-3',
@@ -102,7 +102,7 @@ export const availablePlans: Plan[] = [
     ],
     isActive: true,
     color: 'green',
-    icon: '🏥',
+    icon: 'stethoscope',
   },
 ];
 
