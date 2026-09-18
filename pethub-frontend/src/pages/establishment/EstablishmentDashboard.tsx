@@ -25,6 +25,7 @@ import {
 import { Button, Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
 import { useThemeStore } from '@/store/themeStore';
+import { PartnerProgramCard } from '@/components/establishment/PartnerProgramCard';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -256,6 +257,9 @@ export default function EstablishmentDashboard() {
           </div>
         </div>
       )}
+
+      {/* Partner Program Voluntary Enrollment */}
+      <PartnerProgramCard />
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

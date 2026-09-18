@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, BarChart3, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Download, BarChart3, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 
 export interface ReportTab {
   id: string;
@@ -14,7 +14,10 @@ interface ReportLayoutProps {
   tabs: ReportTab[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  onExportPdf?: () => void;
+  isExportingPdf?: boolean;
   onExportCsv?: () => void;
+  isExportingCsv?: boolean;
   isExporting?: boolean;
   children: React.ReactNode;
 }
@@ -26,7 +29,10 @@ export const ReportLayout: React.FC<ReportLayoutProps> = ({
   tabs,
   activeTab,
   onTabChange,
+  onExportPdf,
+  isExportingPdf = false,
   onExportCsv,
+  isExportingCsv = false,
   isExporting = false,
   children,
 }) => {
@@ -50,29 +56,52 @@ export const ReportLayout: React.FC<ReportLayoutProps> = ({
             </p>
           </div>
 
-          {/* Primary Action Button (CTA Laranja Oficial PetHub) */}
-          {onExportCsv && (
-            <div className="flex items-center">
+          {/* Action Buttons: [ PDF ] Principal + [ CSV ] Secundário */}
+          <div className="flex items-center gap-2.5">
+            {onExportPdf && (
               <button
                 type="button"
-                onClick={onExportCsv}
-                disabled={isExporting}
-                className="group relative inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-500/25 transition-all duration-200 hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/30 active:scale-[0.98] disabled:opacity-60"
+                onClick={onExportPdf}
+                disabled={isExportingPdf || isExporting}
+                className="group relative inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 sm:px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-500/25 transition-all duration-200 hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/30 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                title="Exportar relatório em formato PDF profissional"
               >
-                {isExporting ? (
+                {isExportingPdf ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Exportando...</span>
+                    <span>Gerando PDF...</span>
                   </>
                 ) : (
                   <>
-                    <FileSpreadsheet size={16} className="transition-transform group-hover:-translate-y-0.5" />
-                    <span>Exportar CSV</span>
+                    <FileText size={16} className="transition-transform group-hover:-translate-y-0.5" />
+                    <span>Exportar PDF</span>
                   </>
                 )}
               </button>
-            </div>
-          )}
+            )}
+
+            {onExportCsv && (
+              <button
+                type="button"
+                onClick={onExportCsv}
+                disabled={isExportingCsv || isExporting}
+                className="group inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1E1F20] px-3.5 sm:px-4 py-2.5 text-sm font-medium text-neutral-700 dark:text-[#C4C7C5] shadow-xs transition-all duration-200 hover:bg-neutral-50 dark:hover:bg-[#282A2C] hover:text-neutral-900 dark:hover:text-white active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                title="Exportar dados brutos em formato CSV (Excel)"
+              >
+                {isExportingCsv ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin text-neutral-400" />
+                    <span className="text-xs">Exportando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet size={15} className="text-neutral-500 dark:text-neutral-400 transition-transform group-hover:-translate-y-0.5" />
+                    <span>CSV</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tab Navigation */}

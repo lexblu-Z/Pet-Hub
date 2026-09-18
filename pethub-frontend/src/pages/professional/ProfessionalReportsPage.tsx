@@ -51,7 +51,8 @@ export const ProfessionalReportsPage: React.FC = () => {
 
   // Data states
   const [loading, setLoading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
 
   const [servicesData, setServicesData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<any>(null);
@@ -117,13 +118,47 @@ export const ProfessionalReportsPage: React.FC = () => {
     setSpecies('');
   };
 
-  // Export CSV handler
-  const handleExportCsv = async () => {
+  // Export PDF handler
+  const handleExportPdf = async () => {
     try {
-      setIsExporting(true);
+      setIsExportingPdf(true);
       const res = await api.get('/reports/professional/export', {
         params: {
           type: activeTab,
+          format: 'pdf',
+          startDate,
+          endDate,
+          status: status || undefined,
+          serviceType: category || undefined,
+          species: species || undefined,
+        },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pethub-relatorio-${activeTab}-profissional-${new Date().toISOString().slice(0, 10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao exportar PDF do profissional:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // Export CSV handler
+  const handleExportCsv = async () => {
+    try {
+      setIsExportingCsv(true);
+      const res = await api.get('/reports/professional/export', {
+        params: {
+          type: activeTab,
+          format: 'csv',
           startDate,
           endDate,
           status: status || undefined,
@@ -137,14 +172,15 @@ export const ProfessionalReportsPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `relatorio-profissional-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute('download', `pethub-relatorio-${activeTab}-profissional-${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Erro ao exportar CSV do profissional:', err);
     } finally {
-      setIsExporting(false);
+      setIsExportingCsv(false);
     }
   };
 
@@ -173,8 +209,10 @@ export const ProfessionalReportsPage: React.FC = () => {
       tabs={TABS}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      onExportPdf={handleExportPdf}
+      isExportingPdf={isExportingPdf}
       onExportCsv={handleExportCsv}
-      isExporting={isExporting}
+      isExportingCsv={isExportingCsv}
     >
       {/* Filters (No Professional selector since user is the professional) */}
       <ReportFilters

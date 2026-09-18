@@ -32,6 +32,11 @@ export const productsController = {
               avatar: true,
               defaultAvatar: true,
               phone: true,
+              partnerProgramParticipation: {
+                select: {
+                  status: true,
+                }
+              },
               establishmentProfile: {
                 select: {
                   businessName: true,
@@ -49,7 +54,18 @@ export const productsController = {
         orderBy: { createdAt: 'desc' },
       });
 
-      return reply.send(products);
+      const mapped = products.map(p => ({
+        ...p,
+        isProgramPartner: p.establishment?.partnerProgramParticipation?.status === 'ACTIVE',
+      }));
+
+      // Program partners receive a discreet boost in ranking
+      mapped.sort((a, b) => {
+        if (a.isProgramPartner === b.isProgramPartner) return 0;
+        return a.isProgramPartner ? -1 : 1;
+      });
+
+      return reply.send(mapped);
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Erro ao buscar produtos' });

@@ -35,7 +35,6 @@ import ChatPage from '@/pages/tutor/ChatPage';
 import PlansPage from '@/pages/tutor/PlansPage';
 import NotificationsPage from '@/pages/tutor/NotificationsPage';
 import MyPurchasesPage from '@/pages/tutor/MyPurchasesPage';
-import PaymentMethodsPage from '@/pages/tutor/PaymentMethodsPage';
 import SecurityPage from '@/pages/tutor/SecurityPage';
 import PreferencesPage from '@/pages/tutor/PreferencesPage';
 import NotificationSettingsPage from '@/pages/tutor/NotificationSettingsPage';
@@ -149,7 +148,7 @@ export default function App() {
           <Route path="pedidos" element={<Navigate to="/tutor/compras" replace />} />
           <Route path="minhas-compras" element={<Navigate to="/tutor/compras" replace />} />
           <Route path="meus-pedidos" element={<Navigate to="/tutor/compras" replace />} />
-          <Route path="pagamento" element={<PaymentMethodsPage />} />
+          <Route path="pagamento" element={<Navigate to="/tutor/profile" replace />} />
           <Route path="seguranca" element={<SecurityPage />} />
           <Route path="preferencias" element={<PreferencesPage />} />
           <Route path="notificacoes-config" element={<NotificationSettingsPage />} />

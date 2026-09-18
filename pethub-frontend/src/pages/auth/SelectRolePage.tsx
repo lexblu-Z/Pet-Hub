@@ -117,6 +117,10 @@ export default function SelectRolePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState<any>(null);
 
+  // Tutor Specific Data
+  const [tutorDocument, setTutorDocument] = useState('');
+  const [tutorDocError, setTutorDocError] = useState<string | null>(null);
+
   // Establishment Specific Data
   const [businessName, setBusinessName] = useState(initialName || '');
   const [establishmentType, setEstablishmentType] = useState('Pet shop');
@@ -246,6 +250,21 @@ export default function SelectRolePage() {
 
     // Validações específicas por perfil
     if (selectedRole === 'TUTOR') {
+      if (!tutorDocument.trim()) {
+        const err = 'O CPF do tutor é obrigatório.';
+        setTutorDocError(err);
+        toast.error(err);
+        return;
+      }
+      const docVal = validateCPF(tutorDocument);
+      if (!docVal.isValid) {
+        const err = docVal.error || 'Informe um CPF válido.';
+        setTutorDocError(err);
+        toast.error(err);
+        return;
+      }
+      setTutorDocError(null);
+
       if (!cep || !street || !number || !neighborhood) {
         toast.error('Preencha seu endereço residencial completo (CEP, Rua, Número e Bairro).');
         return;
@@ -320,6 +339,7 @@ export default function SelectRolePage() {
       };
 
       if (selectedRole === 'TUTOR') {
+        basePayload.document = tutorDocument.trim();
         basePayload.address = street;
         basePayload.number = number;
         basePayload.complement = complement || undefined;
@@ -595,8 +615,25 @@ export default function SelectRolePage() {
                     <div className="p-3.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40 rounded-2xl flex items-start gap-3">
                       <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
                       <p className="text-xs text-orange-900 dark:text-orange-200 leading-relaxed">
-                        O PetHub está disponível para residentes em <strong>Ourinhos - SP</strong>. O endereço é obrigatório para entrega de compras e agendamentos.
+                        O PetHub está disponível para residentes em <strong>Ourinhos - SP</strong>. O CPF e endereço completo são obrigatórios para identificação e agendamentos.
                       </p>
+                    </div>
+
+                    <div>
+                      <Input
+                        label="CPF do Tutor *"
+                        placeholder="000.000.000-00"
+                        value={tutorDocument}
+                        onChange={(e) => {
+                          setTutorDocument(formatCPF(e.target.value));
+                          if (tutorDocError) setTutorDocError(null);
+                        }}
+                        maxLength={14}
+                        error={tutorDocError || undefined}
+                        leftIcon={<ShieldCheck size={16} />}
+                        hint="Necessário para segurança e identificação única"
+                        required
+                      />
                     </div>
 
                     <div className="relative">

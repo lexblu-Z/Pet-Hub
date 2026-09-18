@@ -131,6 +131,23 @@ export default function CashbackPage() {
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-400/10 rounded-full translate-y-16 -translate-x-16 blur-2xl pointer-events-none" />
 
           <div className="relative z-10">
+            {/* Decorative Element with real insp12 asset */}
+            <div className="flex items-center gap-3 mb-4">
+              <img
+                src="/insp12.jpg"
+                alt="Economize cuidando do seu amigão"
+                className="w-11 h-11 rounded-full object-cover border-2 border-orange-400 shrink-0 shadow-xs"
+              />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-white truncate">
+                  Economize cuidando do seu amigão
+                </p>
+                <p className="text-[11px] text-white/70 truncate">
+                  Cashback garantido em cada serviço, consulta e produto
+                </p>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between mb-2">
               <span className="text-white/60 text-xs font-semibold uppercase tracking-wider">
                 Saldo Disponível para Resgate

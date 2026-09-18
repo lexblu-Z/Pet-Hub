@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingCart, Plus, Minus, X, Store, Package } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, Store, Package, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useToast } from '@/store/toastStore';
 import { Button, SearchBar, Badge } from '@/components/ui';
@@ -16,6 +16,7 @@ interface RealProduct {
   stock: number;
   photo?: string;
   establishmentId: string;
+  isProgramPartner?: boolean;
   establishment?: {
     id: string;
     name: string;
@@ -64,12 +65,17 @@ export default function ShopPage() {
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    search === '' ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.description && p.description.toLowerCase().includes(search.toLowerCase())) ||
-    (p.establishment?.establishmentProfile?.businessName || p.establishment?.name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products
+    .filter(p =>
+      search === '' ||
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(search.toLowerCase())) ||
+      (p.establishment?.establishmentProfile?.businessName || p.establishment?.name || '').toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (Boolean(a.isProgramPartner) === Boolean(b.isProgramPartner)) return 0;
+      return a.isProgramPartner ? -1 : 1;
+    });
 
   const getEstablishmentPhoto = (product: RealProduct) => {
     return product.establishment?.establishmentProfile?.photos?.[0] ||
@@ -225,7 +231,13 @@ export default function ShopPage() {
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute top-2 left-2">
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+                      {product.isProgramPartner && (
+                        <span className="bg-emerald-800/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 border border-emerald-400/30">
+                          <ShieldCheck size={11} />
+                          Parceiro
+                        </span>
+                      )}
                       {isOutOfStock ? (
                         <span className="bg-neutral-800/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow">
                           Sem estoque

@@ -118,6 +118,7 @@ export interface Pet {
   vaccinationStatus?: 'UP_TO_DATE' | 'PENDING' | 'UNCERTAIN' | 'UNKNOWN' | string | null;
   weight?: number | null;
   photo?: string | null;
+  coverPhoto?: string | null;
   microchip?: string | null;
   notes?: string | null;
   behaviorNotes?: string | null;
@@ -172,6 +173,7 @@ export interface Appointment {
   time: string;
   status: AppointmentStatus;
   transport: TransportType;
+  petTransport?: 'PICKUP_BY_TUTOR' | 'PICKUP_BY_PROVIDER' | string;
   pickupAddress?: Address;
   price: number;
   notes?: string;

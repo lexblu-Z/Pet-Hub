@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, CheckCircle2, Star, Calendar, ChevronRight, PawPrint, Dog, Cat, Heart, Bone, Stethoscope, DollarSign, ArrowDown } from 'lucide-react';
+import { 
+  ArrowRight, 
+  Check, 
+  CheckCircle2, 
+  Star, 
+  Calendar, 
+  ChevronRight, 
+  PawPrint, 
+  Dog, 
+  Cat, 
+  Heart, 
+  Bone, 
+  Stethoscope, 
+  DollarSign, 
+  ArrowDown,
+  Building2,
+  Sparkles,
+  Clock,
+  ShieldCheck,
+  QrCode
+} from 'lucide-react';
 import { FluidText } from '../components/ui/FluidText';
+import { availablePlans } from '@/data/plans';
+import { PlanPixModal } from '@/components/shared/PlanPixModal';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -43,6 +65,8 @@ const testimonials = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [isPixModalOpen, setIsPixModalOpen] = useState<boolean>(false);
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white font-sans selection:bg-orange-500/30">
@@ -314,6 +338,186 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ---- COMO FUNCIONA ---- */}
+      <section id="como-funciona" className="py-24 bg-neutral-900 text-white border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            whileInView="visible"
+            initial="hidden"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.span variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-500/20 bg-orange-500/10 text-orange-400 text-xs font-bold uppercase tracking-wider mb-4">
+              Passo a Passo
+            </motion.span>
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
+              Como funciona o PetHub
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-neutral-400 text-base max-w-2xl mx-auto">
+              Cuidar do seu animal de estimação em Ourinhos ficou muito mais simples, integrado e seguro.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                step: '01',
+                title: 'Escolha um plano de cuidados',
+                desc: 'Selecione o plano ideal para a rotina de saúde, banho e tosa do seu pet com cobertura mensal.',
+                icon: <PawPrint size={22} />,
+              },
+              {
+                step: '02',
+                title: 'Parceiros credenciados',
+                desc: 'Conte com estabelecimentos e profissionais parceiros credenciados e avaliados em Ourinhos.',
+                icon: <Building2 size={22} />,
+              },
+              {
+                step: '03',
+                title: 'Agende com antecedência',
+                desc: 'Marque atendimentos e procedimentos cobertos direto pela plataforma de forma rápida e prática.',
+                icon: <Calendar size={22} />,
+              },
+              {
+                step: '04',
+                title: 'Atendimento presencial',
+                desc: 'Leve seu pet ou solicite o transporte, com acompanhamento dedicado por profissionais qualificados.',
+                icon: <CheckCircle2 size={22} />,
+              },
+              {
+                step: '05',
+                title: 'Histórico digital e vacinas',
+                desc: 'Acompanhe todo o prontuário de saúde, registros de vacinas e benefícios utilizados na palma da mão.',
+                icon: <Clock size={22} />,
+              },
+              {
+                step: '06',
+                title: 'Gestão justa e segura',
+                desc: 'O PetHub gerencia a cobertura dos planos e garante remuneração justa aos parceiros participantes.',
+                icon: <ShieldCheck size={22} />,
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="bg-neutral-800/60 border border-white/10 rounded-3xl p-6 hover:border-orange-500/40 hover:bg-neutral-800 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center">
+                      {item.icon}
+                    </div>
+                    <span className="text-2xl font-black text-white/20">{item.step}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- PLANOS ---- */}
+      <section id="planos" className="py-24 bg-white text-neutral-900 border-t border-neutral-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            whileInView="visible"
+            initial="hidden"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.span variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-200 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-wider mb-4">
+              Planos & Assinaturas
+            </motion.span>
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
+              Escolha o plano ideal para você
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-neutral-500 text-base max-w-2xl mx-auto">
+              Cada plano possui regras e benefícios próprios para atender às necessidades do seu pet.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 items-stretch">
+            {availablePlans.map((plan, i) => {
+              const isPopular = plan.id === 'plan-2';
+              return (
+                <motion.div
+                  key={plan.id}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 30 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ delay: i * 0.15, duration: 0.5 }}
+                  className={`relative rounded-3xl p-8 flex flex-col justify-between transition-all ${
+                    isPopular
+                      ? 'bg-neutral-900 text-white shadow-2xl ring-2 ring-orange-500'
+                      : 'bg-neutral-50 border border-neutral-200/80 text-neutral-900 hover:shadow-lg'
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-orange-500 text-white text-xs font-extrabold uppercase tracking-wider rounded-full shadow-md">
+                      Mais Escolhido
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className={`text-xl font-bold ${isPopular ? 'text-white' : 'text-neutral-900'}`}>
+                        {plan.name}
+                      </h3>
+                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                        {plan.establishmentName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-1 mb-6">
+                      <span className="text-sm font-bold opacity-60">R$</span>
+                      <span className="text-4xl font-extrabold tracking-tight">
+                        {plan.price}
+                      </span>
+                      <span className="text-xs font-semibold opacity-60">/mês</span>
+                    </div>
+
+                    {/* Benefícios */}
+                    <div className="space-y-3 mb-8 pt-4 border-t border-neutral-200/50 dark:border-neutral-800">
+                      <p className={`text-xs font-bold uppercase tracking-wider ${isPopular ? 'text-orange-400' : 'text-neutral-500'}`}>
+                        Benefícios Inclusos
+                      </p>
+                      {plan.benefits.map((b, bIdx) => (
+                        <div key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm">
+                          <Check size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                          <span className={isPopular ? 'text-neutral-300' : 'text-neutral-700'}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedPlan(plan);
+                      setIsPixModalOpen(true);
+                    }}
+                    className={`w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      isPopular
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30'
+                        : 'bg-neutral-900 hover:bg-neutral-800 text-white'
+                    }`}
+                  >
+                    <QrCode size={16} />
+                    <span>Assinar via Pix (Simulação)</span>
+                  </button>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ---- TESTIMONIALS ---- */}
       <section className="py-24 bg-neutral-50 text-neutral-900 border-t border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -409,6 +613,12 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <PlanPixModal
+        isOpen={isPixModalOpen}
+        onClose={() => setIsPixModalOpen(false)}
+        plan={selectedPlan}
+      />
 
     </div>
   );

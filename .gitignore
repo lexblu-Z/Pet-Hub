@@ -15,5 +15,6 @@ uploads/*
 !uploads/pgmntos/
 !uploads/easter-egg´s/
 backend/uploads/
+backend/test_pdfs/
 *.exe
 *.lnk

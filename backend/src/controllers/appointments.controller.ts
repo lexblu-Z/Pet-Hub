@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
 import { normalizeSpecies, SPECIES_LABELS, isPetCompatibleWithService, isPetCompatibleWithProvider } from '../utils/species';
 import { calculateCashback, normalizeCashbackCode } from '../utils/cashback';
+import { createAndEmitNotification } from '../utils/notificationEvents';
+import { partnerProgramService } from '../services/partner-program.service';
 
 const createAppointmentSchema = z.object({
   petId: z.string(),
@@ -17,6 +19,7 @@ const createAppointmentSchema = z.object({
   needsChange: z.boolean().optional().default(false),
   changeFor: z.number().positive().optional().nullable(),
   cashbackCode: z.string().optional().nullable(),
+  petTransport: z.enum(['PICKUP_BY_TUTOR', 'PICKUP_BY_PROVIDER']).optional().default('PICKUP_BY_TUTOR'),
 });
 
 const updateAppointmentStatusSchema = z.object({
@@ -545,6 +548,7 @@ export const appointmentsController = {
             needsChange: isCash ? !!data.needsChange : false,
             changeFor: isCash && data.needsChange ? data.changeFor : null,
             cashbackCredited: false,
+            petTransport: data.petTransport || 'PICKUP_BY_TUTOR',
           },
           include: {
             pet: true,
@@ -576,37 +580,21 @@ export const appointmentsController = {
         return apt;
       });
 
-      // Generate notifications
-      const petName = appointment.pet?.name || 'Pet';
-      const serviceName = appointment.service?.name || 'Serviço';
-      const formattedDate = new Date(appointment.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-      try {
-        await prisma.notification.create({
-          data: {
-            userId: data.establishmentId,
-            title: 'Novo agendamento recebido',
-            message: `${petName} possui um serviço de ${serviceName} agendado para ${formattedDate}.`,
-            type: 'APPOINTMENT',
-          }
-        });
-      } catch (notifErr) {
-        request.log.error(notifErr);
-      }
+      // Generate standardized notifications (no pet/people names)
+      await createAndEmitNotification({
+        userId: data.establishmentId,
+        title: 'Novo agendamento de serviço',
+        message: 'Você tem um novo agendamento de serviço.',
+        type: 'APPOINTMENT',
+      });
 
       if (data.professionalId && data.professionalId !== data.establishmentId) {
-        try {
-          await prisma.notification.create({
-            data: {
-              userId: data.professionalId,
-              title: 'Novo agendamento recebido',
-              message: `${petName} possui um serviço de ${serviceName} agendado para ${formattedDate}.`,
-              type: 'APPOINTMENT',
-            }
-          });
-        } catch (notifErr) {
-          request.log.error(notifErr);
-        }
+        await createAndEmitNotification({
+          userId: data.professionalId,
+          title: 'Novo agendamento de serviço',
+          message: 'Você tem um novo agendamento de serviço.',
+          type: 'APPOINTMENT',
+        });
       }
 
       // Synchronize with Google Calendar (idempotent, asynchronous, non-blocking)
@@ -649,6 +637,14 @@ export const appointmentsController = {
       }
     });
 
+    if (data.status === AppointmentStatus.COMPLETED) {
+      try {
+        await partnerProgramService.processAppointmentPayout(appointment.id);
+      } catch (payoutErr) {
+        request.log.warn({ err: payoutErr }, 'Error processing partner payout on appointment status update');
+      }
+    }
+
     // If cancelled and voucher was used, restore the voucher
     if (data.status === AppointmentStatus.CANCELLED && existing.cashbackCodeApplied) {
       try {
@@ -665,52 +661,49 @@ export const appointmentsController = {
           }
         });
       } catch (voucherErr) {
-        request.log.error('Error restoring cashback voucher on cancellation:', voucherErr);
+        request.log.error(voucherErr, 'Error restoring cashback voucher on cancellation');
       }
     }
 
     // Notify parties about status change
     try {
-      const statusLabels: Record<string, string> = {
-        CONFIRMED: 'confirmado',
-        IN_PROGRESS: 'iniciado',
-        COMPLETED: 'concluído',
-        CANCELLED: 'cancelado',
-        PENDING: 'agendado',
-      };
-      const label = statusLabels[data.status] || data.status.toLowerCase();
-      const petName = appointment.pet?.name || 'Pet';
-      const serviceName = appointment.service?.name || 'Serviço';
+      let notifTitle = 'Agendamento atualizado';
+      let notifMsg = 'Um agendamento de serviço recebeu uma nova atualização.';
+
+      if (data.status === AppointmentStatus.CONFIRMED) {
+        notifTitle = 'Agendamento confirmado';
+        notifMsg = 'Seu agendamento de serviço foi confirmado.';
+      } else if (data.status === AppointmentStatus.CANCELLED) {
+        notifTitle = 'Agendamento cancelado';
+        notifMsg = 'Um agendamento de serviço foi cancelado.';
+      } else if (data.status === AppointmentStatus.COMPLETED) {
+        notifTitle = 'Serviço concluído';
+        notifMsg = 'O atendimento de serviço foi concluído com sucesso.';
+      }
 
       // If tutor updated (e.g. cancelled), notify establishment & professional
       if (isOwner) {
-        await prisma.notification.create({
-          data: {
-            userId: existing.establishmentId,
-            title: `Agendamento ${label}`,
-            message: `O agendamento de ${petName} (${serviceName}) foi marcado como ${label} pelo tutor.`,
-            type: 'APPOINTMENT',
-          }
+        await createAndEmitNotification({
+          userId: existing.establishmentId,
+          title: notifTitle,
+          message: notifMsg,
+          type: 'APPOINTMENT',
         });
         if (existing.professionalId && existing.professionalId !== existing.establishmentId) {
-          await prisma.notification.create({
-            data: {
-              userId: existing.professionalId,
-              title: `Agendamento ${label}`,
-              message: `O agendamento de ${petName} (${serviceName}) foi marcado como ${label} pelo tutor.`,
-              type: 'APPOINTMENT',
-            }
+          await createAndEmitNotification({
+            userId: existing.professionalId,
+            title: notifTitle,
+            message: notifMsg,
+            type: 'APPOINTMENT',
           });
         }
       } else {
         // Provider updated, notify tutor
-        await prisma.notification.create({
-          data: {
-            userId: existing.tutorId,
-            title: `Agendamento ${label}`,
-            message: `O agendamento de ${petName} (${serviceName}) foi ${label}.`,
-            type: 'APPOINTMENT',
-          }
+        await createAndEmitNotification({
+          userId: existing.tutorId,
+          title: notifTitle,
+          message: notifMsg,
+          type: 'APPOINTMENT',
         });
       }
     } catch (notifErr) {
@@ -799,22 +792,19 @@ export const appointmentsController = {
         },
       });
 
+      // Process partner payout if eligible, completed and paid
+      await partnerProgramService.processAppointmentPayout(appointment.id, tx);
+
       return { updatedAppointment, cashbackAmount };
     });
 
     if (result.cashbackAmount > 0) {
-      try {
-        await prisma.notification.create({
-          data: {
-            userId: appointment.tutorId,
-            title: 'Cashback Creditado!',
-            message: `Você recebeu R$ ${result.cashbackAmount.toFixed(2)} de cashback (5%) pela realização do serviço "${appointment.service?.name || 'Serviço'}".`,
-            type: 'CASHBACK',
-          },
-        });
-      } catch (nErr) {
-        request.log.error(nErr);
-      }
+      await createAndEmitNotification({
+        userId: appointment.tutorId,
+        title: 'Cashback creditado',
+        message: 'Você recebeu cashback pela realização de um serviço.',
+        type: 'CASHBACK',
+      });
     }
 
     return reply.send({

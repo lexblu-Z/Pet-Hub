@@ -23,12 +23,32 @@ export const servicesController = {
         ...(professionalId && { professionalId }),
       },
       include: {
-        establishment: true,
-        professional: true,
+        establishment: {
+          include: {
+            establishmentProfile: true,
+            partnerProgramParticipation: true,
+          }
+        },
+        professional: {
+          include: {
+            professionalProfile: true,
+          }
+        },
       }
     });
+
+    const mapped = services.map(s => ({
+      ...s,
+      isProgramPartner: s.establishment?.partnerProgramParticipation?.status === 'ACTIVE',
+    }));
+
+    // Partner boost sorting: partners appear higher among otherwise comparable services
+    mapped.sort((a, b) => {
+      if (a.isProgramPartner === b.isProgramPartner) return 0;
+      return a.isProgramPartner ? -1 : 1;
+    });
     
-    return reply.send(services);
+    return reply.send(mapped);
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {

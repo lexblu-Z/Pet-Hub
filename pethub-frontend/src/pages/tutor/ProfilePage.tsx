@@ -6,25 +6,27 @@ import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/store/toastStore';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui';
+import { getStableAvatar } from '@/components/ui/Card';
 import { formatPhone } from '@/utils/phone';
 import { formatCPF } from '@/utils/documentValidation';
 import { EasterEggUnlockModal } from '@/components/shared/EasterEggUnlockModal';
 import type { TutorProfile } from '@/types';
 
 export default function ProfilePage() {
-  const { currentUser, logout } = useAuthStore();
+  const { currentUser, logout, setUser } = useAuthStore();
   const user = currentUser as TutorProfile;
   const navigate = useNavigate();
   const toast = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showEasterEggModal, setShowEasterEggModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  const fallbackAvatar = user?.role === 'tutor' ? '/user.jpg' : '';
+  const fallbackAvatar = user?.defaultAvatar || getStableAvatar(user?.name || user?.email || 'tutor') || '/user.jpg';
   const userAvatar = user?.avatar || fallbackAvatar;
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -85,9 +87,23 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = () => {
-    toast.success('Dados atualizados com sucesso!');
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await api.put('/users/me/profile', {
+        name: formData.name.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+      });
+      if (res.data?.user) {
+        setUser({ ...(currentUser as any), ...res.data.user });
+      }
+      toast.success('Dados atualizados com sucesso!');
+      setIsEditing(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao salvar alterações.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const menuSections = [
@@ -97,7 +113,6 @@ export default function ProfilePage() {
         { id: 'personal', icon: <User size={18} />, label: 'Dados pessoais', desc: 'Nome, CPF, data de nascimento' },
         { id: 'purchases', icon: <ShoppingBag size={18} />, label: 'Minhas compras', desc: 'Histórico de pedidos e recomprar', to: '/tutor/compras' },
         { id: 'address', icon: <MapPin size={18} />, label: 'Endereços', desc: 'Gerenciar endereços de entrega e busca' },
-        { id: 'payment', icon: <CreditCard size={18} />, label: 'Formas de pagamento', desc: 'Cartões e PIX salvos', to: '/tutor/pagamento' },
       ],
     },
     {
@@ -125,9 +140,12 @@ export default function ProfilePage() {
                   <div className="relative">
                     <img
                       src={previewUrl || userAvatar}
-                      alt={user?.name}
+                      alt={user?.name || 'Foto de perfil'}
                       onClick={() => fileInputRef.current?.click()}
-                      onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = fallbackAvatar || '/user.jpg';
+                      }}
                       className="w-24 h-24 rounded-full border-4 border-white/20 object-cover shadow-lg cursor-pointer hover:opacity-85 transition-opacity"
                     />
                     
@@ -348,7 +366,7 @@ export default function ProfilePage() {
                 <Button variant="ghost" fullWidth onClick={() => setIsEditing(false)}>
                   Cancelar
                 </Button>
-                <Button fullWidth leftIcon={<Save size={18} />} onClick={handleSave}>
+                <Button fullWidth leftIcon={<Save size={18} />} onClick={handleSave} isLoading={isSaving}>
                   Salvar
                 </Button>
               </div>

@@ -33,11 +33,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   totalAmount,
 }) => {
   const toast = useToast();
-  const { currentUser } = useAuthStore();
+  const { currentUser, checkAuth, setUser } = useAuthStore();
 
   const [step, setStep] = useState<'RECEIVE' | 'PAYMENT' | 'REVIEW' | 'SUCCESS'>('RECEIVE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+
+  // Address Registration State for accounts without address (Google / email)
+  const [isRegisteringAddress, setIsRegisteringAddress] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: 'Ourinhos',
+    state: 'SP',
+    zipCode: '',
+  });
+  const [newAddressErrors, setNewAddressErrors] = useState<Record<string, string>>({});
+  const [isNewAddressCepLoading, setIsNewAddressCepLoading] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   // Cashback Voucher State
   const [appliedCashbackCode, setAppliedCashbackCode] = useState<string | null>(null);
@@ -95,8 +110,100 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setAddressErrors({});
       setAppliedCashbackCode(null);
       setCashbackDiscount(0);
+      setIsRegisteringAddress(false);
+      setNewAddressErrors({});
+      checkAuth();
     }
   }, [isOpen]);
+
+  const handleNewAddressCepLookup = async (cep: string) => {
+    let raw = cep.replace(/\D/g, '').slice(0, 8);
+    let formatted = raw;
+    if (raw.length > 5) {
+      formatted = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+    }
+    setNewAddress(prev => ({ ...prev, zipCode: formatted }));
+
+    if (raw.length === 8) {
+      setIsNewAddressCepLoading(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
+        const data = await response.json();
+        if (data.erro) {
+          toast.error('CEP não encontrado.');
+          return;
+        }
+
+        if (data.localidade?.trim().toLowerCase() !== 'ourinhos' || data.uf?.trim().toUpperCase() !== 'SP') {
+          toast.error('O PetHub realiza entregas apenas em Ourinhos - SP.');
+          setNewAddressErrors(prev => ({ ...prev, city: 'Entregas apenas em Ourinhos - SP' }));
+          return;
+        }
+
+        setNewAddress(prev => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: 'Ourinhos',
+          state: 'SP',
+        }));
+        setNewAddressErrors({});
+      } catch {
+        toast.error('Erro ao consultar CEP. Preencha o endereço manualmente.');
+      } finally {
+        setIsNewAddressCepLoading(false);
+      }
+    }
+  };
+
+  const handleSaveNewAddress = async () => {
+    const errors: Record<string, string> = {};
+    if (!newAddress.street.trim()) errors.street = 'Rua é obrigatória';
+    if (!newAddress.number.trim()) errors.number = 'Número é obrigatório';
+    if (!newAddress.neighborhood.trim()) errors.neighborhood = 'Bairro é obrigatório';
+
+    const cleanCep = newAddress.zipCode.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      errors.zipCode = 'CEP válido com 8 dígitos é obrigatório';
+    } else {
+      const prefix = parseInt(cleanCep.slice(0, 5), 10);
+      if (prefix < 19900 || prefix > 19919) {
+        errors.zipCode = 'O CEP deve pertencer a Ourinhos - SP';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setNewAddressErrors(errors);
+      return;
+    }
+
+    try {
+      setIsSavingAddress(true);
+      const res = await api.put('/users/me/address', {
+        street: newAddress.street.trim(),
+        number: newAddress.number.trim(),
+        complement: newAddress.complement.trim() || undefined,
+        neighborhood: newAddress.neighborhood.trim(),
+        city: 'Ourinhos',
+        state: 'SP',
+        zipCode: newAddress.zipCode.trim(),
+      });
+
+      if (res.data?.user) {
+        setUser(res.data.user);
+      } else {
+        await checkAuth();
+      }
+
+      setIsRegisteringAddress(false);
+      toast.success('Endereço cadastrado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao cadastrar endereço:', err);
+      toast.error(err.response?.data?.error || 'Erro ao salvar endereço.');
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
 
   const handleCepLookup = async (cep: string) => {
     let raw = cep.replace(/\D/g, '').slice(0, 8);
@@ -145,7 +252,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     // If using default address
     if (!deliverToDifferentAddress) {
       if (!hasRegisteredAddress) {
-        toast.error('Cadastre um endereço válido para receber por entrega.');
+        toast.error('Você ainda não possui um endereço de entrega cadastrado. Cadastre seu endereço para continuar.');
         return false;
       }
       return true;
@@ -396,8 +503,125 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-900 dark:text-amber-200">
-                            Nenhum endereço completo encontrado no perfil. Marque abaixo para informar o endereço de entrega.
+                          <div className="space-y-3">
+                            {!isRegisteringAddress ? (
+                              <div className="p-4 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-2xl space-y-3">
+                                <div className="flex items-start gap-2.5">
+                                  <MapPin className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={18} />
+                                  <div>
+                                    <p className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                                      Você ainda não possui um endereço de entrega cadastrado.
+                                    </p>
+                                    <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                                      Cadastre seu endereço para que possamos realizar a entrega do seu pedido em Ourinhos - SP.
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                                  onClick={() => setIsRegisteringAddress(true)}
+                                >
+                                  Cadastrar endereço
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="p-4 bg-white dark:bg-[#1E1F20] border border-orange-200 dark:border-orange-500/40 rounded-2xl space-y-3 shadow-xs">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3]">Cadastrar endereço de entrega</p>
+                                  <span className="text-[10px] text-neutral-400">Ourinhos - SP</span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={newAddress.zipCode}
+                                      onChange={(e) => handleNewAddressCepLookup(e.target.value)}
+                                      placeholder={isNewAddressCepLoading ? 'Buscando...' : 'CEP (19900-000)'}
+                                      maxLength={9}
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                    />
+                                    {newAddressErrors.zipCode && <p className="text-[9px] text-red-500">{newAddressErrors.zipCode}</p>}
+                                  </div>
+                                  <div className="col-span-2">
+                                    <input
+                                      type="text"
+                                      value={newAddress.street}
+                                      onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
+                                      placeholder="Rua / Avenida *"
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                    />
+                                    {newAddressErrors.street && <p className="text-[9px] text-red-500">{newAddressErrors.street}</p>}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={newAddress.number}
+                                      onChange={(e) => setNewAddress({ ...newAddress, number: e.target.value })}
+                                      placeholder="Nº *"
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                    />
+                                    {newAddressErrors.number && <p className="text-[9px] text-red-500">{newAddressErrors.number}</p>}
+                                  </div>
+                                  <div className="col-span-2">
+                                    <input
+                                      type="text"
+                                      value={newAddress.complement}
+                                      onChange={(e) => setNewAddress({ ...newAddress, complement: e.target.value })}
+                                      placeholder="Complemento (Apto, bloco)"
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={newAddress.neighborhood}
+                                      onChange={(e) => setNewAddress({ ...newAddress, neighborhood: e.target.value })}
+                                      placeholder="Bairro *"
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                    />
+                                    {newAddressErrors.neighborhood && <p className="text-[9px] text-red-500">{newAddressErrors.neighborhood}</p>}
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value="Ourinhos - SP"
+                                      disabled
+                                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-100 dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl text-neutral-500 cursor-not-allowed font-medium"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-1 justify-end">
+                                  <Button
+                                    type="button"
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => setIsRegisteringAddress(false)}
+                                    disabled={isSavingAddress}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="xs"
+                                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                                    onClick={handleSaveNewAddress}
+                                    isLoading={isSavingAddress}
+                                  >
+                                    Salvar endereço
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 

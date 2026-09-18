@@ -9,6 +9,7 @@ export default function FavoritesPage() {
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     // Load favorites from API or localStorage
@@ -72,9 +73,20 @@ export default function FavoritesPage() {
         </div>
       ) : favorites.length === 0 ? (
         <Card padding="lg" className="text-center py-16 border border-neutral-100 dark:border-[#313335] shadow-sm">
-          <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
-            <Heart size={36} className="fill-red-500/20" />
-          </div>
+          {!imageError ? (
+            <div className="flex items-center justify-center mx-auto mb-5">
+              <img
+                src="/pets/pet_fav.png"
+                alt="Nenhum favorito ainda"
+                onError={() => setImageError(true)}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover object-center border-2 border-orange-400/70 shadow-xs"
+              />
+            </div>
+          ) : (
+            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+              <Heart size={36} className="fill-red-500/20" />
+            </div>
+          )}
           <h2 className="text-lg font-bold text-neutral-800 dark:text-[#E3E3E3] mb-1">
             Você ainda não favoritou nenhum estabelecimento
           </h2>

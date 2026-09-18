@@ -4,31 +4,39 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = 'admin'; // Using 'admin' explicitly as requested for local dev
-  const plainPassword = 'adm';
+  const adminEmail = 'admin';
+  const plainPassword = 'admin';
 
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail }
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      role: Role.ADMIN,
+      password: hashedPassword,
+      hasPassword: true,
+    },
+    create: {
+      name: 'Administrador do Sistema',
+      email: adminEmail,
+      password: hashedPassword,
+      hasPassword: true,
+      role: Role.ADMIN,
+      defaultAvatar: '/user.jpg',
+      adminProfile: {
+        create: {},
+      },
+    },
   });
 
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-    
-    await prisma.user.create({
-      data: {
-        name: 'Administrador do Sistema',
-        email: adminEmail,
-        password: hashedPassword,
-        role: Role.ADMIN,
-      }
-    });
-    
-    console.log(`✅ Conta ADMIN criada com sucesso!`);
-    console.log(`Login: ${adminEmail}`);
-    console.log(`Senha: ${plainPassword}`);
-  } else {
-    console.log(`⚠️ Conta ADMIN já existe no banco de dados.`);
-  }
+  // Ensure AdminProfile relation exists
+  await prisma.adminProfile.upsert({
+    where: { userId: admin.id },
+    update: {},
+    create: { userId: admin.id },
+  });
+
+  console.log(`✅ Conta ADMIN local configurada com sucesso! (ID: ${admin.id}, Role: ${admin.role})`);
 
   // Ensure all users have a deterministic defaultAvatar if not set
   const defaultAvatars = [

@@ -23,6 +23,7 @@ const createPetSchema = z.object({
   specialCareNotes: z.string().nullable().optional(),
   vaccines: z.array(vaccineItemSchema).optional().default([]),
   photo: z.string().nullable().optional(),
+  coverPhoto: z.string().nullable().optional(),
 });
 
 const updatePetSchema = createPetSchema.partial();
@@ -124,6 +125,7 @@ export const petsController = {
           specialCareNotes: data.specialCareNotes?.trim() || null,
           vaccines: Array.isArray(data.vaccines) ? (data.vaccines as any) : [],
           photo: data.photo || null,
+          coverPhoto: data.coverPhoto || null,
           tutorId: user.sub,
         },
       });
@@ -213,6 +215,7 @@ export const petsController = {
       if (data.specialCareNotes !== undefined) updateData.specialCareNotes = data.specialCareNotes?.trim() || null;
       if (data.vaccines !== undefined) updateData.vaccines = data.vaccines;
       if (data.photo !== undefined) updateData.photo = data.photo || null;
+      if (data.coverPhoto !== undefined) updateData.coverPhoto = data.coverPhoto || null;
 
       if (data.birthDate !== undefined) {
         if (data.birthDate) {

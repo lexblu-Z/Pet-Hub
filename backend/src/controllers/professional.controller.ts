@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { Role, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
+import { createAndEmitNotification } from '../utils/notificationEvents';
 
 // Helper to check professional access
 async function ensureProfessional(request: FastifyRequest, reply: FastifyReply) {
@@ -148,6 +149,7 @@ export const professionalController = {
         status: a.status,
         price: Number(a.service?.price ?? 0),
         duration: a.service?.duration || 60,
+        petTransport: (a as any).petTransport || 'PICKUP_BY_TUTOR',
         professionalId: a.professionalId || null,
         establishmentId: a.establishmentId,
         establishmentName: a.establishmentId !== user.id ? estName : null,
@@ -279,6 +281,7 @@ export const professionalController = {
         establishmentName: a.establishmentId !== user.id ? estName : null,
         professionalId: a.professionalId || null,
         status: a.status,
+        petTransport: (a as any).petTransport || 'PICKUP_BY_TUTOR',
       };
     });
 
@@ -309,6 +312,32 @@ export const professionalController = {
         status: status as AppointmentStatus,
       },
     });
+
+    // Notify tutor about status change (standardized operational event message)
+    try {
+      let notifTitle = 'Agendamento atualizado';
+      let notifMsg = 'Um agendamento de serviço recebeu uma nova atualização.';
+
+      if (status === AppointmentStatus.CONFIRMED) {
+        notifTitle = 'Agendamento confirmado';
+        notifMsg = 'Seu agendamento de serviço foi confirmado.';
+      } else if (status === AppointmentStatus.CANCELLED) {
+        notifTitle = 'Agendamento cancelado';
+        notifMsg = 'Um agendamento de serviço foi cancelado.';
+      } else if (status === AppointmentStatus.COMPLETED) {
+        notifTitle = 'Serviço concluído';
+        notifMsg = 'O atendimento de serviço foi concluído com sucesso.';
+      }
+
+      await createAndEmitNotification({
+        userId: appointment.tutorId,
+        title: notifTitle,
+        message: notifMsg,
+        type: 'APPOINTMENT',
+      });
+    } catch (notifErr) {
+      request.log.warn({ err: notifErr }, 'Could not create notification for tutor on status change');
+    }
 
     const action = (status as AppointmentStatus) === AppointmentStatus.CANCELLED ? 'CANCEL' : 'UPDATE';
     googleCalendarService.syncAppointment(id, action).catch(() => {});

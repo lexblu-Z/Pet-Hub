@@ -1,7 +1,8 @@
-import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { ReportTargetType, ReportStatus, ReportPriority } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { reportsController } from '../controllers/reports.controller';
 
 const createReportSchema = z.object({
   targetType: z.nativeEnum(ReportTargetType),
@@ -16,10 +17,11 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
     try {
       await request.jwtVerify();
     } catch (err) {
-      return reply.status(401).send({ error: 'Você precisa estar autenticado para enviar uma denúncia.' });
+      return reply.status(401).send({ error: 'Você precisa estar autenticado para acessar os relatórios.' });
     }
   });
 
+  // Moderation report
   fastify.post('/profile', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = request.user as any;
@@ -33,7 +35,6 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
         return reply.status(400).send({ error: 'Você não pode denunciar o seu próprio perfil.' });
       }
 
-      // If reportedEstablishmentId provided, resolve reportedUserId if not set
       let finalReportedUserId = data.reportedUserId || null;
       let finalEstablishmentId = data.reportedEstablishmentId || null;
 
@@ -74,4 +75,17 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
       return reply.status(500).send({ error: 'Erro ao processar sua denúncia. Tente novamente mais tarde.' });
     }
   });
+
+  // Establishment reports (RF17 & Official PDF/CSV exports)
+  fastify.get('/establishment/services', reportsController.getEstablishmentServices);
+  fastify.get('/establishment/financial', reportsController.getEstablishmentFinancial);
+  fastify.get('/establishment/customers', reportsController.getEstablishmentCustomers);
+  fastify.get('/establishment/inventory', reportsController.getEstablishmentInventory);
+  fastify.get('/establishment/export', reportsController.exportEstablishment);
+
+  // Professional reports
+  fastify.get('/professional/services', reportsController.getProfessionalServices);
+  fastify.get('/professional/financial', reportsController.getProfessionalFinancial);
+  fastify.get('/professional/customers', reportsController.getProfessionalCustomers);
+  fastify.get('/professional/export', reportsController.exportProfessional);
 };

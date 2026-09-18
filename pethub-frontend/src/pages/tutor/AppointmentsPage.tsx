@@ -244,7 +244,9 @@ export default function AppointmentsPage() {
                     />
                     <div>
                       <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3]">{serviceName}</h3>
-                      <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">{providerName}</p>
+                      <p className="text-sm text-neutral-500 dark:text-[#C4C7C5]">
+                        {providerName} • <span className="font-medium text-orange-600 dark:text-orange-400">{apt.petTransport === 'PICKUP_BY_PROVIDER' ? 'Buscar pet' : 'Tutor levará o pet'}</span>
+                      </p>
                     </div>
                   </div>
                   <Badge variant={statusObj.variant}>
@@ -412,6 +414,16 @@ export default function AppointmentsPage() {
                   </span>
                 </div>
               )}
+            </div>
+
+            {/* Transporte do Pet */}
+            <div className="p-3 bg-white dark:bg-[#1E1F20] rounded-xl border border-neutral-100 dark:border-[#313335] text-xs">
+              <span className="text-neutral-400 dark:text-[#8E918F] block text-[11px] mb-0.5">Transporte do Pet</span>
+              <span className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">
+                {selectedAppointment.petTransport === 'PICKUP_BY_PROVIDER'
+                  ? 'Solicitado busca do pet pelo prestador'
+                  : 'O tutor levará o pet ao local'}
+              </span>
             </div>
 
             {/* Botão de Fechar */}

@@ -61,7 +61,8 @@ export const EstablishmentReportsPage: React.FC = () => {
 
   // Data states
   const [loading, setLoading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
 
   const [servicesData, setServicesData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<any>(null);
@@ -122,7 +123,7 @@ export const EstablishmentReportsPage: React.FC = () => {
         const res = await api.get('/reports/establishment/inventory', {
           params: {
             category: category || undefined,
-            lowStockOnly: lowStockOnly ? 'true' : undefined,
+            lowStockOnly: lowStockOnly || undefined,
           },
         });
         setInventoryData(res.data);
@@ -154,13 +155,49 @@ export const EstablishmentReportsPage: React.FC = () => {
     setLowStockOnly(false);
   };
 
-  // Export CSV handler
-  const handleExportCsv = async () => {
+  // Export PDF handler
+  const handleExportPdf = async () => {
     try {
-      setIsExporting(true);
+      setIsExportingPdf(true);
       const res = await api.get('/reports/establishment/export', {
         params: {
           type: activeTab,
+          format: 'pdf',
+          startDate,
+          endDate,
+          status: status || undefined,
+          serviceType: category || undefined,
+          paymentMethod: paymentMethod || undefined,
+          category: category || undefined,
+          species: species || undefined,
+        },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pethub-relatorio-${activeTab}-estabelecimento-${new Date().toISOString().slice(0, 10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao exportar PDF:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // Export CSV handler
+  const handleExportCsv = async () => {
+    try {
+      setIsExportingCsv(true);
+      const res = await api.get('/reports/establishment/export', {
+        params: {
+          type: activeTab,
+          format: 'csv',
           startDate,
           endDate,
           status: status || undefined,
@@ -176,14 +213,15 @@ export const EstablishmentReportsPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `relatorio-estabelecimento-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute('download', `pethub-relatorio-${activeTab}-estabelecimento-${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Erro ao exportar CSV:', err);
     } finally {
-      setIsExporting(false);
+      setIsExportingCsv(false);
     }
   };
 
@@ -212,8 +250,10 @@ export const EstablishmentReportsPage: React.FC = () => {
       tabs={TABS}
       activeTab={activeTab}
       onTabChange={setActiveTab}
+      onExportPdf={handleExportPdf}
+      isExportingPdf={isExportingPdf}
       onExportCsv={handleExportCsv}
-      isExporting={isExporting}
+      isExportingCsv={isExportingCsv}
     >
       {/* Active Filters */}
       <ReportFilters

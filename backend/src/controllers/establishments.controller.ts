@@ -28,25 +28,45 @@ export const establishmentsController = {
         include: {
           establishmentProfile: true,
           professionalProfile: true,
+          partnerProgramParticipation: true,
+          reviewsAsEstablishment: { select: { rating: true } },
+          reviewsAsProfessional: { select: { rating: true } },
         }
       });
 
-      const publicProfiles = establishments.map(e => ({
-        id: e.id,
-        name: e.name,
-        email: e.email,
-        phone: e.phone || e.establishmentProfile?.phone,
-        role: e.role,
-        avatar: e.avatar,
-        businessName: e.establishmentProfile?.businessName || (e.role === Role.PROFESSIONAL ? `Dr(a). ${e.name}` : e.name),
-        description: e.establishmentProfile?.description || e.professionalProfile?.bio,
-        address: e.establishmentProfile?.address,
-        city: e.establishmentProfile?.city,
-        state: e.establishmentProfile?.state,
-        type: e.establishmentProfile?.type || e.professionalProfile?.specialty || 'Veterinário',
-        photos: e.establishmentProfile?.photos || [],
-        acceptedSpecies: (e.establishmentProfile?.acceptedSpecies?.length ? e.establishmentProfile.acceptedSpecies : (e.professionalProfile?.acceptedSpecies?.length ? e.professionalProfile.acceptedSpecies : ['dog', 'cat'])),
-      }));
+      const publicProfiles = establishments.map(e => {
+        const allReviews = [...(e.reviewsAsEstablishment || []), ...(e.reviewsAsProfessional || [])];
+        const reviewCount = allReviews.length;
+        const rating = reviewCount > 0 
+          ? Math.round((allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount) * 10) / 10 
+          : null;
+
+        return {
+          id: e.id,
+          name: e.name,
+          email: e.email,
+          phone: e.phone || e.establishmentProfile?.phone,
+          role: e.role,
+          avatar: e.avatar,
+          businessName: e.establishmentProfile?.businessName || (e.role === Role.PROFESSIONAL ? `Dr(a). ${e.name}` : e.name),
+          description: e.establishmentProfile?.description || e.professionalProfile?.bio,
+          address: e.establishmentProfile?.address,
+          city: e.establishmentProfile?.city,
+          state: e.establishmentProfile?.state,
+          type: e.establishmentProfile?.type || e.professionalProfile?.specialty || 'Veterinário',
+          photos: e.establishmentProfile?.photos || [],
+          acceptedSpecies: (e.establishmentProfile?.acceptedSpecies?.length ? e.establishmentProfile.acceptedSpecies : (e.professionalProfile?.acceptedSpecies?.length ? e.professionalProfile.acceptedSpecies : ['dog', 'cat'])),
+          isProgramPartner: e.partnerProgramParticipation?.status === 'ACTIVE',
+          rating,
+          reviewCount,
+        };
+      });
+
+      // Program partners receive a discreet boost in ranking among active providers
+      publicProfiles.sort((a, b) => {
+        if (a.isProgramPartner === b.isProgramPartner) return 0;
+        return a.isProgramPartner ? -1 : 1;
+      });
 
       return reply.send(publicProfiles);
     } catch (error) {

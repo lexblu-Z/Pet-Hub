@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { authController } from '../controllers/auth.controller';
 import { prisma } from '../lib/prisma';
+import { validateAndNormalizeDocument } from '../utils/documentValidation';
 import bcrypt from 'bcrypt';
 
 export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -31,15 +32,45 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
     return reply.send(dbUser);
   });
 
-  // Update profile (name, phone, avatar, and professional fields)
+  // Update profile (name, phone, avatar, document, and professional fields)
   fastify.put('/me/profile', async (request, reply) => {
     const user = request.user as any;
-    const { name, phone, avatar, specialty, bio, document, acceptedSpecies } = (request.body as any) || {};
+    const { name, phone, avatar, specialty, bio, document, acceptedSpecies, address, number, complement, neighborhood, city, state, zipCode } = (request.body as any) || {};
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
     if (avatar !== undefined) updateData.avatar = avatar;
+
+    if (document !== undefined && document !== null && String(document).trim()) {
+      const docResult = validateAndNormalizeDocument(String(document), user.role === 'ESTABLISHMENT' ? 'auto' : 'cpf');
+      if (!docResult.isValid) {
+        return reply.status(400).send({ error: docResult.error || 'Documento (CPF/CNPJ) inválido.' });
+      }
+      const cleanDoc = docResult.normalized;
+
+      const dupUser = await prisma.user.findFirst({
+        where: { document: cleanDoc, id: { not: user.sub } },
+      });
+      const dupProf = await prisma.professionalProfile.findFirst({
+        where: { document: cleanDoc, userId: { not: user.sub } },
+      });
+      const dupEstab = await prisma.establishmentProfile.findFirst({
+        where: { document: cleanDoc, userId: { not: user.sub } },
+      });
+      if (dupUser || dupProf || dupEstab) {
+        return reply.status(409).send({ error: 'Este documento (CPF/CNPJ) já está cadastrado na plataforma.' });
+      }
+      updateData.document = cleanDoc;
+    }
+
+    if (address !== undefined) updateData.address = address?.trim() || null;
+    if (number !== undefined) updateData.number = number?.trim() || null;
+    if (complement !== undefined) updateData.complement = complement?.trim() || null;
+    if (neighborhood !== undefined) updateData.neighborhood = neighborhood?.trim() || null;
+    if (city !== undefined) updateData.city = city?.trim() || null;
+    if (state !== undefined) updateData.state = state?.trim() || null;
+    if (zipCode !== undefined) updateData.zipCode = zipCode?.trim() || null;
 
     const updatedUser = await prisma.user.update({
       where: { id: user.sub },
@@ -74,85 +105,61 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
     });
   });
 
-  // List payment methods
-  fastify.get('/me/payment-methods', async (request, reply) => {
+  // Dedicated Address update endpoint for Tutor and Checkout
+  fastify.put('/me/address', async (request, reply) => {
     const user = request.user as any;
-    const methods = await prisma.paymentMethod.findMany({
-      where: { userId: user.sub },
-      orderBy: { createdAt: 'desc' },
-    });
-    return reply.send(methods);
-  });
+    const userId = user?.sub || user?.id;
+    const body = (request.body as any) || {};
+    const street = body.street || body.address;
+    const number = body.number;
+    const complement = body.complement;
+    const neighborhood = body.neighborhood;
+    const city = body.city || 'Ourinhos';
+    const state = body.state || 'SP';
+    const zipCode = body.zipCode;
 
-  // Add payment method
-  fastify.post('/me/payment-methods', async (request, reply) => {
-    const user = request.user as any;
-    const { brand, lastFour, holder } = request.body as any;
-
-    if (!brand || !lastFour || !holder) {
-      return reply.status(400).send({ error: 'Dados incompletos.' });
+    if (!street || !number || !neighborhood || !city || !state || !zipCode) {
+      return reply.status(400).send({ error: 'Preencha todos os campos obrigatórios do endereço.' });
     }
 
-    // If this is the first method, make it default
-    const existingCount = await prisma.paymentMethod.count({ where: { userId: user.sub } });
+    if (city.trim().toLowerCase() !== 'ourinhos' || state.trim().toUpperCase() !== 'SP') {
+      return reply.status(400).send({ error: 'O PetHub realiza entregas apenas em Ourinhos - SP.' });
+    }
 
-    const method = await prisma.paymentMethod.create({
+    const updated = await prisma.user.update({
+      where: { id: userId },
       data: {
-        userId: user.sub,
-        brand,
-        lastFour: lastFour.slice(-4),
-        holder,
-        isDefault: existingCount === 0,
+        address: street.trim(),
+        number: String(number).trim(),
+        complement: complement ? String(complement).trim() : null,
+        neighborhood: String(neighborhood).trim(),
+        city: 'Ourinhos',
+        state: 'SP',
+        zipCode: String(zipCode).trim(),
       },
     });
-    return reply.status(201).send(method);
-  });
 
-  // Delete payment method (requires password confirmation)
-  fastify.delete('/me/payment-methods/:id', async (request, reply) => {
-    const user = request.user as any;
-    const { id } = request.params as any;
-    const { password } = request.body as any || {};
-
-    // Verify password
-    const dbUser = await prisma.user.findUnique({ where: { id: user.sub } });
-    if (!dbUser) return reply.status(404).send({ error: 'Usuário não encontrado.' });
-
-    if (password) {
-      const isValid = await bcrypt.compare(password, dbUser.password);
-      if (!isValid) {
-        return reply.status(400).send({ error: 'Senha incorreta.' });
-      }
-    }
-
-    const method = await prisma.paymentMethod.findFirst({
-      where: { id, userId: user.sub },
+    return reply.send({
+      success: true,
+      message: 'Endereço atualizado com sucesso.',
+      user: updated,
     });
-    if (!method) return reply.status(404).send({ error: 'Método de pagamento não encontrado.' });
-
-    await prisma.paymentMethod.delete({ where: { id } });
-
-    // If deleted was default, make the next one default
-    if (method.isDefault) {
-      const nextMethod = await prisma.paymentMethod.findFirst({ where: { userId: user.sub } });
-      if (nextMethod) {
-        await prisma.paymentMethod.update({ where: { id: nextMethod.id }, data: { isDefault: true } });
-      }
-    }
-
-    return reply.send({ message: 'Removido com sucesso.' });
   });
 
-  // Set default payment method
-  fastify.put('/me/payment-methods/:id/default', async (request, reply) => {
-    const user = request.user as any;
-    const { id } = request.params as any;
+  // Saved Cards (Disabled for safety and compliance)
+  fastify.get('/me/payment-methods', async (_request, reply) => {
+    return reply.send([]);
+  });
 
-    // Remove default from all
-    await prisma.paymentMethod.updateMany({ where: { userId: user.sub }, data: { isDefault: false } });
-    // Set new default
-    await prisma.paymentMethod.update({ where: { id }, data: { isDefault: true } });
+  fastify.post('/me/payment-methods', async (_request, reply) => {
+    return reply.status(400).send({ error: 'A funcionalidade de salvar cartões foi descontinuada.' });
+  });
 
+  fastify.delete('/me/payment-methods/:id', async (_request, reply) => {
+    return reply.send({ message: 'Cartão removido.' });
+  });
+
+  fastify.put('/me/payment-methods/:id/default', async (_request, reply) => {
     return reply.send({ message: 'Padrão atualizado.' });
   });
 };

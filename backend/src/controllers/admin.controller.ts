@@ -211,6 +211,9 @@ export const adminController = {
     else if (period === '6m') days = 180;
     else if (period === '1y') days = 365;
 
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+
     const startDate = new Date(now);
     startDate.setDate(now.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
@@ -230,46 +233,80 @@ export const adminController = {
       }),
     ]);
 
-    const pointsMap = new Map<string, { date: string; users: number; appointments: number; revenue: number }>();
-
-    const stepDays = days <= 30 ? 1 : days <= 90 ? 3 : 7;
-    for (let i = 0; i <= days; i += stepDays) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const key = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      if (!pointsMap.has(key)) {
-        pointsMap.set(key, { date: key, users: 0, appointments: 0, revenue: 0 });
-      }
+    const stepDays = days <= 30 ? 1 : days <= 90 ? 3 : days <= 180 ? 7 : 14;
+    interface Bucket {
+      startMs: number;
+      endMs: number;
+      date: string;
+      users: number;
+      appointments: number;
+      revenue: number;
     }
 
+    const buckets: Bucket[] = [];
+    let currentStart = new Date(startDate);
+
+    while (currentStart < endOfToday) {
+      const currentEnd = new Date(currentStart);
+      currentEnd.setDate(currentStart.getDate() + stepDays);
+
+      const label = currentStart.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+      });
+
+      buckets.push({
+        startMs: currentStart.getTime(),
+        endMs: currentEnd.getTime(),
+        date: label,
+        users: 0,
+        appointments: 0,
+        revenue: 0,
+      });
+
+      currentStart = currentEnd;
+    }
+
+    const findBucket = (d: Date): Bucket | undefined => {
+      const t = d.getTime();
+      if (t < startDate.getTime()) return undefined;
+      for (let i = 0; i < buckets.length; i++) {
+        const b = buckets[i];
+        if (t >= b.startMs && (t < b.endMs || i === buckets.length - 1)) {
+          return b;
+        }
+      }
+      return undefined;
+    };
+
     users.forEach((u) => {
-      const key = u.createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      const point = pointsMap.get(key);
-      if (point) point.users += 1;
+      const bucket = findBucket(u.createdAt);
+      if (bucket) bucket.users += 1;
     });
 
     appointments.forEach((a) => {
-      const key = a.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      const point = pointsMap.get(key);
-      if (point) {
-        point.appointments += 1;
+      const bucket = findBucket(a.date);
+      if (bucket) {
+        bucket.appointments += 1;
         if (a.status === AppointmentStatus.COMPLETED) {
-          point.revenue += a.service?.price || 0;
+          bucket.revenue += a.service?.price || 0;
         }
       }
     });
 
     orders.forEach((o) => {
-      const key = o.createdAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      const point = pointsMap.get(key);
-      if (point) {
-        point.revenue += o.totalAmount || 0;
+      const bucket = findBucket(o.createdAt);
+      if (bucket) {
+        bucket.revenue += o.totalAmount || 0;
       }
     });
 
-    const data = Array.from(pointsMap.values()).map((p) => ({
-      ...p,
-      revenue: Number(p.revenue.toFixed(2)),
+    const data = buckets.map((b) => ({
+      date: b.date,
+      users: b.users,
+      appointments: b.appointments,
+      revenue: Number(b.revenue.toFixed(2)),
     }));
 
     return reply.send(data);

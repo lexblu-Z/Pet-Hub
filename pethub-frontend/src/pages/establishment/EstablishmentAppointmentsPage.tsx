@@ -64,6 +64,7 @@ interface AppointmentData {
     name: string;
     role: string;
   } | null;
+  petTransport?: 'PICKUP_BY_TUTOR' | 'PICKUP_BY_PROVIDER' | string | null;
 }
 
 interface EmployeeItem {
@@ -710,6 +711,14 @@ export default function EstablishmentAppointmentsPage() {
                               <span className="capitalize">{apt.serviceCategory}</span>
                             </>
                           )}
+                          <span>•</span>
+                          <span className={`px-2 py-0.5 rounded-md font-medium text-[11px] ${
+                            apt.petTransport === 'PICKUP_BY_PROVIDER'
+                              ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300'
+                              : 'bg-neutral-100 text-neutral-600 dark:bg-[#282A2C] dark:text-[#C4C7C5]'
+                          }`}>
+                            {apt.petTransport === 'PICKUP_BY_PROVIDER' ? 'Transporte: Buscar pet' : 'Transporte: Tutor levará o pet'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -930,6 +939,25 @@ export default function EstablishmentAppointmentsPage() {
                   </div>
                   <span className="text-base font-black text-green-700 dark:text-emerald-400">
                     R$ {Number(selectedApt.price ?? 0).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Informações de Transporte do Pet */}
+              <div className="p-4 rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-2">
+                <p className="text-xs font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider">Transporte do Pet</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">
+                    {selectedApt.petTransport === 'PICKUP_BY_PROVIDER'
+                      ? 'Buscar pet no endereço cadastrado do tutor'
+                      : 'O tutor levará o pet até o estabelecimento'}
+                  </p>
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                    selectedApt.petTransport === 'PICKUP_BY_PROVIDER'
+                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300'
+                      : 'bg-neutral-100 text-neutral-600 dark:bg-[#282A2C] dark:text-[#C4C7C5]'
+                  }`}>
+                    {selectedApt.petTransport === 'PICKUP_BY_PROVIDER' ? 'Buscar pet' : 'Tutor levará'}
                   </span>
                 </div>
               </div>

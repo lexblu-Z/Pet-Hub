@@ -1,12 +1,16 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Check, ChevronRight, Camera, Dog, Cat, ArrowRight, ArrowLeft, 
-  X, Plus, Loader2, ChevronDown, ChevronUp, Search, Sparkles, PawPrint 
+  Check, ChevronRight, Camera, Dog, ArrowRight, ArrowLeft, 
+  X, Plus, Loader2, ChevronDown, ChevronUp, Search, Sparkles, 
+  PawPrint, ShieldCheck, Calendar, Weight, Activity, AlertCircle,
+  Scissors, Heart, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/store/toastStore';
+import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
+import { formatCPF, validateCPF } from '@/utils/documentValidation';
 import { 
   SPECIES_OPTIONS, 
   searchBreedsBySpecies, 
@@ -14,37 +18,115 @@ import {
   getSpeciesInfo 
 } from '@/utils/species';
 
+const APPROXIMATE_AGE_OPTIONS = [
+  'Filhote (menos de 6 meses)',
+  'Jovem (6 meses a 1 ano)',
+  'Aproximadamente 1 ano',
+  'Aproximadamente 2 anos',
+  'Aproximadamente 3 anos',
+  'Aproximadamente 4 anos',
+  'Aproximadamente 5 anos',
+  'Adulto (6 a 8 anos)',
+  'Sênior (9 a 12 anos)',
+  'Idoso (mais de 12 anos)',
+];
+
 interface PetDraft {
   name: string;
   species: string;
   breed: string;
+  gender: 'MALE' | 'FEMALE' | 'UNKNOWN';
+  ageMode: 'exact' | 'approximate' | 'unknown';
+  birthDate: string;
+  approximateAge: string;
+  weight: string;
+  weightUnknown: boolean;
+  isNeutered: boolean | null;
+  vaccinationStatus: 'UP_TO_DATE' | 'PENDING' | 'UNKNOWN';
+  specialCareNotes: string;
   photoFile: File | null;
   photoPreview: string | null;
 }
 
+const createInitialPet = (): PetDraft => ({
+  name: '',
+  species: 'dog',
+  breed: '',
+  gender: 'UNKNOWN',
+  ageMode: 'unknown',
+  birthDate: '',
+  approximateAge: '',
+  weight: '',
+  weightUnknown: true,
+  isNeutered: null,
+  vaccinationStatus: 'UNKNOWN',
+  specialCareNotes: '',
+  photoFile: null,
+  photoPreview: null,
+});
+
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { currentUser, setUser } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Steps: 1 = Initial question (has pet?), 2 = How many pets?, 3 = Pet details forms
-  const [step, setStep] = useState(1);
+
+  // CPF Verification for Tutor (mandatory rule)
+  const hasDocument = Boolean((currentUser as any)?.document?.trim());
+  const [step, setStep] = useState(hasDocument ? 1 : 0);
+  const [tutorCpf, setTutorCpf] = useState('');
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [isSavingCpf, setIsSavingCpf] = useState(false);
+
+  // Steps: 0 = CPF requirement (if missing), 1 = Initial question (has pet?), 2 = How many pets?, 3 = Pet details forms
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [petCount, setPetCount] = useState<number>(1);
   const [activePetIndex, setActivePetIndex] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Array of pets being registered
-  const [pets, setPets] = useState<PetDraft[]>([
-    { name: '', species: 'dog', breed: '', photoFile: null, photoPreview: null }
-  ]);
+  const [pets, setPets] = useState<PetDraft[]>([createInitialPet()]);
 
   // Dropdown states for active pet
   const [isSpeciesOpen, setIsSpeciesOpen] = useState(false);
   const [isBreedOpen, setIsBreedOpen] = useState(false);
   const [breedSearch, setBreedSearch] = useState('');
 
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const currentPet = pets[activePetIndex] || pets[0];
+
+  useEffect(() => {
+    if (hasDocument && step === 0) {
+      setStep(1);
+    }
+  }, [hasDocument, step]);
+
+  const handleCpfSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const docVal = validateCPF(tutorCpf);
+    if (!docVal.isValid) {
+      const err = docVal.error || 'Informe um CPF válido.';
+      setCpfError(err);
+      toast.error(err);
+      return;
+    }
+    setCpfError(null);
+    setIsSavingCpf(true);
+    try {
+      const res = await api.put('/users/me/profile', { document: tutorCpf.trim() });
+      if (res.data?.user) {
+        setUser({ ...(currentUser as any), ...res.data.user });
+      }
+      toast.success('CPF validado com sucesso!');
+      setStep(1);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Erro ao validar e salvar CPF.';
+      setCpfError(msg);
+      toast.error(msg);
+    } finally {
+      setIsSavingCpf(false);
+    }
+  };
 
   const handlePetCountChange = (count: number) => {
     const validCount = Math.max(1, Math.min(10, count));
@@ -52,7 +134,7 @@ export default function OnboardingPage() {
     setPets(prev => {
       const next = [...prev];
       while (next.length < validCount) {
-        next.push({ name: '', species: 'dog', breed: '', photoFile: null, photoPreview: null });
+        next.push(createInitialPet());
       }
       return next.slice(0, validCount);
     });
@@ -70,7 +152,7 @@ export default function OnboardingPage() {
   };
 
   const handleSpeciesSelect = (newSpecies: string) => {
-    // CRITICAL: Changing species immediately clears breed and search query
+    // Changing species immediately clears breed and search query
     updateCurrentPet({ species: newSpecies, breed: '' });
     setBreedSearch('');
     setIsSpeciesOpen(false);
@@ -113,7 +195,6 @@ export default function OnboardingPage() {
     let createdCount = 0;
 
     if (hasPet) {
-      // Validate that at least the current pet or first pet has a name
       const validPets = pets.filter(p => p.name.trim().length > 0);
       if (validPets.length === 0) {
         toast.error('Informe o nome de pelo menos um pet para continuar.');
@@ -139,12 +220,21 @@ export default function OnboardingPage() {
             }
           }
 
-          await api.post('/pets', {
+          const petPayload: any = {
             name: pet.name.trim(),
             species: pet.species,
             breed: pet.breed?.trim() || undefined,
+            gender: pet.gender === 'UNKNOWN' ? undefined : pet.gender,
+            birthDate: pet.ageMode === 'exact' && pet.birthDate ? pet.birthDate : undefined,
+            approximateAge: pet.ageMode === 'approximate' && pet.approximateAge ? pet.approximateAge : undefined,
+            weight: !pet.weightUnknown && pet.weight ? parseFloat(pet.weight.replace(',', '.')) : undefined,
+            isNeutered: pet.isNeutered === null ? undefined : pet.isNeutered,
+            vaccinationStatus: pet.vaccinationStatus,
+            specialCareNotes: pet.specialCareNotes?.trim() || undefined,
             photo: photoUrl,
-          });
+          };
+
+          await api.post('/pets', petPayload);
           createdCount++;
         } catch (err) {
           console.error('Falha ao cadastrar pet #' + (i + 1) + ':', err);
@@ -166,7 +256,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-neutral-900 font-sans">
+    <div className="min-h-screen relative flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-neutral-900 font-sans">
       {/* Background Image & Overlay */}
       <div 
         className="absolute inset-0 z-0 opacity-40 mix-blend-overlay"
@@ -184,13 +274,76 @@ export default function OnboardingPage() {
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-xl"
+        className="relative z-10 w-full max-w-2xl my-2"
       >
-        <div className="backdrop-blur-2xl bg-white/10 border border-white/20 p-6 sm:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+        <div className="backdrop-blur-2xl bg-neutral-900/85 border border-white/20 p-6 sm:p-8 rounded-[2rem] shadow-2xl relative overflow-hidden max-h-[92vh] flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
           
-          <div className="relative z-10">
+          <div className="relative z-10 overflow-y-auto pr-1 sm:pr-2 scrollbar-thin">
             <AnimatePresence mode="wait">
+              {/* STEP 0: Mandatory CPF Confirmation (if Tutor doesn't have CPF yet) */}
+              {step === 0 && (
+                <motion.div
+                  key="step0"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6 text-center py-2"
+                >
+                  <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-orange-500/30 mb-4">
+                    <ShieldCheck size={32} className="text-white" />
+                  </div>
+                  
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">Confirmação de CPF do Tutor</h1>
+                    <p className="text-white/70 text-sm max-w-md mx-auto">
+                      Para emitir pedidos, gerenciar agendamentos e garantir a segurança da sua conta, informe seu CPF de tutor.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleCpfSubmit} className="space-y-4 max-w-sm mx-auto text-left">
+                    <div>
+                      <label className="block text-xs font-semibold text-white/90 mb-1.5">
+                        CPF do Tutor *
+                      </label>
+                      <input
+                        type="text"
+                        value={tutorCpf}
+                        onChange={(e) => {
+                          setTutorCpf(formatCPF(e.target.value));
+                          if (cpfError) setCpfError(null);
+                        }}
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                        required
+                        className="w-full bg-white/10 border border-white/20 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm placeholder-white/40"
+                      />
+                      {cpfError && (
+                        <p className="text-xs text-red-400 mt-1 font-medium">{cpfError}</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingCpf || !tutorCpf}
+                      className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer text-sm"
+                    >
+                      {isSavingCpf ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Validando...
+                        </>
+                      ) : (
+                        <>
+                          Confirmar CPF e prosseguir
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+
               {/* STEP 1: Welcome & Pet Question */}
               {step === 1 && (
                 <motion.div
@@ -198,26 +351,26 @@ export default function OnboardingPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="text-center"
+                  className="text-center py-2"
                 >
-                  <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-orange-500/30 mb-8 transform rotate-3">
+                  <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-orange-500/30 mb-6 transform rotate-3">
                     <Dog size={40} className="text-white -rotate-3" />
                   </div>
-                  <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">Que bom ter você aqui!</h1>
-                  <p className="text-white/70 mb-10 text-lg">Para personalizarmos sua experiência, conte-nos: você já tem um pet?</p>
+                  <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Que bom ter você aqui!</h1>
+                  <p className="text-white/70 mb-8 text-base">Para personalizarmos sua experiência, conte-nos: você já tem um pet?</p>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 max-w-lg mx-auto">
                     <button
                       type="button"
                       onClick={() => { setHasPet(true); setStep(2); }}
-                      className="w-full group relative overflow-hidden rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 p-5 transition-all flex items-center gap-4 cursor-pointer"
+                      className="w-full group relative overflow-hidden rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 p-5 transition-all flex items-center gap-4 cursor-pointer text-left shadow-lg hover:border-orange-400/50"
                     >
-                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
-                        <Dog className="text-white" />
+                      <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center shrink-0 border border-orange-400/30">
+                        <Dog className="text-orange-400" />
                       </div>
-                      <div className="text-left flex-1">
+                      <div className="flex-1">
                         <p className="font-bold text-white text-lg">Sim, eu tenho!</p>
-                        <p className="text-sm text-white/60">Quero cadastrar meus pets agora</p>
+                        <p className="text-xs text-white/60">Quero cadastrar meus pets agora</p>
                       </div>
                       <ChevronRight className="text-white/40 group-hover:text-white transition-colors" />
                     </button>
@@ -225,14 +378,14 @@ export default function OnboardingPage() {
                     <button
                       type="button"
                       onClick={() => { setHasPet(false); handleFinish(); }}
-                      className="w-full group relative overflow-hidden rounded-2xl bg-transparent hover:bg-white/5 border border-white/10 p-5 transition-all flex items-center gap-4 cursor-pointer"
+                      className="w-full group relative overflow-hidden rounded-2xl bg-transparent hover:bg-white/5 border border-white/15 p-5 transition-all flex items-center gap-4 cursor-pointer text-left"
                     >
-                      <div className="w-12 h-12 bg-transparent border border-white/20 rounded-xl flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 bg-white/5 border border-white/20 rounded-xl flex items-center justify-center shrink-0">
                         <X className="text-white/60" />
                       </div>
-                      <div className="text-left flex-1">
+                      <div className="flex-1">
                         <p className="font-bold text-white text-lg">Ainda não tenho</p>
-                        <p className="text-sm text-white/60">Estou apenas conhecendo a plataforma</p>
+                        <p className="text-xs text-white/60">Estou apenas conhecendo a plataforma</p>
                       </div>
                       <ArrowRight className="text-white/40 group-hover:text-white transition-colors" />
                     </button>
@@ -247,6 +400,7 @@ export default function OnboardingPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
+                  className="py-2"
                 >
                   <div className="flex items-center gap-4 mb-6">
                     <button 
@@ -326,15 +480,16 @@ export default function OnboardingPage() {
                 </motion.div>
               )}
 
-              {/* STEP 3: Multiple Pet Details Forms */}
+              {/* STEP 3: Complete Pet Details Forms */}
               {step === 3 && (
                 <motion.div
                   key="step3"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6"
                 >
-                  <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <div className="flex items-center gap-3">
                       <button 
                         type="button" 
@@ -349,12 +504,11 @@ export default function OnboardingPage() {
                           Pet {activePetIndex + 1} de {petCount}
                         </h2>
                         <p className="text-white/60 text-xs sm:text-sm">
-                          {currentPet.name.trim() ? `Dados de ${currentPet.name}` : 'Preencha os dados do seu pet'}
+                          {currentPet.name.trim() ? `Dados de ${currentPet.name}` : 'Preencha os dados completos do seu animal'}
                         </p>
                       </div>
                     </div>
 
-                    {/* Progress pill */}
                     <span className="text-xs font-semibold px-3 py-1 bg-white/10 text-orange-400 rounded-full border border-white/10">
                       {activePetIndex + 1}/{petCount}
                     </span>
@@ -362,11 +516,10 @@ export default function OnboardingPage() {
 
                   {/* Multiple Pets Tabs Bar (if petCount > 1) */}
                   {petCount > 1 && (
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-6 -mx-2 px-2">
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
                       {pets.map((p, idx) => {
                         const isCurrent = idx === activePetIndex;
                         const hasName = p.name.trim().length > 0;
-                        const info = getSpeciesInfo(p.species);
                         return (
                           <button
                             key={idx}
@@ -393,7 +546,7 @@ export default function OnboardingPage() {
                   )}
 
                   {/* Photo Upload */}
-                  <div className="flex flex-col items-center justify-center mb-6">
+                  <div className="flex flex-col items-center justify-center">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -428,17 +581,22 @@ export default function OnboardingPage() {
                       <button
                         type="button"
                         onClick={removePhoto}
-                        className="mt-1.5 text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
+                        className="mt-1 text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
                       >
                         Remover foto
                       </button>
                     ) : (
-                      <p className="text-[10px] text-white/40 mt-1.5">Opcional • JPG, PNG ou WEBP</p>
+                      <p className="text-[10px] text-white/40 mt-1">Opcional • JPG, PNG ou WEBP</p>
                     )}
                   </div>
 
-                  {/* Form Inputs */}
-                  <div className="space-y-4 mb-6">
+                  {/* ================= SECTION 1: Identificação Básica ================= */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-orange-400 text-xs font-bold uppercase tracking-wider">
+                      <PawPrint size={14} />
+                      <span>1. Identificação Básica</span>
+                    </div>
+
                     {/* Pet Name */}
                     <div>
                       <label className="block text-xs font-semibold text-white/80 mb-1.5">Nome do pet *</label>
@@ -446,13 +604,13 @@ export default function OnboardingPage() {
                         type="text" 
                         value={currentPet.name}
                         onChange={(e) => updateCurrentPet({ name: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 placeholder-white/30 transition-all text-sm"
-                        placeholder="Ex: Thor, Mel, Luna..."
+                        className="w-full bg-neutral-800/90 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 placeholder-white/30 transition-all text-sm"
+                        placeholder="Ex: Thor, Mel, Luna, Bob..."
                       />
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Species Selector with clear arrow & dropdown */}
+                      {/* Species Selector */}
                       <div className="relative">
                         <label className="block text-xs font-semibold text-white/80 mb-1.5">
                           Espécie *
@@ -512,7 +670,7 @@ export default function OnboardingPage() {
                       {/* Smart Searchable Breed Combobox */}
                       <div className="relative">
                         <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                          Raça * <span className="text-[10px] font-normal text-white/50">(filtrada por espécie)</span>
+                          Raça * <span className="text-[10px] font-normal text-white/50">(ou SRD)</span>
                         </label>
                         <div className="relative flex items-center w-full">
                           <input 
@@ -529,7 +687,7 @@ export default function OnboardingPage() {
                               setIsBreedOpen(true);
                               setIsSpeciesOpen(false);
                             }}
-                            placeholder="Buscar raça..."
+                            placeholder="Buscar ou digitar raça..."
                             className="w-full h-[46px] px-3.5 pr-10 bg-neutral-800/90 border border-white/15 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 placeholder-white/30 transition-all text-sm"
                           />
                           <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40 shrink-0">
@@ -557,7 +715,7 @@ export default function OnboardingPage() {
                               >
                                 {availableBreeds.length === 0 ? (
                                   <div className="p-3 text-center">
-                                    <p className="text-xs text-white/50 mb-1">Nenhuma raça encontrada no catálogo</p>
+                                    <p className="text-xs text-white/50 mb-1">Nenhuma raça catalogada</p>
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -597,10 +755,238 @@ export default function OnboardingPage() {
                         </AnimatePresence>
                       </div>
                     </div>
+
+                    {/* Gender Selector */}
+                    <div>
+                      <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                        Sexo do pet
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'MALE', label: 'Macho' },
+                          { id: 'FEMALE', label: 'Fêmea' },
+                          { id: 'UNKNOWN', label: 'Não sei' },
+                        ].map((g) => {
+                          const isSelected = currentPet.gender === g.id;
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => updateCurrentPet({ gender: g.id as any })}
+                              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {g.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ================= SECTION 2: Idade e Porte ================= */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-orange-400 text-xs font-bold uppercase tracking-wider">
+                      <Calendar size={14} />
+                      <span>2. Idade e Porte Físico</span>
+                    </div>
+
+                    {/* Age Mode Tabs */}
+                    <div>
+                      <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                        Idade do animal
+                      </label>
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {[
+                          { id: 'exact', label: 'Data exata' },
+                          { id: 'approximate', label: 'Aproximada' },
+                          { id: 'unknown', label: 'Não sei' },
+                        ].map((tab) => {
+                          const isSelected = currentPet.ageMode === tab.id;
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => updateCurrentPet({ ageMode: tab.id as any })}
+                              className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Exact Date Input */}
+                      {currentPet.ageMode === 'exact' && (
+                        <div className="relative">
+                          <input
+                            type="date"
+                            max={todayStr}
+                            value={currentPet.birthDate}
+                            onChange={(e) => updateCurrentPet({ birthDate: e.target.value })}
+                            className="w-full bg-neutral-800/90 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      {/* Approximate Select */}
+                      {currentPet.ageMode === 'approximate' && (
+                        <div>
+                          <select
+                            value={currentPet.approximateAge}
+                            onChange={(e) => updateCurrentPet({ approximateAge: e.target.value })}
+                            className="w-full bg-neutral-800 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm cursor-pointer"
+                          >
+                            <option value="">Selecione a faixa etária aproximada...</option>
+                            {APPROXIMATE_AGE_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Unknown Notice */}
+                      {currentPet.ageMode === 'unknown' && (
+                        <p className="text-xs text-white/60 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          Tudo bem! O veterinário ou profissional poderá estimar a idade durante a primeira avaliação.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Weight Field with 'Não sei' option */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-semibold text-white/80 flex items-center gap-1.5">
+                          <Weight size={13} />
+                          <span>Peso aproximado (kg)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => updateCurrentPet({ weightUnknown: !currentPet.weightUnknown, weight: '' })}
+                          className={`text-xs font-semibold transition-colors cursor-pointer ${
+                            currentPet.weightUnknown ? 'text-orange-400' : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          {currentPet.weightUnknown ? '✓ Não sei o peso' : 'Não sei o peso'}
+                        </button>
+                      </div>
+
+                      {!currentPet.weightUnknown ? (
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            max="300"
+                            value={currentPet.weight}
+                            onChange={(e) => updateCurrentPet({ weight: e.target.value })}
+                            placeholder="Ex: 8.5"
+                            className="w-full bg-neutral-800/90 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-white/60 bg-white/5 border border-white/10 p-3 rounded-xl">
+                          Peso marcado como desconhecido. Poderá ser pesado na balança da clínica ou pet shop.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ================= SECTION 3: Saúde e Cuidados ================= */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-orange-400 text-xs font-bold uppercase tracking-wider">
+                      <Heart size={14} />
+                      <span>3. Saúde e Cuidados</span>
+                    </div>
+
+                    {/* Castration */}
+                    <div>
+                      <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                        <Scissors size={13} />
+                        <span>O pet é castrado?</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: true, label: 'Sim, castrado' },
+                          { val: false, label: 'Não castrado' },
+                          { val: null, label: 'Não sei' },
+                        ].map((opt, idx) => {
+                          const isSelected = currentPet.isNeutered === opt.val;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => updateCurrentPet({ isNeutered: opt.val })}
+                              className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Vaccination Status */}
+                    <div>
+                      <label className="block text-xs font-semibold text-white/80 mb-1.5 flex items-center gap-1.5">
+                        <Activity size={13} />
+                        <span>Situação vacinal</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'UP_TO_DATE', label: 'Em dia' },
+                          { id: 'PENDING', label: 'Atrasada' },
+                          { id: 'UNKNOWN', label: 'Não sei' },
+                        ].map((v) => {
+                          const isSelected = currentPet.vaccinationStatus === v.id;
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              onClick={() => updateCurrentPet({ vaccinationStatus: v.id as any })}
+                              className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {v.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Special Care Notes */}
+                    <div>
+                      <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                        Cuidados especiais ou observações (opcional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={currentPet.specialCareNotes}
+                        onChange={(e) => updateCurrentPet({ specialCareNotes: e.target.value })}
+                        placeholder="Alergias, medicamentos contínuos, temperamento tímido/bravo..."
+                        className="w-full bg-neutral-800/90 border border-white/15 text-white rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-xs placeholder-white/30 resize-none leading-relaxed"
+                      />
+                    </div>
                   </div>
 
                   {/* Navigation Buttons */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 pt-2">
                     {activePetIndex > 0 && (
                       <button
                         type="button"

@@ -26,6 +26,8 @@ import { professionalRoutes } from './routes/professional.routes';
 import { easterEggRoutes } from './routes/easterEgg.routes';
 import { messagesRoutes } from './routes/messages.routes';
 import { reportsRoutes } from './routes/reports.routes';
+import { partnerProgramRoutes } from './routes/partner-program.routes';
+import { reviewsRoutes } from './routes/reviews.routes';
 
 dotenv.config();
 
@@ -89,6 +91,8 @@ fastify.register(professionalRoutes, { prefix: '/api/professional' });
 fastify.register(easterEggRoutes, { prefix: '/api/easter-egg' });
 fastify.register(messagesRoutes, { prefix: '/api/messages' });
 fastify.register(reportsRoutes, { prefix: '/api/reports' });
+fastify.register(partnerProgramRoutes, { prefix: '/api' });
+fastify.register(reviewsRoutes, { prefix: '/api/reviews' });
 
 // Basic route
 fastify.get('/', async (request, reply) => {

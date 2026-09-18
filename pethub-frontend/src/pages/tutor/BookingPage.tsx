@@ -40,6 +40,7 @@ export default function BookingPage() {
   const [changeFor, setChangeFor] = useState<string>('');
   const [appliedCashbackCode, setAppliedCashbackCode] = useState<string | null>(null);
   const [cashbackDiscount, setCashbackDiscount] = useState<number>(0);
+  const [petTransport, setPetTransport] = useState<'PICKUP_BY_TUTOR' | 'PICKUP_BY_PROVIDER'>('PICKUP_BY_TUTOR');
 
   const [myPets, setMyPets] = useState<any[]>([]);
   const [availableEsts, setAvailableEsts] = useState<any[]>([]);
@@ -137,6 +138,17 @@ export default function BookingPage() {
         if (location.state?.prefillEstablishment) {
           store.setSelectedEstablishment(location.state.prefillEstablishment);
         }
+        if (location.state?.prefillService) {
+          store.setSelectedService(location.state.prefillService);
+        }
+        if (location.state?.prefillPet) {
+          store.setSelectedPet(location.state.prefillPet);
+        }
+        if (location.state?.prefillPet && location.state?.prefillEstablishment && location.state?.prefillService) {
+          setCurrentStep(4);
+        } else if (location.state?.prefillPet && location.state?.prefillEstablishment) {
+          setCurrentStep(3);
+        }
       } catch (error) {
         toast.error('Erro ao buscar dados para agendamento.');
       } finally {
@@ -210,6 +222,7 @@ export default function BookingPage() {
         needsChange: isCash ? needsChange : false,
         changeFor: parsedChangeFor,
         cashbackCode: appliedCashbackCode || null,
+        petTransport,
       };
 
       await api.post('/appointments', payload);
@@ -593,6 +606,58 @@ export default function BookingPage() {
                       </span>
                       <span className="text-lg text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Opção de Transporte do Pet */}
+                <div className="mb-6 bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4">
+                  <label className="text-xs font-bold text-neutral-600 dark:text-[#C4C7C5] uppercase tracking-wider block mb-3">
+                    Como o pet chegará ao agendamento?
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPetTransport('PICKUP_BY_TUTOR')}
+                      className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
+                        petTransport === 'PICKUP_BY_TUTOR'
+                          ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 text-orange-950 dark:text-orange-200 ring-2 ring-orange-500/20'
+                          : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 ${
+                        petTransport === 'PICKUP_BY_TUTOR' ? 'border-orange-500 bg-orange-500' : 'border-neutral-300'
+                      }`}>
+                        {petTransport === 'PICKUP_BY_TUTOR' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3]">Vou levar meu pet</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                          O tutor leva o pet até o local no horário agendado.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPetTransport('PICKUP_BY_PROVIDER')}
+                      className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 cursor-pointer ${
+                        petTransport === 'PICKUP_BY_PROVIDER'
+                          ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 text-orange-950 dark:text-orange-200 ring-2 ring-orange-500/20'
+                          : 'border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 ${
+                        petTransport === 'PICKUP_BY_PROVIDER' ? 'border-orange-500 bg-orange-500' : 'border-neutral-300'
+                      }`}>
+                        {petTransport === 'PICKUP_BY_PROVIDER' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-neutral-900 dark:text-[#E3E3E3]">Quero solicitar busca do pet</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                          O estabelecimento ou profissional buscará o pet no endereço.
+                        </p>
+                      </div>
+                    </button>
                   </div>
                 </div>
 

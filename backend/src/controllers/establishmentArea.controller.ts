@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Role, AppointmentStatus, OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
+import { createAndEmitNotification } from '../utils/notificationEvents';
 
 // Helper to check establishment access
 async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply) {
@@ -42,6 +43,8 @@ export const establishmentAreaController = {
       startDate.setDate(now.getDate() - 30);
     } else if (period === 'year') {
       startDate.setFullYear(now.getFullYear() - 1);
+    } else if (period === 'all') {
+      startDate = new Date(0);
     }
 
     // 1. Completed appointments for revenue
@@ -57,11 +60,21 @@ export const establishmentAreaController = {
     const appointmentRevenue = completedAppointments.reduce((sum, a) => sum + (a.service?.price || 0), 0);
 
     // 2. Orders revenue from items of this establishment
+    // Include all approved statuses: everything except PENDING and CANCELLED counts as confirmed revenue
+    const APPROVED_ORDER_STATUSES = [
+      OrderStatus.PAID,
+      OrderStatus.CONFIRMED,
+      OrderStatus.PREPARING,
+      OrderStatus.SHIPPED,
+      OrderStatus.READY_FOR_PICKUP,
+      OrderStatus.DELIVERED,
+      OrderStatus.COMPLETED,
+    ];
     const orderItems = await prisma.orderItem.findMany({
       where: {
         establishmentId: user.id,
         order: {
-          status: { in: [OrderStatus.PAID, OrderStatus.DELIVERED] },
+          status: { in: APPROVED_ORDER_STATUSES },
           createdAt: { gte: startDate },
         },
       },
@@ -116,7 +129,7 @@ export const establishmentAreaController = {
     const completedOrdersCount = await prisma.orderItem.count({
       where: {
         establishmentId: user.id,
-        order: { status: OrderStatus.DELIVERED },
+        order: { status: { in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED] } },
       },
     });
 
@@ -148,10 +161,16 @@ export const establishmentAreaController = {
       distinct: ['petId'],
     });
 
-    // 7. Top sold products
+    // 7. Top sold products (consistent with approved orders and period)
     const productSalesMap: Record<string, { name: string; photo: string | null; quantity: number; revenue: number }> = {};
     const allSoldItems = await prisma.orderItem.findMany({
-      where: { establishmentId: user.id },
+      where: {
+        establishmentId: user.id,
+        order: {
+          status: { in: APPROVED_ORDER_STATUSES },
+          createdAt: { gte: startDate },
+        },
+      },
       include: { product: true },
     });
 
@@ -172,25 +191,35 @@ export const establishmentAreaController = {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
 
-    // 8. Revenue chart data points (grouped by day/month based on period)
+    // 8. Revenue chart data points (grouped by day/month based on period, America/Sao_Paulo)
+    const toBrDateStr = (dt: Date | string) => {
+      try {
+        return new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Sao_Paulo',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date(dt));
+      } catch {
+        return '';
+      }
+    };
+
     const revenuePoints: { date: string; amount: number }[] = [];
     const daysCount = period === 'today' ? 1 : period === '7days' ? 7 : 30;
     
     for (let i = daysCount - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dayStr = d.toISOString().split('T')[0];
-      const label = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace(' de ', ' ').replace('.', '');
-      
-      const dayStart = new Date(dayStr + 'T00:00:00');
-      const dayEnd = new Date(dayStr + 'T23:59:59');
+      const dayTargetStr = toBrDateStr(d);
+      const label = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'short' }).replace(' de ', ' ').replace('.', '');
 
       const appRev = completedAppointments
-        .filter(a => a.date >= dayStart && a.date <= dayEnd)
+        .filter(a => toBrDateStr(a.date) === dayTargetStr)
         .reduce((sum, a) => sum + (a.service?.price || 0), 0);
 
       const ordRev = orderItems
-        .filter(it => it.createdAt >= dayStart && it.createdAt <= dayEnd)
+        .filter(it => toBrDateStr(it.createdAt) === dayTargetStr)
         .reduce((sum, it) => sum + (it.priceAtTime * it.quantity), 0);
 
       revenuePoints.push({ date: label, amount: appRev + ordRev });
@@ -839,14 +868,11 @@ export const establishmentAreaController = {
         COMPLETED: 'Concluído',
         CANCELLED: 'Cancelado',
       };
-      const label = statusTranslations[status] || status;
-      await prisma.notification.create({
-        data: {
-          userId: updated.tutorId,
-          title: `Atualização no pedido #${id.slice(0, 8).toUpperCase()}`,
-          message: `O status do seu pedido foi atualizado para "${label}".`,
-          type: 'ORDER',
-        },
+      await createAndEmitNotification({
+        userId: updated.tutorId,
+        title: 'Pedido atualizado',
+        message: 'Seu pedido recebeu uma nova atualização de status.',
+        type: 'ORDER',
       });
     } catch (notifErr) {
       request.log.error(notifErr, 'Erro ao criar notificação de atualização de status do pedido');
@@ -960,14 +986,11 @@ export const establishmentAreaController = {
         }
 
         // Create notification for tutor
-        const orderShortId = id.slice(0, 8).toUpperCase();
-        await tx.notification.create({
-          data: {
-            userId: order.tutorId,
-            title: `Pedido #${orderShortId} Cancelado pelo Estabelecimento`,
-            message: `Seu pedido foi cancelado pelo estabelecimento parceiro. Motivo: ${reason}${notes ? ` (${notes})` : ''}. O estoque foi reposto.`,
-            type: 'ORDER',
-          },
+        await createAndEmitNotification({
+          userId: order.tutorId,
+          title: 'Pedido cancelado',
+          message: 'Um pedido de produtos foi cancelado.',
+          type: 'ORDER',
         });
 
         return updated;
@@ -1061,6 +1084,7 @@ export const establishmentAreaController = {
         price: Number(a.service?.price ?? 0),
         duration: a.service?.duration || 60,
         status: a.status,
+        petTransport: (a as any).petTransport || 'PICKUP_BY_TUTOR',
         employeeId: a.employeeId || null,
         employee: a.employee ? {
           id: a.employee.id,
@@ -1087,38 +1111,44 @@ export const establishmentAreaController = {
       include: {
         pet: true,
         service: true,
-      }
+      },
     });
-    if (!existing) return reply.status(404).send({ error: 'Agendamento não encontrado ou acesso negado.' });
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Agendamento não encontrado.' });
+    }
 
     const updated = await prisma.appointment.update({
       where: { id },
       data: { status },
       include: {
         pet: true,
-        tutor: true,
         service: true,
         employee: true,
-      }
+      },
     });
 
-    // Notify tutor about status change
+    // Notify tutor about status change (standardized operational event message)
     try {
-      const statusLabels: Record<string, string> = {
-        CONFIRMED: 'confirmado',
-        IN_PROGRESS: 'iniciado',
-        COMPLETED: 'concluído',
-        CANCELLED: 'cancelado',
-        PENDING: 'agendado',
-      };
-      const label = statusLabels[status] || status.toLowerCase();
-      await prisma.notification.create({
-        data: {
-          userId: existing.tutorId,
-          title: `Agendamento ${label}`,
-          message: `O agendamento de ${existing.pet?.name || 'seu pet'} para ${existing.service?.name || 'o serviço'} foi ${label}.`,
-          type: 'APPOINTMENT',
-        }
+      let notifTitle = 'Agendamento atualizado';
+      let notifMsg = 'Um agendamento de serviço recebeu uma nova atualização.';
+
+      if (status === AppointmentStatus.CONFIRMED) {
+        notifTitle = 'Agendamento confirmado';
+        notifMsg = 'Seu agendamento de serviço foi confirmado.';
+      } else if (status === AppointmentStatus.CANCELLED) {
+        notifTitle = 'Agendamento cancelado';
+        notifMsg = 'Um agendamento de serviço foi cancelado.';
+      } else if (status === AppointmentStatus.COMPLETED) {
+        notifTitle = 'Serviço concluído';
+        notifMsg = 'O atendimento de serviço foi concluído com sucesso.';
+      }
+
+      await createAndEmitNotification({
+        userId: existing.tutorId,
+        title: notifTitle,
+        message: notifMsg,
+        type: 'APPOINTMENT',
       });
     } catch (notifErr) {
       request.log.warn({ err: notifErr }, 'Could not create notification for tutor on status change');

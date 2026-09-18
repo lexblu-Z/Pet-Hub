@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCircle2, X, Clock, ArrowRight } from 'lucide-react';
+import { Bell, X, Calendar, ShoppingBag, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 
 const SEEN_IDS_KEY = 'pethub_seen_notification_ids';
+const MAX_SEEN_HISTORY = 100;
+const RECENT_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutos
 
 function getSeenNotificationIds(): string[] {
   try {
-    const raw = sessionStorage.getItem(SEEN_IDS_KEY);
+    const raw = localStorage.getItem(SEEN_IDS_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -18,8 +21,8 @@ function getSeenNotificationIds(): string[] {
 function markNotificationIdsAsSeen(ids: string[]) {
   try {
     const existing = getSeenNotificationIds();
-    const set = new Set([...existing, ...ids]);
-    sessionStorage.setItem(SEEN_IDS_KEY, JSON.stringify(Array.from(set)));
+    const combined = Array.from(new Set([...existing, ...ids])).slice(-MAX_SEEN_HISTORY);
+    localStorage.setItem(SEEN_IDS_KEY, JSON.stringify(combined));
   } catch (err) {
     console.error('Failed to save seen notification IDs', err);
   }
@@ -27,9 +30,17 @@ function markNotificationIdsAsSeen(ids: string[]) {
 
 export const LoginNotificationModal: React.FC = () => {
   const { isAuthenticated, currentUser, token } = useAuthStore();
-  const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
+  const [newNotifications, setNewNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
+
+  const resetDismissTimer = () => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
+      handleClose();
+    }, 8000);
+  };
 
   // 1. Listen to Realtime SSE Stream
   useEffect(() => {
@@ -49,18 +60,17 @@ export const LoginNotificationModal: React.FC = () => {
         try {
           const payload = JSON.parse(e.data);
           if (payload && payload.id) {
-            // Dispatch global event for popover and header badges
             window.dispatchEvent(new CustomEvent('pethub:new_notification', { detail: payload }));
 
-            // ID-based tracking: only show popup if this specific ID was NOT seen/dismissed in this session
             const seenIds = getSeenNotificationIds();
             if (!seenIds.includes(payload.id)) {
-              setUnreadNotifications((prev) => {
+              setNewNotifications((prev) => {
                 const exists = prev.some((n) => n.id === payload.id);
                 if (exists) return prev;
                 return [payload, ...prev];
               });
               setIsOpen(true);
+              resetDismissTimer();
             }
           }
         } catch (parseErr) {
@@ -68,163 +78,164 @@ export const LoginNotificationModal: React.FC = () => {
         }
       });
 
-      eventSource.onerror = () => {
-        // EventSource automatically retries
-      };
+      eventSource.onerror = () => {};
     } catch (err) {
       console.error('Error establishing notification SSE stream', err);
     }
 
     return () => {
       isSubscribed = false;
-      if (eventSource) {
-        eventSource.close();
-      }
+      if (eventSource) eventSource.close();
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
   }, [isAuthenticated, token]);
 
-  // 2. Initial login/mount unread check (filtered against seen IDs)
+  // 2. Initial login/mount unread check (ONLY genuinely recent notifications <= 60 min)
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      return;
-    }
+    if (!isAuthenticated || !currentUser) return;
 
     let isMounted = true;
 
-    async function checkUnread() {
+    async function checkRecentUnread() {
       try {
         const res = await api.get('/notifications');
         if (Array.isArray(res.data) && isMounted) {
           const seenIds = getSeenNotificationIds();
-          const unreadUnseen = res.data.filter((n: any) => !n.read && !seenIds.includes(n.id));
-          if (unreadUnseen.length > 0) {
-            setUnreadNotifications(unreadUnseen);
+          const now = Date.now();
+
+          // Strict separation: historical notifications stay in the center,
+          // only recent unread notifications (< 60 minutes) trigger automatic toast
+          const recentUnseen = res.data.filter((n: any) => {
+            if (n.read) return false;
+            if (seenIds.includes(n.id)) return false;
+            const createdTime = new Date(n.createdAt).getTime();
+            return !isNaN(createdTime) && now - createdTime <= RECENT_THRESHOLD_MS;
+          });
+
+          if (recentUnseen.length > 0) {
+            setNewNotifications(recentUnseen);
             setIsOpen(true);
+            resetDismissTimer();
           }
         }
-      } catch (err) {
-        // Silently fail if endpoint is not reachable or unauthenticated
-      }
+      } catch {}
     }
 
-    const timer = setTimeout(checkUnread, 1200);
+    const timer = setTimeout(checkRecentUnread, 1000);
     return () => {
       isMounted = false;
       clearTimeout(timer);
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
   }, [isAuthenticated, currentUser?.id]);
 
   const handleClose = () => {
-    markNotificationIdsAsSeen(unreadNotifications.map((n) => n.id));
+    markNotificationIdsAsSeen(newNotifications.map((n) => n.id));
     setIsOpen(false);
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.patch('/notifications/read-all');
-      markNotificationIdsAsSeen(unreadNotifications.map((n) => n.id));
-      setUnreadNotifications([]);
-      window.dispatchEvent(new CustomEvent('pethub:notifications_updated'));
-    } catch (err) {
-      console.error('Erro ao marcar como lidas', err);
-    } finally {
-      setIsOpen(false);
-    }
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
   };
 
   const handleViewAll = () => {
     handleClose();
     if (currentUser?.role === 'tutor') {
       navigate('/tutor/notifications');
+    } else if (currentUser?.role === 'estabelecimento') {
+      navigate('/estabelecimento/agendamentos');
+    } else if (currentUser?.role === 'profissional') {
+      navigate('/profissional/agenda');
     }
   };
 
-  if (!isOpen || unreadNotifications.length === 0) {
-    return null;
-  }
+  if (!isAuthenticated || newNotifications.length === 0) return null;
+
+  const currentNotif = newNotifications[0];
+  const isAppointment = currentNotif.type === 'APPOINTMENT';
+  const isOrder = currentNotif.type === 'ORDER';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200 dark:border-[#313335] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="p-5 border-b border-neutral-100 dark:border-[#313335] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0 border border-orange-500/20">
-              <Bell size={20} />
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral-900 dark:text-white text-base leading-tight">
-                Novas Notificações
-              </h3>
-              <p className="text-xs text-neutral-400">
-                Você tem {unreadNotifications.length} mensagem(ns) não lida(s)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-            aria-label="Fechar modal"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* List of recent unread */}
-        <div className="p-5 max-h-72 overflow-y-auto divide-y divide-neutral-100 dark:divide-[#313335] space-y-3">
-          {unreadNotifications.slice(0, 3).map((n) => (
-            <div key={n.id} className="pt-3 first:pt-0 space-y-1">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-neutral-900 dark:text-white">
-                  {n.title}
-                </h4>
-                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="discrete-notification-toast"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+          onMouseEnter={() => {
+            if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+          }}
+          onMouseLeave={resetDismissTimer}
+          className="fixed bottom-6 right-6 z-50 w-full max-w-sm pointer-events-auto"
+        >
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/90 dark:border-[#313335] shadow-xl p-3.5 backdrop-blur-md">
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                isAppointment 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/60 dark:border-orange-900/40' 
+                  : isOrder 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40'
+                    : 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/60 dark:border-orange-900/40'
+              }`}>
+                {isAppointment ? <Calendar size={16} /> : isOrder ? <ShoppingBag size={16} /> : <Bell size={16} />}
               </div>
-              <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                {n.message}
-              </p>
-              <div className="flex items-center gap-1 text-[10px] text-neutral-400 pt-0.5">
-                <Clock size={11} />
-                <span>{new Date(n.createdAt).toLocaleDateString('pt-BR')} às {new Date(n.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <p className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">
+                    {currentNotif.title}
+                  </p>
+                  <span className="text-[10px] text-neutral-400 dark:text-[#8E918F] shrink-0 font-medium">
+                    agora
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-[#8E918F] leading-relaxed line-clamp-2">
+                  {currentNotif.message}
+                </p>
+
+                <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                  {newNotifications.length > 1 ? (
+                    <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+                      +{newNotifications.length - 1} nova{newNotifications.length - 1 !== 1 ? 's' : ''}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-neutral-400 dark:text-[#8E918F]">
+                      PetHub Notificações
+                    </span>
+                  )}
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleViewAll}
+                      className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>Ver</span>
+                      <ArrowRight size={11} />
+                    </button>
+                    <span className="text-neutral-300 dark:text-[#313335]">•</span>
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
 
-          {unreadNotifications.length > 3 && (
-            <p className="text-center text-xs text-neutral-400 pt-2">
-              + {unreadNotifications.length - 3} outra(s) notificação(ões)
-            </p>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-4 bg-neutral-50 dark:bg-[#131314] border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between gap-2">
-          <button
-            onClick={handleMarkAllRead}
-            className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer px-2 py-1.5"
-          >
-            Marcar todas como lidas
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleClose}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-            >
-              Entendido
-            </button>
-            {currentUser?.role === 'tutor' && (
               <button
-                onClick={handleViewAll}
-                className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                type="button"
+                onClick={handleClose}
+                className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
+                aria-label="Fechar"
               >
-                <span>Ver todas</span>
-                <ArrowRight size={13} />
+                <X size={13} />
               </button>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

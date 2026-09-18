@@ -14,6 +14,8 @@ import {
   XCircle,
   Percent,
   Sparkles,
+  ShieldCheck,
+  Receipt,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { PaymentLogo } from '@/components/shared/PaymentLogo';
@@ -50,8 +52,29 @@ export default function AdminFinancialPage() {
     }
   };
 
+  const [partnerOverview, setPartnerOverview] = useState<any>(null);
+
+  const fetchPartnerOverview = async () => {
+    try {
+      const res = await api.get('/admin/partner-program/overview');
+      setPartnerOverview(res.data);
+    } catch (err) {
+      console.error('Failed to load partner program overview', err);
+    }
+  };
+
+  const handleUpdatePayoutStatus = async (id: string, status: 'APPROVED' | 'PAID') => {
+    try {
+      await api.patch(`/admin/partner-program/payouts/${id}/status`, { status });
+      fetchPartnerOverview();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Erro ao atualizar repasse');
+    }
+  };
+
   useEffect(() => {
     fetchFinance(!data);
+    fetchPartnerOverview();
   }, [period]);
 
   const handleApplyCustomDates = (e: React.FormEvent) => {
@@ -455,6 +478,141 @@ export default function AdminFinancialPage() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Programa de Parceiros dos Planos */}
+      <div className="bg-white dark:bg-[#1E1F20] rounded-3xl border border-neutral-200 dark:border-[#313335] p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                Programa de Parceiros dos Planos
+              </h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Adesão voluntária de estabelecimentos e controle de repasses calculados (70%)
+              </p>
+            </div>
+          </div>
+          {partnerOverview?.stats && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold border border-emerald-500/20">
+                {partnerOverview.stats.activePartners} parceiro(s) ativo(s)
+              </span>
+              <span className="px-3 py-1 bg-neutral-100 dark:bg-[#131314] text-neutral-600 dark:text-neutral-400 rounded-xl text-xs font-bold border border-neutral-200 dark:border-[#313335]">
+                {partnerOverview.stats.declinedPartners} recusado(s)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Stats Grid */}
+        {partnerOverview?.stats && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-[#131314] border border-neutral-200 dark:border-[#313335]">
+              <p className="text-xs text-neutral-500">Repasses Calculados (A liquidar)</p>
+              <p className="text-lg font-bold text-neutral-900 dark:text-white mt-1">
+                {formatBRL(partnerOverview.stats.totalPayoutsCalculated)}
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20">
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">Repasses Aprovados</p>
+              <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-1">
+                {formatBRL(partnerOverview.stats.totalPayoutsApproved)}
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Repasses Quitados</p>
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatBRL(partnerOverview.stats.totalPayoutsPaid)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Payouts Table */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <Receipt size={16} className="text-emerald-500" />
+            <span>Repasses Recentes do Programa</span>
+          </h3>
+
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-[#313335]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-neutral-50 dark:bg-[#131314] text-[11px] text-neutral-500 font-bold border-b border-neutral-200 dark:border-[#313335]">
+                  <th className="px-4 py-3">Estabelecimento</th>
+                  <th className="px-4 py-3">Serviço</th>
+                  <th className="px-4 py-3">Período</th>
+                  <th className="px-4 py-3">Valor Serviço</th>
+                  <th className="px-4 py-3">Repasse (70%)</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 dark:divide-[#313335] text-xs">
+                {!partnerOverview?.payouts || partnerOverview.payouts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-neutral-400 text-xs">
+                      Nenhum repasse registrado até o momento.
+                    </td>
+                  </tr>
+                ) : (
+                  partnerOverview.payouts.map((po: any) => (
+                    <tr key={po.id} className="hover:bg-neutral-50/50 dark:hover:bg-[#131314]/50">
+                      <td className="px-4 py-3 font-semibold text-neutral-900 dark:text-white">
+                        {po.establishment?.establishmentProfile?.businessName || po.establishment?.name || 'Estabelecimento'}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+                        {po.serviceName}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-500">
+                        {po.periodMonth}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
+                        {formatBRL(po.servicePrice)}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatBRL(po.payoutAmount)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          po.status === 'PAID'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : po.status === 'APPROVED'
+                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {po.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-1.5">
+                        {po.status === 'CALCULATED' && (
+                          <button
+                            onClick={() => handleUpdatePayoutStatus(po.id, 'APPROVED')}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors"
+                          >
+                            Aprovar
+                          </button>
+                        )}
+                        {po.status !== 'PAID' && (
+                          <button
+                            onClick={() => handleUpdatePayoutStatus(po.id, 'PAID')}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors"
+                          >
+                            Marcar Pago
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

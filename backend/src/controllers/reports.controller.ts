@@ -1,6 +1,18 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { Role, AppointmentStatus, OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { reportsPdfService, ReportPdfMetadata } from '../services/reportsPdf.service';
+import { reportsExportController } from './reportsExport.controller';
+
+const APPROVED_ORDER_STATUSES = [
+  OrderStatus.PAID,
+  OrderStatus.CONFIRMED,
+  OrderStatus.PREPARING,
+  OrderStatus.SHIPPED,
+  OrderStatus.READY_FOR_PICKUP,
+  OrderStatus.DELIVERED,
+  OrderStatus.COMPLETED,
+];
 
 // Helper to check establishment access
 async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply) {
@@ -92,6 +104,36 @@ function formatDateTimeBr(date: Date | string | null): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
   return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false });
+}
+
+function formatStatusBr(status: string): string {
+  const map: Record<string, string> = {
+    COMPLETED: 'Concluído',
+    DELIVERED: 'Entregue',
+    CONFIRMED: 'Confirmado',
+    IN_PROGRESS: 'Em andamento',
+    PENDING: 'Pendente',
+    CANCELLED: 'Cancelado',
+  };
+  return map[status] || status;
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'COMPLETED':
+    case 'DELIVERED':
+      return '#16a34a';
+    case 'CONFIRMED':
+      return '#4f46e5';
+    case 'IN_PROGRESS':
+      return '#2563eb';
+    case 'PENDING':
+      return '#d97706';
+    case 'CANCELLED':
+      return '#e11d48';
+    default:
+      return '#334155';
+  }
 }
 
 export const reportsController = {
@@ -302,7 +344,7 @@ export const reportsController = {
     const orderItemsWhere: any = {
       establishmentId: user.id,
       order: {
-        status: { in: [OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.PAID] },
+        status: { in: APPROVED_ORDER_STATUSES },
         createdAt: { gte: start, lte: end },
       },
     };
@@ -685,200 +727,12 @@ export const reportsController = {
   },
 
   // =========================================================================
-  // 5. ESTABELECIMENTO — EXPORTAÇÃO CSV
   // =========================================================================
-  async exportEstablishmentCsv(request: FastifyRequest<{
-    Querystring: {
-      type: 'services' | 'financial' | 'customers' | 'inventory';
-      startDate?: string;
-      endDate?: string;
-      serviceType?: string;
-      status?: string;
-      paymentMethod?: string;
-      category?: string;
-      species?: string;
-    };
-  }>, reply: FastifyReply) {
-    const user = await ensureEstablishment(request, reply);
-    if (!user) return;
+  // 5. ESTABELECIMENTO — EXPORTAÇÃO (PDF / CSV)
+  // =========================================================================
+  exportEstablishment: reportsExportController.exportEstablishment,
+  exportEstablishmentCsv: reportsExportController.exportEstablishment,
 
-    const { type, startDate, endDate, serviceType, status, paymentMethod, category, species } = request.query;
-    const { start, end } = parseDateRange(startDate, endDate);
-
-    let csvContent = '\uFEFF'; // UTF-8 BOM for Microsoft Excel compatibility
-    const filenameDate = new Date().toISOString().slice(0, 10);
-
-    if (type === 'services') {
-      const whereClause: any = {
-        establishmentId: user.id,
-        date: { gte: start, lte: end },
-      };
-      if (status && Object.values(AppointmentStatus).includes(status as any)) {
-        whereClause.status = status as AppointmentStatus;
-      }
-      if (serviceType) {
-        whereClause.service = { category: { equals: serviceType, mode: 'insensitive' } };
-      }
-
-      const list = await prisma.appointment.findMany({
-        where: whereClause,
-        include: {
-          service: true,
-          pet: true,
-          tutor: true,
-          professional: true,
-          employee: true,
-        },
-        orderBy: { date: 'desc' },
-      });
-
-      const headers = ['ID', 'Data e Hora', 'Status', 'Serviço', 'Categoria', 'Valor (R$)', 'Cliente / Tutor', 'Pet', 'Espécie', 'Responsável'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const apt of list) {
-        const row = [
-          escapeCsv(apt.id),
-          escapeCsv(formatDateTimeBr(apt.date)),
-          escapeCsv(apt.status),
-          escapeCsv(apt.service?.name || '-'),
-          escapeCsv(apt.service?.category || '-'),
-          escapeCsv(formatCurrency(apt.service?.price || 0)),
-          escapeCsv(apt.tutor?.name || '-'),
-          escapeCsv(apt.pet?.name || '-'),
-          escapeCsv(apt.pet?.species || '-'),
-          escapeCsv(apt.professional?.name || apt.employee?.name || 'Não atribuído'),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    } else if (type === 'financial') {
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          establishmentId: user.id,
-          status: AppointmentStatus.COMPLETED,
-          date: { gte: start, lte: end },
-        },
-        include: { service: true, tutor: true },
-        orderBy: { date: 'desc' },
-      });
-
-      const orderItems = await prisma.orderItem.findMany({
-        where: {
-          establishmentId: user.id,
-          order: {
-            status: { in: [OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.PAID] },
-            createdAt: { gte: start, lte: end },
-          },
-        },
-        include: { product: true, order: { include: { tutor: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      const headers = ['Tipo', 'Data', 'Descrição / Item', 'Cliente', 'Forma de Pagamento', 'Valor Bruto (R$)'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const apt of appointments) {
-        const row = [
-          escapeCsv('SERVIÇO'),
-          escapeCsv(formatDateTimeBr(apt.date)),
-          escapeCsv(apt.service?.name || 'Serviço'),
-          escapeCsv(apt.tutor?.name || '-'),
-          escapeCsv('Presencial'),
-          escapeCsv(formatCurrency(apt.service?.price || 0)),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-
-      for (const item of orderItems) {
-        const row = [
-          escapeCsv('PRODUTO'),
-          escapeCsv(formatDateTimeBr(item.createdAt)),
-          escapeCsv(`${item.product?.name} (${item.quantity}x)`),
-          escapeCsv(item.order?.tutor?.name || '-'),
-          escapeCsv(item.order?.paymentMethod || 'Outro'),
-          escapeCsv(formatCurrency(item.quantity * item.priceAtTime)),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    } else if (type === 'inventory') {
-      const whereClause: any = { establishmentId: user.id };
-      if (category) whereClause.category = { equals: category, mode: 'insensitive' };
-
-      const products = await prisma.product.findMany({
-        where: whereClause,
-        include: {
-          orderItems: {
-            where: { order: { status: { not: OrderStatus.CANCELLED } } },
-            select: { quantity: true },
-          },
-        },
-        orderBy: { name: 'asc' },
-      });
-
-      const headers = ['Produto', 'Categoria', 'Preço Unitário (R$)', 'Estoque Atual', 'Vendas Realizadas', 'Valor Total em Estoque (R$)', 'Situação'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const p of products) {
-        const sales = p.orderItems.reduce((acc, c) => acc + c.quantity, 0);
-        let situacao = 'Normal';
-        if (p.stock === 0) situacao = 'Esgotado';
-        else if (p.stock <= 5) situacao = 'Estoque Baixo';
-
-        const row = [
-          escapeCsv(p.name),
-          escapeCsv(p.category || '-'),
-          escapeCsv(formatCurrency(p.price)),
-          escapeCsv(p.stock),
-          escapeCsv(sales),
-          escapeCsv(formatCurrency(p.stock * p.price)),
-          escapeCsv(situacao),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    } else if (type === 'customers') {
-      const appointments = await prisma.appointment.findMany({
-        where: { establishmentId: user.id, date: { gte: start, lte: end } },
-        include: { tutor: true, pet: true, service: true },
-      });
-
-      const tutorMap = new Map<string, { name: string; email: string; phone: string; visits: number; pets: Set<string>; lastDate: Date | null }>();
-      for (const apt of appointments) {
-        if (!apt.tutor) continue;
-        if (!tutorMap.has(apt.tutor.id)) {
-          tutorMap.set(apt.tutor.id, {
-            name: apt.tutor.name,
-            email: apt.tutor.email,
-            phone: apt.tutor.phone || '-',
-            visits: 0,
-            pets: new Set(),
-            lastDate: null,
-          });
-        }
-        const t = tutorMap.get(apt.tutor.id)!;
-        t.visits++;
-        if (apt.pet?.name) t.pets.add(apt.pet.name);
-        if (!t.lastDate || new Date(apt.date) > new Date(t.lastDate)) t.lastDate = new Date(apt.date);
-      }
-
-      const headers = ['Cliente / Tutor', 'E-mail', 'Telefone', 'Pets Atendidos', 'Total de Visitas', 'Última Visita'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const t of tutorMap.values()) {
-        const row = [
-          escapeCsv(t.name),
-          escapeCsv(t.email),
-          escapeCsv(t.phone),
-          escapeCsv(Array.from(t.pets).join(', ') || '-'),
-          escapeCsv(t.visits),
-          escapeCsv(formatDateTimeBr(t.lastDate)),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    }
-
-    reply.header('Content-Type', 'text/csv; charset=utf-8');
-    reply.header('Content-Disposition', `attachment; filename="relatorio-estabelecimento-${type}-${filenameDate}.csv"`);
-    return reply.send(csvContent);
-  },
 
   // =========================================================================
   // 6. PROFISSIONAL — SERVIÇOS (RF17 ADAPTADO)
@@ -1210,142 +1064,9 @@ export const reportsController = {
   },
 
   // =========================================================================
-  // 9. PROFISSIONAL — EXPORTAÇÃO CSV
+  // 9. PROFISSIONAL — EXPORTAÇÃO (PDF / CSV)
   // =========================================================================
-  async exportProfessionalCsv(request: FastifyRequest<{
-    Querystring: {
-      type: 'services' | 'financial' | 'customers';
-      startDate?: string;
-      endDate?: string;
-      serviceType?: string;
-      status?: string;
-      species?: string;
-    };
-  }>, reply: FastifyReply) {
-    const user = await ensureProfessional(request, reply);
-    if (!user) return;
+  exportProfessional: reportsExportController.exportProfessional,
+  exportProfessionalCsv: reportsExportController.exportProfessional,
 
-    const { type, startDate, endDate, serviceType, status, species } = request.query;
-    const { start, end } = parseDateRange(startDate, endDate);
-
-    let csvContent = '\uFEFF'; // UTF-8 BOM
-    const filenameDate = new Date().toISOString().slice(0, 10);
-
-    if (type === 'services') {
-      const whereClause: any = {
-        OR: [
-          { professionalId: user.id },
-          { service: { professionalId: user.id } },
-        ],
-        date: { gte: start, lte: end },
-      };
-      if (status && Object.values(AppointmentStatus).includes(status as any)) {
-        whereClause.status = status as AppointmentStatus;
-      }
-      if (serviceType) {
-        whereClause.service = { category: { equals: serviceType, mode: 'insensitive' } };
-      }
-
-      const list = await prisma.appointment.findMany({
-        where: whereClause,
-        include: { service: true, pet: true, tutor: true, establishment: true },
-        orderBy: { date: 'desc' },
-      });
-
-      const headers = ['ID', 'Data e Hora', 'Status', 'Serviço', 'Categoria', 'Valor (R$)', 'Cliente / Tutor', 'Pet', 'Espécie'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const apt of list) {
-        const row = [
-          escapeCsv(apt.id),
-          escapeCsv(formatDateTimeBr(apt.date)),
-          escapeCsv(apt.status),
-          escapeCsv(apt.service?.name || '-'),
-          escapeCsv(apt.service?.category || '-'),
-          escapeCsv(formatCurrency(apt.service?.price || 0)),
-          escapeCsv(apt.tutor?.name || '-'),
-          escapeCsv(apt.pet?.name || '-'),
-          escapeCsv(apt.pet?.species || '-'),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    } else if (type === 'financial') {
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          OR: [
-            { professionalId: user.id },
-            { service: { professionalId: user.id } },
-          ],
-          status: AppointmentStatus.COMPLETED,
-          date: { gte: start, lte: end },
-        },
-        include: { service: true, tutor: true, pet: true },
-        orderBy: { date: 'desc' },
-      });
-
-      const headers = ['ID Agendamento', 'Data Conclusão', 'Serviço Atendido', 'Cliente', 'Pet', 'Valor Bruto do Serviço (R$)'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const apt of appointments) {
-        const row = [
-          escapeCsv(apt.id),
-          escapeCsv(formatDateTimeBr(apt.date)),
-          escapeCsv(apt.service?.name || 'Serviço'),
-          escapeCsv(apt.tutor?.name || '-'),
-          escapeCsv(apt.pet?.name || '-'),
-          escapeCsv(formatCurrency(apt.service?.price || 0)),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    } else if (type === 'customers') {
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          OR: [
-            { professionalId: user.id },
-            { service: { professionalId: user.id } },
-          ],
-          date: { gte: start, lte: end },
-        },
-        include: { tutor: true, pet: true },
-      });
-
-      const tutorMap = new Map<string, { name: string; email: string; phone: string; visits: number; pets: Set<string>; lastDate: Date | null }>();
-      for (const apt of appointments) {
-        if (!apt.tutor) continue;
-        if (!tutorMap.has(apt.tutor.id)) {
-          tutorMap.set(apt.tutor.id, {
-            name: apt.tutor.name,
-            email: apt.tutor.email,
-            phone: apt.tutor.phone || '-',
-            visits: 0,
-            pets: new Set(),
-            lastDate: null,
-          });
-        }
-        const t = tutorMap.get(apt.tutor.id)!;
-        t.visits++;
-        if (apt.pet?.name) t.pets.add(apt.pet.name);
-        if (!t.lastDate || new Date(apt.date) > new Date(t.lastDate)) t.lastDate = new Date(apt.date);
-      }
-
-      const headers = ['Cliente / Tutor', 'E-mail', 'Telefone', 'Pets Atendidos', 'Total de Atendimentos', 'Último Atendimento'];
-      csvContent += headers.join(';') + '\r\n';
-
-      for (const t of tutorMap.values()) {
-        const row = [
-          escapeCsv(t.name),
-          escapeCsv(t.email),
-          escapeCsv(t.phone),
-          escapeCsv(Array.from(t.pets).join(', ') || '-'),
-          escapeCsv(t.visits),
-          escapeCsv(formatDateTimeBr(t.lastDate)),
-        ];
-        csvContent += row.join(';') + '\r\n';
-      }
-    }
-
-    reply.header('Content-Type', 'text/csv; charset=utf-8');
-    reply.header('Content-Disposition', `attachment; filename="relatorio-profissional-${type}-${filenameDate}.csv"`);
-    return reply.send(csvContent);
-  },
 };

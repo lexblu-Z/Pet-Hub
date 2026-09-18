@@ -55,6 +55,11 @@ model User {
   adminAuditLogs              AdminAuditLog[]
   termsAcceptances            TermsAcceptance[]
   cashbackVouchers            CashbackVoucher[]
+  partnerProgramParticipation PartnerProgramParticipation?
+  partnerPayoutsAsEstablishment PartnerPayout[]       @relation("EstablishmentPartnerPayouts")
+  reviewsAsTutor              Review[]                  @relation("TutorReviews")
+  reviewsAsEstablishment      Review[]                  @relation("EstablishmentReviews")
+  reviewsAsProfessional       Review[]                  @relation("ProfessionalReviews")
 }
 
 model Pet {
@@ -69,6 +74,7 @@ model Pet {
   vaccinationStatus String? @default("UNKNOWN")
   notes        String?
   photo        String?
+  coverPhoto   String?
   isNeutered        Boolean?
   behaviorNotes     String?
   specialCareNotes  String?
@@ -209,6 +215,7 @@ model Service {
   employees       EmployeeService[]
   establishment   User?         @relation("EstablishmentServices", fields: [establishmentId], references: [id], onDelete: Cascade)
   professional    User?         @relation("ProfessionalServices", fields: [professionalId], references: [id], onDelete: Cascade)
+  reviews         Review[]
 }
 
 model Appointment {
@@ -234,6 +241,7 @@ model Appointment {
   cashbackAmountCredited Float?
   confirmedByTutor       Boolean           @default(false)
   confirmedByTutorAt     DateTime?
+  petTransport           String?           @default("PICKUP_BY_TUTOR") // 'PICKUP_BY_TUTOR' | 'PICKUP_BY_PROVIDER'
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   establishment          User              @relation("EstablishmentAppointments", fields: [establishmentId], references: [id], onDelete: Cascade)
@@ -243,6 +251,8 @@ model Appointment {
   service         Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   tutor           User              @relation("TutorAppointments", fields: [tutorId], references: [id], onDelete: Cascade)
   calendarEventSyncs CalendarEventSync[]
+  partnerPayout   PartnerPayout?
+  review          Review?
 }
 
 model Product {
@@ -559,5 +569,70 @@ model AdminAuditLog {
   @@index([action])
   @@index([entity])
   @@index([createdAt])
+}
+
+model PartnerProgramParticipation {
+  id               String         @id @default(uuid())
+  establishmentId  String         @unique
+  status           String         @default("PENDING") // 'PENDING' | 'ACTIVE' | 'DECLINED' | 'SUSPENDED'
+  termsVersion     String         @default("1.0")
+  acceptedAt       DateTime?
+  declinedAt       DateTime?
+  suspendedAt      DateTime?
+  remunerationRate Float          @default(0.70) // 70% of eligible service value
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  establishment    User           @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model PartnerPayout {
+  id               String         @id @default(uuid())
+  establishmentId  String
+  appointmentId    String         @unique // Guarantee: one payout per appointment! Idempotent
+  planId           String?
+  serviceId        String
+  serviceName      String
+  servicePrice     Float
+  remunerationRate Float          @default(0.70)
+  payoutAmount     Float
+  status           String         @default("CALCULATED") // 'CALCULATED' | 'APPROVED' | 'PAID' | 'CANCELLED'
+  periodMonth      String         // 'YYYY-MM' (e.g. '2026-09')
+  paidAt           DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  establishment    User           @relation("EstablishmentPartnerPayouts", fields: [establishmentId], references: [id], onDelete: Cascade)
+  appointment      Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId])
+  @@index([status])
+  @@index([periodMonth])
+}
+
+model Review {
+  id              String       @id @default(uuid())
+  appointmentId   String?      @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  tutorId         String
+  tutor           User         @relation("TutorReviews", fields: [tutorId], references: [id], onDelete: Cascade)
+  establishmentId String?
+  establishment   User?        @relation("EstablishmentReviews", fields: [establishmentId], references: [id], onDelete: Cascade)
+  professionalId  String?
+  professional    User?        @relation("ProfessionalReviews", fields: [professionalId], references: [id], onDelete: Cascade)
+  serviceId       String?
+  service         Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  rating          Int          // 1 to 5
+  comment         String
+  petPhotoUrl     String?
+  reply           String?
+  replyCreatedAt  DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([establishmentId])
+  @@index([professionalId])
+  @@index([tutorId])
 }
 

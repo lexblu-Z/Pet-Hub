@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { OrderStatus } from '@prisma/client';
 import { z } from 'zod';
 import { calculateCashback, normalizeCashbackCode } from '../utils/cashback';
+import { createAndEmitNotification } from '../utils/notificationEvents';
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Rua é obrigatória'),
@@ -128,8 +129,37 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
   } = parseResult.data;
 
   // Validate address when delivery is chosen
+  let finalDeliveryAddress = deliveryAddress;
   if (deliveryMethod === 'DELIVERY') {
-    if (!deliveryAddress || !deliveryAddress.street || !deliveryAddress.number || !deliveryAddress.city) {
+    if (!finalDeliveryAddress || !finalDeliveryAddress.street || !finalDeliveryAddress.number) {
+      // Fallback: check database for user's registered address
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.sub },
+        select: {
+          address: true,
+          number: true,
+          complement: true,
+          neighborhood: true,
+          city: true,
+          state: true,
+          zipCode: true,
+        },
+      });
+
+      if (dbUser?.address && dbUser?.number && dbUser?.neighborhood) {
+        finalDeliveryAddress = {
+          street: dbUser.address,
+          number: dbUser.number,
+          complement: dbUser.complement || null,
+          neighborhood: dbUser.neighborhood,
+          city: dbUser.city || 'Ourinhos',
+          state: dbUser.state || 'SP',
+          zipCode: dbUser.zipCode || '19900-000',
+        };
+      }
+    }
+
+    if (!finalDeliveryAddress || !finalDeliveryAddress.street || !finalDeliveryAddress.number || !finalDeliveryAddress.neighborhood) {
       return reply.status(400).send({ error: 'Endereço de entrega completo é obrigatório para entregas.' });
     }
   }
@@ -221,7 +251,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
         }
       }
 
-      // 3. Create Order with items and applied cashback
+      // 3. Create the order
       const newOrder = await tx.order.create({
         data: {
           tutorId: user.sub,
@@ -234,7 +264,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
           status: OrderStatus.PENDING,
           paymentMethod,
           deliveryMethod,
-          deliveryAddress: deliveryMethod === 'DELIVERY' ? (deliveryAddress as any) : null,
+          deliveryAddress: deliveryMethod === 'DELIVERY' ? (finalDeliveryAddress as any) : null,
           needsChange: isCash ? !!needsChange : false,
           changeFor: isCash && needsChange ? changeFor : null,
           notes: notes?.trim() || null,
@@ -269,32 +299,23 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
     });
 
 
-    // Create real notifications for establishments
+    // Create real notifications (standardized without personal/pet names)
     try {
-      const orderShortId = order.id.slice(0, 8).toUpperCase();
       for (const estId of establishmentIds) {
-        const estabItems = order.items.filter((it: any) => it.establishmentId === estId);
-        const prodSummary = estabItems.map((it: any) => `${it.quantity}x ${it.product?.name || 'Item'}`).join(', ');
-        const modeLabel = deliveryMethod === 'DELIVERY' ? 'Entrega' : 'Retirada';
-
-        await prisma.notification.create({
-          data: {
-            userId: estId,
-            title: `Novo pedido #${orderShortId} (${modeLabel})`,
-            message: `${order.tutor.name} realizou uma compra: ${prodSummary}. Total: R$ ${totalAmount.toFixed(2)}. Forma: ${paymentMethod}.`,
-            type: 'ORDER',
-          },
+        await createAndEmitNotification({
+          userId: estId,
+          title: 'Nova venda de produto',
+          message: 'Uma nova venda de produto foi realizada.',
+          type: 'ORDER',
         });
       }
 
       // Create notification for the tutor
-      await prisma.notification.create({
-        data: {
-          userId: user.sub,
-          title: `Pedido #${orderShortId} realizado`,
-          message: `Seu pedido foi registrado com sucesso e está aguardando confirmação do estabelecimento parceiro.`,
-          type: 'ORDER',
-        },
+      await createAndEmitNotification({
+        userId: user.sub,
+        title: 'Pedido realizado',
+        message: 'Seu pedido de produtos foi realizado com sucesso.',
+        type: 'ORDER',
       });
     } catch (notifErr) {
       request.log.error(notifErr, 'Erro ao criar notificações do pedido');
@@ -407,37 +428,24 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
       return tx.order.findUniqueOrThrow({ where: { id } });
     });
 
-    const orderShortId = id.slice(0, 8).toUpperCase();
     const establishmentId = order.items[0]?.establishmentId;
     if (establishmentId) {
-      try {
-        await prisma.notification.create({
-          data: {
-            userId: establishmentId,
-            title: `Pedido #${orderShortId} Concluído!`,
-            message: `O cliente confirmou o recebimento do pedido #${orderShortId}. Pedido concluído com sucesso.`,
-            type: 'ORDER',
-          },
-        });
-      } catch (notifErr) {
-        request.log.error(notifErr, 'Erro ao notificar estabelecimento sobre confirmação do pedido');
-      }
+      await createAndEmitNotification({
+        userId: establishmentId,
+        title: 'Pedido concluído',
+        message: 'O pedido de produtos foi concluído com sucesso.',
+        type: 'ORDER',
+      });
     }
 
     // Notify tutor about cashback earned if applicable
     if (updated.cashbackAmountCredited && updated.cashbackAmountCredited > 0) {
-      try {
-        await prisma.notification.create({
-          data: {
-            userId: user.sub,
-            title: `Você recebeu R$ ${updated.cashbackAmountCredited.toFixed(2).replace('.', ',')} de cashback!`,
-            message: `Seu recebimento do pedido #${orderShortId} foi confirmado. O saldo de cashback de 3% já está disponível na sua carteira.`,
-            type: 'ORDER',
-          },
-        });
-      } catch (notifErr) {
-        request.log.error(notifErr, 'Erro ao notificar tutor sobre cashback');
-      }
+      await createAndEmitNotification({
+        userId: user.sub,
+        title: 'Cashback creditado',
+        message: 'Você recebeu cashback pela compra de produtos.',
+        type: 'ORDER',
+      });
     }
 
     return reply.send({
@@ -549,16 +557,13 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
       }
 
       // 4. Create notification for establishment
-      const orderShortId = id.slice(0, 8).toUpperCase();
       const establishmentId = order.items[0]?.establishmentId;
       if (establishmentId) {
-        await tx.notification.create({
-          data: {
-            userId: establishmentId,
-            title: `Pedido #${orderShortId} Cancelado pelo Cliente`,
-            message: `O cliente cancelou o pedido #${orderShortId}. Motivo: ${reason}${notes ? ` (${notes})` : ''}. O estoque dos itens foi restaurado automaticamente.`,
-            type: 'ORDER',
-          },
+        await createAndEmitNotification({
+          userId: establishmentId,
+          title: 'Pedido cancelado',
+          message: 'Um pedido de produtos foi cancelado.',
+          type: 'ORDER',
         });
       }
 
