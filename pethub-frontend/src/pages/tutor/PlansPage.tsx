@@ -59,7 +59,7 @@ export default function PlansPage() {
                   <span className="text-4xl font-bold text-neutral-900 dark:text-[#E3E3E3]">{plan.price}</span>
                   <span className="text-neutral-500 dark:text-[#8E918F] text-sm mb-1">/mês</span>
                 </div>
-                <p className="text-sm text-neutral-500 dark:text-[#8E918F]">{plan.establishmentName}</p>
+                <p className="text-sm text-neutral-500 dark:text-[#8E918F]">Plano Oficial PetHub</p>
               </div>
 
               <div className="flex-1 space-y-4 mb-8">
@@ -79,7 +79,7 @@ export default function PlansPage() {
                   setIsPixModalOpen(true);
                 }}
               >
-                Assinar {plan.name}
+                Simular {plan.name}
               </Button>
             </motion.div>
           );

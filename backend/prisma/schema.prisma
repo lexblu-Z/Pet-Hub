@@ -292,6 +292,12 @@ model Order {
   cancelledBy     String?     // 'ESTABLISHMENT' | 'TUTOR'
   cancellationReason String?
   cancellationNotes  String?
+  refundStatus       String?     @default("NONE") // 'NONE' | 'REFUNDED'
+  refundAmount       Float?      @default(0)
+  refundedAt         DateTime?
+  refundMethod       String?
+  refundReason       String?
+  review             Review?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   tutor           User        @relation("TutorOrders", fields: [tutorId], references: [id], onDelete: Cascade)
@@ -615,6 +621,8 @@ model Review {
   id              String       @id @default(uuid())
   appointmentId   String?      @unique
   appointment     Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  orderId         String?      @unique
+  order           Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
   tutorId         String
   tutor           User         @relation("TutorReviews", fields: [tutorId], references: [id], onDelete: Cascade)
   establishmentId String?
@@ -634,5 +642,6 @@ model Review {
   @@index([establishmentId])
   @@index([professionalId])
   @@index([tutorId])
+  @@index([orderId])
 }
 

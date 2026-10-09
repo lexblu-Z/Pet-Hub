@@ -1,15 +1,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { AppointmentStatus, Role } from '@prisma/client';
+import { AppointmentStatus, Role, OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { createAndEmitNotification } from '../utils/notificationEvents';
 
-const createReviewSchema = z.object({
-  appointmentId: z.string().uuid({ message: 'ID do agendamento inválido.' }),
-  rating: z.number().int().min(1).max(5, { message: 'A nota deve ser entre 1 e 5 estrelas.' }),
-  comment: z.string().trim().min(3, { message: 'O comentário deve ter no mínimo 3 caracteres.' }).max(1000, { message: 'O comentário deve ter no máximo 1000 caracteres.' }),
-  petPhotoUrl: z.string().trim().optional().nullable(),
-});
+const createReviewSchema = z
+  .object({
+    appointmentId: z.string().uuid({ message: 'ID do agendamento inválido.' }).optional().nullable(),
+    orderId: z.string().uuid({ message: 'ID do pedido inválido.' }).optional().nullable(),
+    rating: z.number().int().min(1).max(5, { message: 'A nota deve ser entre 1 e 5 estrelas.' }),
+    comment: z.string().trim().min(3, { message: 'O comentário deve ter no mínimo 3 caracteres.' }).max(1000, { message: 'O comentário deve ter no máximo 1000 caracteres.' }),
+    petPhotoUrl: z.string().trim().optional().nullable(),
+  })
+  .refine((data) => data.appointmentId || data.orderId, {
+    message: 'Informe o agendamento ou o pedido a ser avaliado.',
+  });
 
 export const reviewsController = {
   /**
@@ -76,7 +81,7 @@ export const reviewsController = {
         reply: r.reply,
         replyCreatedAt: r.replyCreatedAt,
         createdAt: r.createdAt,
-        serviceName: r.service?.name || 'Serviço',
+        serviceName: r.service?.name || (r.orderId ? 'Compra na Loja' : 'Serviço'),
         tutor: {
           id: r.tutor.id,
           name: r.tutor.name,
@@ -97,14 +102,14 @@ export const reviewsController = {
   },
 
   /**
-   * Check if the authenticated tutor has completed appointments eligible for review.
-   * Query: ?establishmentId=:id
+   * Check if the authenticated tutor has completed appointments or orders eligible for review.
+   * Query: ?establishmentId=:id OR ?professionalId=:id
    */
   async checkEligibility(request: FastifyRequest<{ Querystring: { establishmentId?: string; professionalId?: string } }>, reply: FastifyReply) {
     try {
       const user = request.user as any;
       if (!user || user.role !== Role.TUTOR) {
-        return reply.send({ canReview: false, eligibleAppointments: [] });
+        return reply.send({ canReview: false, eligibleAppointments: [], eligibleOrders: [] });
       }
 
       const { establishmentId, professionalId } = request.query;
@@ -114,7 +119,7 @@ export const reviewsController = {
         return reply.status(400).send({ error: 'Parâmetro establishmentId ou professionalId é obrigatório.' });
       }
 
-      // Find completed or paid appointments with this provider
+      // 1. Check eligible appointments
       const appointments = await prisma.appointment.findMany({
         where: {
           tutorId: user.sub,
@@ -140,10 +145,36 @@ export const reviewsController = {
         orderBy: { date: 'desc' },
       });
 
-      const unreviewed = appointments.filter((apt) => !apt.review);
+      // 2. Check eligible orders if establishmentId was requested
+      let eligibleOrders: any[] = [];
+      if (establishmentId) {
+        const orders = await prisma.order.findMany({
+          where: {
+            tutorId: user.sub,
+            status: { in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED] },
+            items: { some: { establishmentId } },
+          },
+          include: {
+            review: { select: { id: true } },
+            items: { include: { product: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        eligibleOrders = orders.map((o) => ({
+          id: o.id,
+          createdAt: o.createdAt,
+          totalAmount: o.totalAmount,
+          itemCount: o.items.length,
+          alreadyReviewed: Boolean(o.review),
+        }));
+      }
+
+      const unreviewedApts = appointments.filter((apt) => !apt.review);
+      const unreviewedOrders = eligibleOrders.filter((ord) => !ord.alreadyReviewed);
 
       return reply.send({
-        canReview: unreviewed.length > 0,
+        canReview: unreviewedApts.length > 0 || unreviewedOrders.length > 0,
         eligibleAppointments: appointments.map((apt) => ({
           id: apt.id,
           date: apt.date,
@@ -153,6 +184,7 @@ export const reviewsController = {
           petPhoto: apt.pet?.photo || null,
           alreadyReviewed: Boolean(apt.review),
         })),
+        eligibleOrders: eligibleOrders,
       });
     } catch (error) {
       request.log.error(error, 'Erro ao verificar elegibilidade de avaliação');
@@ -161,7 +193,7 @@ export const reviewsController = {
   },
 
   /**
-   * Create a new real review for an eligible appointment.
+   * Create a new real review for an eligible appointment or order.
    */
   async create(request: FastifyRequest, reply: FastifyReply) {
     try {
@@ -172,8 +204,103 @@ export const reviewsController = {
 
       const body = createReviewSchema.parse(request.body);
 
+      // Validate sanitized petPhotoUrl if passed
+      let sanitizedPhoto: string | null = null;
+      if (body.petPhotoUrl) {
+        const trimmed = body.petPhotoUrl.trim();
+        if (trimmed.startsWith('/uploads/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+          sanitizedPhoto = trimmed;
+        }
+      }
+
+      // --- BRANCH A: Review for Order ---
+      if (body.orderId) {
+        const order = await prisma.order.findUnique({
+          where: { id: body.orderId },
+          include: {
+            review: true,
+            items: {
+              include: { establishment: true, product: true },
+            },
+          },
+        });
+
+        if (!order) {
+          return reply.status(404).send({ error: 'Pedido não encontrado.' });
+        }
+
+        if (order.tutorId !== user.sub) {
+          return reply.status(403).send({ error: 'Você só pode avaliar compras vinculadas ao seu usuário.' });
+        }
+
+        if (order.review) {
+          return reply.status(409).send({ error: 'Esta compra já foi avaliada anteriormente.' });
+        }
+
+        const eligibleStatuses: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.COMPLETED];
+        if (!eligibleStatuses.includes(order.status)) {
+          return reply.status(400).send({
+            error: 'Apenas compras entregues ou concluídas podem ser avaliadas.',
+          });
+        }
+
+        const establishmentId = order.items[0]?.establishmentId;
+        if (!establishmentId) {
+          return reply.status(400).send({ error: 'Estabelecimento do pedido não identificado.' });
+        }
+
+        const review = await prisma.review.create({
+          data: {
+            orderId: order.id,
+            tutorId: user.sub,
+            establishmentId: establishmentId,
+            rating: body.rating,
+            comment: body.comment,
+            petPhotoUrl: sanitizedPhoto,
+          },
+          include: {
+            tutor: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+                defaultAvatar: true,
+              },
+            },
+          },
+        });
+
+        createAndEmitNotification({
+          userId: establishmentId,
+          title: 'Nova avaliação de compra',
+          message: `Sua loja recebeu uma avaliação de ${body.rating} estrelas sobre uma compra.`,
+          type: 'ORDER',
+        }).catch((notifErr) => {
+          request.log.warn({ err: notifErr }, 'Falha ao emitir notificação de review de compra');
+        });
+
+        return reply.status(201).send({
+          message: 'Avaliação publicada com sucesso!',
+          review: {
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            petPhotoUrl: review.petPhotoUrl,
+            createdAt: review.createdAt,
+            orderId: order.id,
+            serviceName: 'Compra na Loja',
+            tutor: {
+              id: review.tutor.id,
+              name: review.tutor.name,
+              avatar: review.tutor.avatar || review.tutor.defaultAvatar || null,
+            },
+          },
+        });
+      }
+
+      // --- BRANCH B: Review for Appointment ---
       const appointment = await prisma.appointment.findUnique({
-        where: { id: body.appointmentId },
+        where: { id: body.appointmentId! },
         include: {
           review: true,
           service: true,
@@ -198,15 +325,6 @@ export const reviewsController = {
         return reply.status(400).send({
           error: 'Apenas atendimentos concluídos ou confirmados podem ser avaliados.',
         });
-      }
-
-      // Validate sanitized petPhotoUrl if passed
-      let sanitizedPhoto: string | null = null;
-      if (body.petPhotoUrl) {
-        const trimmed = body.petPhotoUrl.trim();
-        if (trimmed.startsWith('/uploads/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-          sanitizedPhoto = trimmed;
-        }
       }
 
       const review = await prisma.review.create({

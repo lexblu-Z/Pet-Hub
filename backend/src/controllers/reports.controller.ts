@@ -390,9 +390,44 @@ export const reportsController = {
       else paymentMethodBreakdown.OTHER += itemTotal;
     }
 
-    const totalGrossRevenue = grossRevenueServices + grossRevenueProducts;
+    // 3. Cancelled / Refunded Orders
+    const cancelledOrderItemsWhere: any = {
+      establishmentId: user.id,
+      order: {
+        status: OrderStatus.CANCELLED,
+        createdAt: { gte: start, lte: end },
+      },
+    };
+
+    if (paymentMethod) {
+      cancelledOrderItemsWhere.order = {
+        ...cancelledOrderItemsWhere.order,
+        paymentMethod: { equals: paymentMethod, mode: 'insensitive' },
+      };
+    }
+
+    const cancelledOrderItems = await prisma.orderItem.findMany({
+      where: cancelledOrderItemsWhere,
+      include: {
+        product: true,
+        order: {
+          include: {
+            tutor: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let refundedRevenueProducts = 0;
+    for (const item of cancelledOrderItems) {
+      refundedRevenueProducts += item.quantity * item.priceAtTime;
+    }
+
+    const totalGrossRevenue = grossRevenueServices + grossRevenueProducts + refundedRevenueProducts;
+    const refunds = refundedRevenueProducts;
     const discounts = 0; // No real global discount engine stored; reported honestly as 0.00
-    const netRevenue = totalGrossRevenue - discounts;
+    const netRevenue = totalGrossRevenue - refunds - discounts;
 
     // Daily cash flow aggregation
     const cashFlowMap = new Map<string, { date: string; servicesRevenue: number; productsRevenue: number; total: number; count: number }>();
@@ -431,12 +466,16 @@ export const reportsController = {
       summary: {
         totalGrossRevenue,
         grossRevenueServices,
-        grossRevenueProducts,
+        grossRevenueProducts: grossRevenueProducts + refundedRevenueProducts,
+        refunds,
+        totalRefundedAmount: refunds,
         discounts,
         netRevenue,
         completedServicesCount: completedAppointments.length,
         soldProductsCount: orderItems.reduce((acc, i) => acc + i.quantity, 0),
+        cancelledProductsCount: cancelledOrderItems.reduce((acc, i) => acc + i.quantity, 0),
         ordersCount: new Set(orderItems.map((i) => i.orderId)).size,
+        cancelledOrdersCount: new Set(cancelledOrderItems.map((i) => i.orderId)).size,
       },
       paymentMethodBreakdown,
       cashFlow,
@@ -460,6 +499,16 @@ export const reportsController = {
           clientName: item.order?.tutor?.name || 'Comprador',
           paymentMethod: item.order?.paymentMethod || 'Não informado',
           amount: item.quantity * item.priceAtTime,
+        })),
+        ...cancelledOrderItems.map((item) => ({
+          id: `refund-${item.id}`,
+          date: item.order?.refundedAt || item.createdAt,
+          formattedDate: formatDateTimeBr(item.order?.refundedAt || item.createdAt),
+          type: 'REEMBOLSO',
+          description: `Cancelamento: ${item.product?.name} (${item.quantity}x)`,
+          clientName: item.order?.tutor?.name || 'Comprador',
+          paymentMethod: item.order?.paymentMethod ? `${item.order.paymentMethod} (Simulado)` : 'Estorno Simulado',
+          amount: -(item.quantity * item.priceAtTime),
         })),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     });

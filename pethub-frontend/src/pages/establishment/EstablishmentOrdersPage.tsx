@@ -5,12 +5,13 @@ import {
   ClipboardList, Package, User, Calendar, DollarSign, Search, 
   CheckCircle, Clock, Truck, XCircle, Store, Copy, Check, Phone, 
   MapPin, AlertTriangle, MessageSquare, RefreshCw, X, Ban,
-  ChevronRight, ChevronDown, ChevronsUpDown, CheckCircle2
+  ChevronRight, ChevronDown, ChevronsUpDown, CheckCircle2, Flag
 } from 'lucide-react';
 import { Input, Button, Badge, Avatar } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PaymentLogo } from '@/components/shared/PaymentLogo';
 import { WhatsAppIcon } from '@/components/shared/WhatsAppIcon';
+import { ReportModal } from '@/components/shared/ReportModal';
 
 interface OrderItemDetail {
   id: string;
@@ -98,6 +99,7 @@ export default function EstablishmentOrdersPage() {
   const [cancelReason, setCancelReason] = useState<string>('');
   const [cancelNotes, setCancelNotes] = useState<string>('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [reportModalData, setReportModalData] = useState<{ tutorId: string; tutorName: string; orderNumber: string } | null>(null);
 
   const toast = useToast();
 
@@ -729,6 +731,21 @@ TOTAL: R$ ${order.totalAmount.toFixed(2).replace('.', ',')}`;
                         {/* Pipeline Step Actions, Cancellation, and Total */}
                         <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200/70 dark:border-[#313335]">
                           <div className="flex flex-wrap items-center gap-2">
+                            {/* Denunciar Cliente Button */}
+                            <button
+                              type="button"
+                              onClick={() => setReportModalData({
+                                tutorId: order.tutor.id,
+                                tutorName: order.tutor.name,
+                                orderNumber: order.orderNumber || order.id,
+                              })}
+                              className="px-3 py-1.5 text-xs font-semibold text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors flex items-center gap-1 border border-neutral-200 dark:border-[#313335] cursor-pointer mr-1"
+                              title="Denunciar este cliente / tutor"
+                            >
+                              <Flag size={12} />
+                              Denunciar Cliente
+                            </button>
+
                             {/* Cancellation Button */}
                             {isCancellable && (
                               <button
@@ -936,6 +953,19 @@ TOTAL: R$ ${order.totalAmount.toFixed(2).replace('.', ',')}`;
           </div>
         )}
       </AnimatePresence>
+
+      {/* Report Modal */}
+      {reportModalData && (
+        <ReportModal
+          isOpen={!!reportModalData}
+          onClose={() => setReportModalData(null)}
+          targetType="USER"
+          reportedUserId={reportModalData.tutorId}
+          targetName={reportModalData.tutorName}
+          contextType="ORDER"
+          contextId={reportModalData.orderNumber}
+        />
+      )}
     </div>
   );
 }

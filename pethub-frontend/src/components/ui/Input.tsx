@@ -69,6 +69,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               .filter(Boolean)
               .join(' ')}
             {...props}
+            onWheel={(e) => {
+              if (actualType === 'number') {
+                (e.target as HTMLElement).blur();
+              }
+              props.onWheel?.(e);
+            }}
           />
           {isPassword && (
             <button

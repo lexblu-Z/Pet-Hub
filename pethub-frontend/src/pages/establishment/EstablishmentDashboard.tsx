@@ -20,7 +20,8 @@ import {
   CheckCircle2,
   BarChart2,
   Star,
-  Trophy
+  Trophy,
+  RotateCcw
 } from 'lucide-react';
 import { Button, Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
@@ -39,8 +40,25 @@ import {
 interface DashboardData {
   hasData: boolean;
   revenue: number;
+  grossRevenue?: number;
+  netRevenue?: number;
+  totalRefundedAmount?: number;
+  totalCancelledAmount?: number;
+  cancelledOrdersCount?: number;
   appointmentRevenue: number;
   productRevenue: number;
+  cancellations?: {
+    ordersCount: number;
+    totalCancelledAmount: number;
+    totalRefundedAmount: number;
+  };
+  financialSummary?: {
+    grossRevenue: number;
+    refundedAmount: number;
+    netRevenue: number;
+    appointmentRevenue: number;
+    productRevenue: number;
+  };
   appointments: {
     today: number;
     upcoming: number;
@@ -50,6 +68,7 @@ interface DashboardData {
   orders: {
     pending: number;
     completed: number;
+    cancelled?: number;
   };
   clientsCount: number;
   petsCount: number;
@@ -262,23 +281,47 @@ export default function EstablishmentDashboard() {
       <PartnerProgramCard />
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Receita */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {/* Receita Líquida */}
         <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
           <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
-            <span className="text-xs font-bold uppercase tracking-wider">Receita Total</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Receita Líquida</span>
             <div className="w-9 h-9 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center">
               <DollarSign size={18} />
             </div>
           </div>
           <div>
             <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
-              R$ {data ? data.revenue.toFixed(2).replace('.', ',') : '0,00'}
+              R$ {data ? (data.netRevenue ?? data.revenue).toFixed(2).replace('.', ',') : '0,00'}
             </span>
           </div>
           <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
-            <span>Serviços: R$ {data ? data.appointmentRevenue.toFixed(2).replace('.', ',') : '0,00'}</span>
-            <span>Produtos: R$ {data ? data.productRevenue.toFixed(2).replace('.', ',') : '0,00'}</span>
+            <span>Bruto: R$ {data ? (data.grossRevenue ?? data.revenue).toFixed(2).replace('.', ',') : '0,00'}</span>
+            <span className="text-rose-600 dark:text-rose-400">Estorno: -R$ {data ? (data.totalRefundedAmount || 0).toFixed(2).replace('.', ',') : '0,00'}</span>
+          </div>
+        </div>
+
+        {/* Cancelamentos & Estornos */}
+        <div className="bg-white dark:bg-[#1E1F20] p-5 rounded-2xl border border-neutral-100 dark:border-[#313335] shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-neutral-400 dark:text-[#8E918F]">
+            <span className="text-xs font-bold uppercase tracking-wider">Cancelamentos</span>
+            <div className="w-9 h-9 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center">
+              <RotateCcw size={18} />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-black text-neutral-900 dark:text-[#E3E3E3]">
+              {data?.cancellations?.ordersCount ?? data?.cancelledOrdersCount ?? data?.orders?.cancelled ?? 0}
+            </span>
+            <span className="text-xs text-neutral-400 dark:text-[#8E918F] ml-1.5 font-medium">pedidos</span>
+          </div>
+          <div className="flex justify-between text-[11px] text-neutral-500 dark:text-[#C4C7C5] pt-1 border-t border-neutral-50 dark:border-[#313335]">
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">
+              Reembolso: R$ {data ? (data.cancellations?.totalRefundedAmount ?? data.totalRefundedAmount ?? 0).toFixed(2).replace('.', ',') : '0,00'}
+            </span>
+            <Link to="/estabelecimento/pedidos" className="text-orange-600 dark:text-orange-400 font-bold hover:underline">
+              Ver →
+            </Link>
           </div>
         </div>
 

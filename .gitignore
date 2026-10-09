@@ -16,5 +16,8 @@ uploads/*
 !uploads/easter-egg´s/
 backend/uploads/
 backend/test_pdfs/
+backend/test_output_pdfs/
+backup*.json
+backend/backup*.json
 *.exe
 *.lnk

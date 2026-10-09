@@ -106,6 +106,8 @@ export default function App() {
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/agendar" element={<Navigate to="/tutor/booking" replace />} />
         <Route path="/booking" element={<Navigate to="/tutor/booking" replace />} />
+        <Route path="/plans" element={<Navigate to="/tutor/plans" replace />} />
+        <Route path="/planos" element={<Navigate to="/tutor/plans" replace />} />
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />

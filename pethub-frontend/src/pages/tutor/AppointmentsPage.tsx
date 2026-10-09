@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronRight, X, Plus, Stethoscope, Scissors, PawPrint, DollarSign } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, X, Plus, Stethoscope, Scissors, PawPrint, DollarSign, Flag } from 'lucide-react';
 import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState, Modal, Button } from '@/components/ui';
 import { GoogleCalendarPromptModal } from '@/components/shared/GoogleCalendarPromptModal';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 import { GoogleCalendarViewModal } from '@/components/shared/GoogleCalendarViewModal';
+import { ReportModal } from '@/components/shared/ReportModal';
 import { useToast } from '@/store/toastStore';
 import { useBookingStore } from '@/store/bookingStore';
 import { formatAppointmentTime, formatBrasiliaDate } from '@/utils/date';
 import { ServiceLogo } from '@/components/shared/ServiceLogo';
 import { PaymentLogo } from '@/components/shared/PaymentLogo';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'error' }> = {
   CONFIRMED: { label: 'Confirmado', variant: 'success' },
@@ -28,6 +30,12 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [reportModalData, setReportModalData] = useState<{
+    targetType: 'ESTABLISHMENT' | 'PROFESSIONAL';
+    targetId?: string;
+    targetName: string;
+    appointmentId: string;
+  } | null>(null);
 
   // Google Calendar Integration states
   const [googleStatus, setGoogleStatus] = useState<{ isConnected: boolean; googleEmail?: string } | null>(null);
@@ -259,7 +267,10 @@ export default function AppointmentsPage() {
                     <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
                       <PawPrint size={12} /> Pet
                     </p>
-                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3]">{petName}</p>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-1.5">
+                      <SpeciesIcon speciesId={apt.pet?.species} size={14} className="text-orange-500 shrink-0" />
+                      <span>{petName}</span>
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
@@ -281,8 +292,30 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-sm text-orange-500 font-medium">
-                  Ver detalhes <ChevronRight size={16} />
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-neutral-50 dark:border-[#313335]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const isProf = !!apt.professional?.id || !!apt.professionalId;
+                      setReportModalData({
+                        targetType: isProf ? 'PROFESSIONAL' : 'ESTABLISHMENT',
+                        targetId: apt.professional?.id || apt.professionalId || apt.establishment?.id || apt.establishmentId,
+                        targetName: isProf
+                          ? (apt.professional?.name || 'Profissional')
+                          : (apt.establishment?.establishmentProfile?.businessName || apt.establishment?.name || 'Estabelecimento'),
+                        appointmentId: apt.id,
+                      });
+                    }}
+                    className="text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Denunciar prestador"
+                  >
+                    <Flag size={13} />
+                    <span>Denunciar</span>
+                  </button>
+                  <span className="text-orange-500 font-medium inline-flex items-center gap-1">
+                    Ver detalhes <ChevronRight size={16} />
+                  </span>
                 </div>
               </motion.div>
             );
@@ -375,8 +408,9 @@ export default function AppointmentsPage() {
                 <p className="text-neutral-400 dark:text-[#8E918F] mb-1 flex items-center gap-1">
                   <PawPrint size={12} /> Pet Atendido
                 </p>
-                <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">
-                  {selectedAppointment.pet?.name || selectedAppointment.petName || 'Pet'}
+                <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm flex items-center gap-1.5">
+                  <SpeciesIcon speciesId={selectedAppointment.pet?.species} size={14} className="text-orange-500 shrink-0" />
+                  <span>{selectedAppointment.pet?.name || selectedAppointment.petName || 'Pet'}</span>
                 </p>
                 {selectedAppointment.pet?.breed && (
                   <p className="text-neutral-500 dark:text-[#8E918F] text-[11px]">{selectedAppointment.pet.breed}</p>
@@ -426,8 +460,40 @@ export default function AppointmentsPage() {
               </span>
             </div>
 
-            {/* Botão de Fechar */}
-            <div className="pt-2 flex justify-end">
+            {/* Ações e Denúncia */}
+            <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 dark:border-[#313335]">
+              <div className="flex items-center gap-2 flex-wrap">
+                {(selectedAppointment.professional?.id || selectedAppointment.professionalId) && (
+                  <button
+                    type="button"
+                    onClick={() => setReportModalData({
+                      targetType: 'PROFESSIONAL',
+                      targetId: selectedAppointment.professional?.id || selectedAppointment.professionalId,
+                      targetName: selectedAppointment.professional?.name || 'Profissional',
+                      appointmentId: selectedAppointment.id,
+                    })}
+                    className="text-xs text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                  >
+                    <Flag size={13} />
+                    <span>Denunciar Profissional</span>
+                  </button>
+                )}
+                {(selectedAppointment.establishment?.id || selectedAppointment.establishmentId) && (
+                  <button
+                    type="button"
+                    onClick={() => setReportModalData({
+                      targetType: 'ESTABLISHMENT',
+                      targetId: selectedAppointment.establishment?.id || selectedAppointment.establishmentId,
+                      targetName: selectedAppointment.establishment?.establishmentProfile?.businessName || selectedAppointment.establishment?.name || 'Estabelecimento',
+                      appointmentId: selectedAppointment.id,
+                    })}
+                    className="text-xs text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                  >
+                    <Flag size={13} />
+                    <span>Denunciar Estabelecimento</span>
+                  </button>
+                )}
+              </div>
               <Button onClick={() => setSelectedAppointment(null)} className="w-full sm:w-auto">
                 Fechar
               </Button>
@@ -446,6 +512,20 @@ export default function AppointmentsPage() {
           <span>Novo agendamento</span>
         </button>
       </div>
+
+      {/* Report Modal */}
+      {reportModalData && (
+        <ReportModal
+          isOpen={!!reportModalData}
+          onClose={() => setReportModalData(null)}
+          targetType={reportModalData.targetType}
+          reportedUserId={reportModalData.targetType === 'PROFESSIONAL' ? reportModalData.targetId : undefined}
+          reportedEstablishmentId={reportModalData.targetType === 'ESTABLISHMENT' ? reportModalData.targetId : undefined}
+          targetName={reportModalData.targetName}
+          contextType="APPOINTMENT"
+          contextId={reportModalData.appointmentId}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ interface ReportModalProps {
   reportedUserId?: string;
   reportedEstablishmentId?: string;
   targetName: string;
+  contextType?: 'APPOINTMENT' | 'ORDER' | 'PROFILE' | 'OTHER';
+  contextId?: string;
 }
 
 const REPORT_REASONS = [
@@ -19,6 +21,8 @@ const REPORT_REASONS = [
   'Conteúdo impróprio',
   'Fraude / Atividade suspeita',
   'Assédio ou desrespeito',
+  'Não comparecimento / Atraso grave',
+  'Problemas na entrega / Produto adulterado',
   'Outro motivo',
 ];
 
@@ -29,6 +33,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   reportedUserId,
   reportedEstablishmentId,
   targetName,
+  contextType,
+  contextId,
 }) => {
   const { addToast } = useToastStore();
   const [reason, setReason] = useState(REPORT_REASONS[0]);
@@ -37,6 +43,18 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
 
   if (!isOpen) return null;
+
+  const getModalTitle = () => {
+    switch (targetType) {
+      case 'ESTABLISHMENT':
+        return 'Denunciar Estabelecimento';
+      case 'PROFESSIONAL':
+        return 'Denunciar Profissional';
+      case 'USER':
+      default:
+        return 'Denunciar Tutor / Cliente';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +75,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         reportedEstablishmentId,
         reason,
         description: description.trim(),
+        contextType,
+        contextId,
       });
 
       setIsSuccess(true);
@@ -98,7 +118,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <Flag size={18} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white">Denunciar perfil</h3>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">{getModalTitle()}</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">{targetName}</p>
               </div>
             </div>

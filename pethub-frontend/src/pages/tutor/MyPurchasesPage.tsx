@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShoppingBag, ArrowLeft, CheckCircle, Package, Clock, XCircle, 
-  Store, Truck, MapPin, DollarSign, AlertTriangle, X, Ban
+  Store, Truck, MapPin, DollarSign, AlertTriangle, X, Ban, Star, Flag, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,8 @@ import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { PaymentLogo } from '@/components/shared/PaymentLogo';
 import { ItemLogo } from '@/components/shared/ServiceLogo';
+import { ReportModal } from '@/components/shared/ReportModal';
+import { ReviewModal } from '@/components/shared/ReviewModal';
 
 interface OrderItem {
   id: string;
@@ -57,6 +59,17 @@ interface Order {
   cancelledBy?: string | null;
   cancellationReason?: string | null;
   cancellationNotes?: string | null;
+  refundStatus?: string | null;
+  refundAmount?: number | null;
+  refundedAt?: string | null;
+  refundMethod?: string | null;
+  refundReason?: string | null;
+  review?: {
+    id: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+  } | null;
   items: OrderItem[];
 }
 
@@ -83,6 +96,10 @@ export default function MyPurchasesPage() {
   const [cancelNotes, setCancelNotes] = useState<string>('');
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
   const [isConfirmingReceipt, setIsConfirmingReceipt] = useState<string | null>(null);
+
+  // Review and Report modal states
+  const [reviewModalOrder, setReviewModalOrder] = useState<Order | null>(null);
+  const [reportModalOrder, setReportModalOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -135,7 +152,10 @@ export default function MyPurchasesPage() {
         notes: cancelNotes.trim() || undefined,
       });
 
-      toast.success('Pedido cancelado com sucesso.');
+      const refundInfo = res.data.refund;
+      const refundMsg = refundInfo?.amount ? ` Reembolso simulado de R$ ${refundInfo.amount.toFixed(2).replace('.', ',')} registrado.` : '';
+      toast.success(`Pedido cancelado com sucesso.${refundMsg}`);
+
       const updatedCancelledOrder: Order = {
         ...cancelModalOrder,
         status: 'CANCELLED',
@@ -143,6 +163,10 @@ export default function MyPurchasesPage() {
         cancelledBy: 'TUTOR',
         cancellationReason: cancelReason,
         cancellationNotes: cancelNotes.trim() || null,
+        refundStatus: refundInfo?.status || 'REFUNDED',
+        refundAmount: refundInfo?.amount || cancelModalOrder.totalAmount,
+        refundedAt: refundInfo?.refundedAt || new Date().toISOString(),
+        refundMethod: refundInfo?.method || 'SIMULATED_REVERSAL',
       };
 
       setOrders(prev => prev.map(o => o.id === cancelModalOrder.id ? updatedCancelledOrder : o));
@@ -274,14 +298,38 @@ export default function MyPurchasesPage() {
 
                 {/* Cancelled Banner if applicable */}
                 {order.status === 'CANCELLED' && (
-                  <div className="p-2.5 bg-rose-50 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/40 text-xs text-rose-700 dark:text-rose-300 space-y-0.5">
-                    <p className="font-bold">Pedido cancelado {order.cancelledBy === 'ESTABLISHMENT' ? 'pela loja' : 'por você'}</p>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/40 text-xs text-rose-700 dark:text-rose-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <XCircle size={14} className="text-rose-500" />
+                      Pedido cancelado {order.cancelledBy === 'ESTABLISHMENT' ? 'pela loja' : 'por você'}
+                    </p>
                     {order.cancellationReason && <p><span className="font-semibold">Motivo:</span> {order.cancellationReason}</p>}
+                    <div className="flex items-center gap-1.5 pt-0.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+                      <RotateCcw size={13} />
+                      <span>
+                        Estorno simulado: R$ {(order.refundAmount || order.totalAmount).toFixed(2).replace('.', ',')}
+                        {order.refundStatus === 'REFUNDED' ? ' (Reembolsado)' : ''}
+                      </span>
+                    </div>
                   </div>
                 )}
 
                 {/* Action Buttons for Tutor */}
                 <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                  {/* Contextual Report Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setReportModalOrder(order);
+                    }}
+                    className="p-1.5 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1 text-xs"
+                    title="Denunciar este estabelecimento"
+                  >
+                    <Flag size={13} />
+                    <span className="hidden sm:inline">Denunciar</span>
+                  </button>
+
                   {canCancel && (
                     <button
                       type="button"
@@ -309,11 +357,26 @@ export default function MyPurchasesPage() {
                     </Button>
                   )}
 
-                  {order.status === 'COMPLETED' && (
-                    <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                      <CheckCircle size={14} />
-                      <span>Recebimento Confirmado</span>
-                    </div>
+                  {/* Review Button / Rating Badge */}
+                  {['DELIVERED', 'COMPLETED'].includes(order.status) && (
+                    order.review ? (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 px-2.5 py-1 rounded-xl">
+                        <Star size={13} className="fill-amber-500 text-amber-500" />
+                        <span>Avaliado ({order.review.rating}★)</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReviewModalOrder(order);
+                        }}
+                        className="px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Star size={13} className="fill-amber-500 text-amber-500" />
+                        Avaliar Loja
+                      </button>
+                    )
                   )}
                 </div>
               </motion.div>
@@ -373,6 +436,13 @@ export default function MyPurchasesPage() {
                   {selectedOrder.cancellationNotes && (
                     <p><span className="font-semibold">Detalhes:</span> {selectedOrder.cancellationNotes}</p>
                   )}
+                  <div className="flex items-center gap-1.5 pt-1 text-emerald-700 dark:text-emerald-400 font-semibold border-t border-rose-200 dark:border-rose-900/40">
+                    <RotateCcw size={13} />
+                    <span>
+                      Estorno simulado: R$ {(selectedOrder.refundAmount || selectedOrder.totalAmount).toFixed(2).replace('.', ',')}
+                      {selectedOrder.refundStatus === 'REFUNDED' ? ' (Registrado no financeiro)' : ''}
+                    </span>
+                  </div>
                 </div>
               )}
 
@@ -455,31 +525,60 @@ export default function MyPurchasesPage() {
               </div>
 
               {/* Modal Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                {['PENDING', 'CONFIRMED', 'PAID'].includes(selectedOrder.status) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCancelModalOrder(selectedOrder);
-                      setCancelReason('');
-                      setCancelNotes('');
-                    }}
-                    className="px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors border border-rose-200 dark:border-rose-900/50 cursor-pointer"
-                  >
-                    Cancelar Pedido
-                  </button>
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReportModalOrder(selectedOrder)}
+                  className="px-3 py-2 text-xs font-semibold text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Flag size={14} />
+                  <span>Denunciar Loja</span>
+                </button>
 
-                {['SHIPPED', 'READY_FOR_PICKUP', 'DELIVERED'].includes(selectedOrder.status) && (
-                  <Button
-                    disabled={isConfirmingReceipt === selectedOrder.id}
-                    onClick={() => handleConfirmReceipt(selectedOrder.id)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                    leftIcon={<CheckCircle size={16} />}
-                  >
-                    {isConfirmingReceipt === selectedOrder.id ? 'Confirmando...' : 'Confirmar Recebimento'}
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {['PENDING', 'CONFIRMED', 'PAID'].includes(selectedOrder.status) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCancelModalOrder(selectedOrder);
+                        setCancelReason('');
+                        setCancelNotes('');
+                      }}
+                      className="px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors border border-rose-200 dark:border-rose-900/50 cursor-pointer"
+                    >
+                      Cancelar Pedido
+                    </button>
+                  )}
+
+                  {['SHIPPED', 'READY_FOR_PICKUP', 'DELIVERED'].includes(selectedOrder.status) && (
+                    <Button
+                      disabled={isConfirmingReceipt === selectedOrder.id}
+                      onClick={() => handleConfirmReceipt(selectedOrder.id)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                      leftIcon={<CheckCircle size={16} />}
+                    >
+                      {isConfirmingReceipt === selectedOrder.id ? 'Confirmando...' : 'Confirmar Recebimento'}
+                    </Button>
+                  )}
+
+                  {['DELIVERED', 'COMPLETED'].includes(selectedOrder.status) && (
+                    selectedOrder.review ? (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 px-3 py-2 rounded-xl">
+                        <Star size={13} className="fill-amber-500 text-amber-500" />
+                        <span>Avaliado ({selectedOrder.review.rating}★)</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setReviewModalOrder(selectedOrder)}
+                        className="px-4 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Star size={13} className="fill-amber-500 text-amber-500" />
+                        Avaliar Loja
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
@@ -517,9 +616,12 @@ export default function MyPurchasesPage() {
                 </button>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300">
+              <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 space-y-1">
                 <p className="font-semibold">Tem certeza que deseja cancelar?</p>
                 <p>O pedido será cancelado imediatamente e os itens retornarão ao estoque do parceiro.</p>
+                <p className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                  O valor de R$ {cancelModalOrder.totalAmount.toFixed(2).replace('.', ',')} terá o estorno/reembolso demonstrativo registrado e saldo/cupons restituídos.
+                </p>
               </div>
 
               <form onSubmit={handleConfirmTutorCancellation} className="space-y-4">
@@ -576,6 +678,42 @@ export default function MyPurchasesPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Review Modal */}
+      {reviewModalOrder && (
+        <ReviewModal
+          isOpen={!!reviewModalOrder}
+          onClose={() => setReviewModalOrder(null)}
+          orderId={reviewModalOrder.id}
+          targetName={
+            reviewModalOrder.items[0]?.establishment?.establishmentProfile?.businessName ||
+            reviewModalOrder.items[0]?.establishment?.name ||
+            'Loja Parceira'
+          }
+          onSuccess={() => {
+            fetchOrders();
+          }}
+        />
+      )}
+
+      {/* Report Modal */}
+      {reportModalOrder && (
+        <ReportModal
+          isOpen={!!reportModalOrder}
+          onClose={() => setReportModalOrder(null)}
+          targetType="ESTABLISHMENT"
+          reportedEstablishmentId={
+            reportModalOrder.items[0]?.establishment?.id
+          }
+          targetName={
+            reportModalOrder.items[0]?.establishment?.establishmentProfile?.businessName ||
+            reportModalOrder.items[0]?.establishment?.name ||
+            'Estabelecimento Parceiro'
+          }
+          contextType="ORDER"
+          contextId={reportModalOrder.orderNumber || reportModalOrder.id}
+        />
+      )}
     </div>
   );
 }

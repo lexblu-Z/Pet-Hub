@@ -143,7 +143,7 @@ export const reportsExportController = {
     const user = await ensureEstablishment(request, reply);
     if (!user) return;
 
-    const { type, format = 'pdf', startDate, endDate, serviceType, status, paymentMethod, category, species } = request.query;
+    const { type, format = 'csv', startDate, endDate, serviceType, status, paymentMethod, category, species } = request.query;
     const { start, end } = parseDateRange(startDate, endDate);
     const startDateStr = formatDateBr(start);
     const endDateStr = formatDateBr(end);
@@ -187,15 +187,13 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'Data e Hora', width: 85 },
-          { label: 'Status', width: 72 },
-          { label: 'Serviço', width: 110 },
-          { label: 'Categoria', width: 80 },
-          { label: 'Valor (R$)', width: 65, align: 'right' as const },
-          { label: 'Cliente / Tutor', width: 105 },
-          { label: 'Pet', width: 75 },
-          { label: 'Espécie', width: 60 },
-          { label: 'Responsável', width: 120 },
+          { label: 'Data e Hora', width: 68 },
+          { label: 'Status', width: 52 },
+          { label: 'Serviço', width: 90 },
+          { label: 'Categoria', width: 65 },
+          { label: 'Tutor / Pet', width: 95 },
+          { label: 'Responsável', width: 75 },
+          { label: 'Valor (R$)', width: 60, align: 'right' as const },
         ];
 
         const tableRows = list.map(apt => [
@@ -203,11 +201,9 @@ export const reportsExportController = {
           { text: formatStatusBr(apt.status), color: getStatusColor(apt.status), bold: true },
           { text: apt.service?.name || '-' },
           { text: apt.service?.category || '-' },
-          { text: formatCurrency(apt.service?.price || 0), align: 'right' as const, bold: true },
-          { text: apt.tutor?.name || '-' },
-          { text: apt.pet?.name || '-' },
-          { text: apt.pet?.species || '-' },
+          { text: `${apt.tutor?.name || 'Cliente'}${apt.pet?.name ? ` (${apt.pet.name})` : ''}` },
           { text: apt.professional?.name || apt.employee?.name || 'Não atribuído' },
+          { text: formatCurrency(apt.service?.price || 0), align: 'right' as const, bold: true },
         ]);
 
         return reportsPdfService.generateReportPdf({
@@ -244,27 +240,41 @@ export const reportsExportController = {
           orderBy: { createdAt: 'desc' },
         });
 
+        const cancelledOrderItems = await prisma.orderItem.findMany({
+          where: {
+            establishmentId: user.id,
+            order: {
+              status: OrderStatus.CANCELLED,
+              createdAt: { gte: start, lte: end },
+            },
+          },
+          include: { product: true, order: { include: { tutor: true } } },
+          orderBy: { createdAt: 'desc' },
+        });
+
         const servRev = appointments.reduce((s, a) => s + (a.service?.price || 0), 0);
         const prodRev = orderItems.reduce((s, i) => s + (i.priceAtTime * i.quantity), 0);
-        const totalRev = servRev + prodRev;
+        const refundedRev = cancelledOrderItems.reduce((s, i) => s + (i.priceAtTime * i.quantity), 0);
+        const grossTotalRev = servRev + prodRev + refundedRev;
+        const netTotalRev = grossTotalRev - refundedRev;
 
         const summaryCards = [
-          { label: 'Faturamento Total', value: formatCurrency(totalRev) },
-          { label: 'Receita Serviços', value: formatCurrency(servRev) },
-          { label: 'Receita Produtos', value: formatCurrency(prodRev) },
+          { label: 'Faturamento Bruto', value: formatCurrency(grossTotalRev) },
+          { label: 'Estornos / Reembolsos', value: `- ${formatCurrency(refundedRev)}` },
+          { label: 'Faturamento Líquido', value: formatCurrency(netTotalRev) },
           { label: 'Transações Válidas', value: `${appointments.length + orderItems.length}` },
         ];
 
         const tableHeaders = [
-          { label: 'Tipo', width: 75 },
-          { label: 'Data e Hora', width: 95 },
-          { label: 'Descrição / Item', width: 212 },
-          { label: 'Cliente / Tutor', width: 160 },
-          { label: 'Forma Pagamento', width: 110 },
-          { label: 'Valor Bruto', width: 120, align: 'right' as const },
+          { label: 'Tipo', width: 55 },
+          { label: 'Data e Hora', width: 65 },
+          { label: 'Descrição / Item', width: 150 },
+          { label: 'Cliente / Tutor', width: 105 },
+          { label: 'Método', width: 60 },
+          { label: 'Valor', width: 70, align: 'right' as const },
         ];
 
-        type TxItem = { type: 'SERVIÇO' | 'PRODUTO'; date: Date; desc: string; client: string; method: string; amount: number };
+        type TxItem = { type: 'SERVIÇO' | 'PRODUTO' | 'ESTORNO'; date: Date; desc: string; client: string; method: string; amount: number };
         const allTx: TxItem[] = [
           ...appointments.map(a => ({
             type: 'SERVIÇO' as const,
@@ -282,16 +292,24 @@ export const reportsExportController = {
             method: i.order?.paymentMethod || 'Online',
             amount: i.priceAtTime * i.quantity,
           })),
+          ...cancelledOrderItems.map(i => ({
+            type: 'ESTORNO' as const,
+            date: new Date(i.order?.refundedAt || i.createdAt),
+            desc: `Cancelamento: ${i.product?.name || 'Produto'} (${i.quantity}x)`,
+            client: i.order?.tutor?.name || '-',
+            method: i.order?.paymentMethod ? `${i.order.paymentMethod} (Simulado)` : 'Estorno',
+            amount: -(i.priceAtTime * i.quantity),
+          })),
         ];
         allTx.sort((a, b) => b.date.getTime() - a.date.getTime());
 
         const tableRows = allTx.map(t => [
-          { text: t.type, color: t.type === 'SERVIÇO' ? '#f97316' : '#16a34a', bold: true },
+          { text: t.type, color: t.type === 'SERVIÇO' ? '#f97316' : t.type === 'ESTORNO' ? '#e11d48' : '#16a34a', bold: true },
           { text: formatDateTimeBr(t.date) },
           { text: t.desc },
           { text: t.client },
           { text: t.method },
-          { text: formatCurrency(t.amount), align: 'right' as const, bold: true },
+          { text: t.amount < 0 ? `- ${formatCurrency(Math.abs(t.amount))}` : formatCurrency(t.amount), align: 'right' as const, bold: true, color: t.amount < 0 ? '#e11d48' : undefined },
         ]);
 
         return reportsPdfService.generateReportPdf({
@@ -332,13 +350,13 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'Produto', width: 202 },
-          { label: 'Categoria', width: 110 },
-          { label: 'Preço Unitário', width: 90, align: 'right' as const },
-          { label: 'Estoque Atual', width: 80, align: 'center' as const },
-          { label: 'Vendas', width: 80, align: 'center' as const },
-          { label: 'Valor em Estoque', width: 110, align: 'right' as const },
-          { label: 'Situação', width: 100, align: 'center' as const },
+          { label: 'Produto', width: 140 },
+          { label: 'Categoria', width: 70 },
+          { label: 'Preço', width: 50, align: 'right' as const },
+          { label: 'Estoque', width: 50, align: 'center' as const },
+          { label: 'Vendas', width: 45, align: 'center' as const },
+          { label: 'Total (R$)', width: 75, align: 'right' as const },
+          { label: 'Situação', width: 75, align: 'center' as const },
         ];
 
         const tableRows = products.map(p => {
@@ -412,12 +430,12 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'Cliente / Tutor', width: 172 },
-          { label: 'E-mail', width: 180 },
-          { label: 'Telefone', width: 110 },
-          { label: 'Pets Atendidos', width: 140 },
-          { label: 'Visitas', width: 70, align: 'center' as const },
-          { label: 'Última Visita', width: 100, align: 'center' as const },
+          { label: 'Cliente / Tutor', width: 110 },
+          { label: 'E-mail', width: 115 },
+          { label: 'Telefone', width: 75 },
+          { label: 'Pets Atendidos', width: 85 },
+          { label: 'Visitas', width: 45, align: 'center' as const },
+          { label: 'Última Visita', width: 75, align: 'center' as const },
         ];
 
         const tableRows = Array.from(tutorMap.values()).map(t => [
@@ -506,7 +524,19 @@ export const reportsExportController = {
         orderBy: { createdAt: 'desc' },
       });
 
-      const headers = ['Tipo', 'Data', 'Descrição / Item', 'Cliente', 'Forma de Pagamento', 'Valor Bruto (R$)'];
+      const cancelledOrderItems = await prisma.orderItem.findMany({
+        where: {
+          establishmentId: user.id,
+          order: {
+            status: OrderStatus.CANCELLED,
+            createdAt: { gte: start, lte: end },
+          },
+        },
+        include: { product: true, order: { include: { tutor: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const headers = ['Tipo', 'Data', 'Descrição / Item', 'Cliente', 'Forma de Pagamento', 'Valor (R$)'];
       csvContent += headers.join(';') + '\r\n';
 
       for (const apt of appointments) {
@@ -529,6 +559,18 @@ export const reportsExportController = {
           escapeCsv(item.order?.tutor?.name || '-'),
           escapeCsv(item.order?.paymentMethod || 'Outro'),
           escapeCsv(formatCurrency(item.quantity * item.priceAtTime)),
+        ];
+        csvContent += row.join(';') + '\r\n';
+      }
+
+      for (const item of cancelledOrderItems) {
+        const row = [
+          escapeCsv('ESTORNO'),
+          escapeCsv(formatDateTimeBr(item.order?.refundedAt || item.createdAt)),
+          escapeCsv(`Cancelamento: ${item.product?.name} (${item.quantity}x)`),
+          escapeCsv(item.order?.tutor?.name || '-'),
+          escapeCsv(item.order?.paymentMethod ? `${item.order.paymentMethod} (Simulado)` : 'Estorno'),
+          escapeCsv(`-${formatCurrency(item.quantity * item.priceAtTime)}`),
         ];
         csvContent += row.join(';') + '\r\n';
       }
@@ -626,7 +668,7 @@ export const reportsExportController = {
     const user = await ensureProfessional(request, reply);
     if (!user) return;
 
-    const { type, format = 'pdf', startDate, endDate, serviceType, status, species } = request.query;
+    const { type, format = 'csv', startDate, endDate, serviceType, status, species } = request.query;
     const { start, end } = parseDateRange(startDate, endDate);
     const startDateStr = formatDateBr(start);
     const endDateStr = formatDateBr(end);
@@ -665,14 +707,13 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'Data e Hora', width: 95 },
-          { label: 'Status', width: 75 },
-          { label: 'Serviço', width: 130 },
-          { label: 'Categoria', width: 95 },
-          { label: 'Valor (R$)', width: 85, align: 'right' as const },
-          { label: 'Cliente / Tutor', width: 130 },
-          { label: 'Pet', width: 85 },
-          { label: 'Espécie', width: 76 },
+          { label: 'Data e Hora', width: 68 },
+          { label: 'Status', width: 52 },
+          { label: 'Serviço', width: 95 },
+          { label: 'Categoria', width: 65 },
+          { label: 'Tutor / Pet', width: 105 },
+          { label: 'Espécie', width: 50 },
+          { label: 'Valor (R$)', width: 70, align: 'right' as const },
         ];
 
         const tableRows = list.map(apt => [
@@ -680,10 +721,9 @@ export const reportsExportController = {
           { text: formatStatusBr(apt.status), color: getStatusColor(apt.status), bold: true },
           { text: apt.service?.name || '-' },
           { text: apt.service?.category || '-' },
-          { text: formatCurrency(apt.service?.price || 0), align: 'right' as const, bold: true },
-          { text: apt.tutor?.name || '-' },
-          { text: apt.pet?.name || '-' },
+          { text: `${apt.tutor?.name || 'Cliente'}${apt.pet?.name ? ` (${apt.pet.name})` : ''}` },
           { text: apt.pet?.species || '-' },
+          { text: formatCurrency(apt.service?.price || 0), align: 'right' as const, bold: true },
         ]);
 
         return reportsPdfService.generateReportPdf({
@@ -720,12 +760,12 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'ID Agendamento', width: 140 },
-          { label: 'Data Conclusão', width: 110 },
-          { label: 'Serviço Atendido', width: 190 },
-          { label: 'Cliente / Tutor', width: 150 },
-          { label: 'Pet', width: 90 },
-          { label: 'Valor Bruto (R$)', width: 91, align: 'right' as const },
+          { label: 'ID / Ref.', width: 60 },
+          { label: 'Data Conclusão', width: 65 },
+          { label: 'Serviço Atendido', width: 150 },
+          { label: 'Cliente / Tutor', width: 100 },
+          { label: 'Pet', width: 55 },
+          { label: 'Valor Bruto', width: 75, align: 'right' as const },
         ];
 
         const tableRows = appointments.map(apt => [
@@ -785,12 +825,12 @@ export const reportsExportController = {
         ];
 
         const tableHeaders = [
-          { label: 'Cliente / Tutor', width: 172 },
-          { label: 'E-mail', width: 180 },
-          { label: 'Telefone', width: 110 },
-          { label: 'Pets Atendidos', width: 140 },
-          { label: 'Atendimentos', width: 70, align: 'center' as const },
-          { label: 'Último Atendimento', width: 100, align: 'center' as const },
+          { label: 'Cliente / Tutor', width: 110 },
+          { label: 'E-mail', width: 120 },
+          { label: 'Telefone', width: 75 },
+          { label: 'Pets Atendidos', width: 90 },
+          { label: 'Visitas', width: 45, align: 'center' as const },
+          { label: 'Última Visita', width: 65, align: 'center' as const },
         ];
 
         const tableRows = Array.from(tutorMap.values()).map(t => [

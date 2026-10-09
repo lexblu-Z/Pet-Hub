@@ -53,14 +53,29 @@ function formatStatus(status: string): string {
   return map[status] || status;
 }
 
+function getStatusColor(status: string): string {
+  if (['COMPLETED', 'DELIVERED', 'CONFIRMED', 'RESOLVED', 'ACTIVE', 'Concluído', 'Entregue', 'Confirmado', 'Resolvido', 'Ativo'].includes(status)) {
+    return '#059669'; // emerald green
+  }
+  if (['CANCELLED', 'REJECTED', 'Cancelado'].includes(status)) {
+    return '#dc2626'; // red
+  }
+  if (['PENDING', 'IN_PROGRESS', 'INVESTIGATING', 'Pendente', 'Em andamento', 'Em análise'].includes(status)) {
+    return '#d97706'; // amber
+  }
+  return '#475569';
+}
+
 function getOfficialLogoPath(): string | null {
   const candidates = [
+    path.resolve(process.cwd(), 'src/assets/logo_transparent.png'),
+    path.resolve(process.cwd(), 'backend/src/assets/logo_transparent.png'),
+    path.resolve(process.cwd(), '../logo_transparent.png'),
+    path.resolve(process.cwd(), 'logo_transparent.png'),
+    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet-Hub-main/Pet-Hub-main/backend/src/assets/logo_transparent.png',
+    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet-Hub-main/Pet-Hub-main/logo_transparent.png',
     path.resolve(process.cwd(), 'src/assets/logo.jpg'),
     path.resolve(process.cwd(), '../logo.jpg'),
-    path.resolve(process.cwd(), 'logo.jpg'),
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet Hub/logo.jpg',
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet Hub/backend/src/assets/logo.jpg',
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet Hub/pethub-frontend/public/logo.jpg',
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
@@ -140,23 +155,23 @@ export const adminExportController = {
 
     doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 68, 6).fill('#0f172a');
 
-    // Official Logo insertion
+    // Official Logo insertion (transparent PNG)
     if (logoPath) {
       try {
-        doc.image(logoPath, PAGE_X + 10, 52, { height: 42, fit: [125, 42] });
+        doc.image(logoPath, PAGE_X + 8, 55, { fit: [102, 36] });
       } catch {
-        doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text('PetHub', PAGE_X + 14, 56);
+        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
       }
     } else {
-      doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text('PetHub', PAGE_X + 14, 56);
+      doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
     }
 
-    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text('CENTRO DE CONTROLE OPERACIONAL', PAGE_X + 140, 57);
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#ffffff').text(typeTitle, PAGE_X + 140, 70);
+    doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text('CENTRO DE CONTROLE OPERACIONAL', PAGE_X + 122, 57);
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff').text(typeTitle, PAGE_X + 122, 70, { width: 225, lineBreak: false, ellipsis: true });
 
-    doc.fontSize(8).font('Helvetica').fillColor('#cbd5e1').text(`Período: ${periodStr}`, PAGE_X + 320, 57, { align: 'right', width: 175 });
-    doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado em: ${generatedAtStr}`, PAGE_X + 320, 71, { align: 'right', width: 175 });
-    doc.fontSize(7).font('Helvetica').fillColor('#f97316').text('Documento Oficial PetHub', PAGE_X + 320, 84, { align: 'right', width: 175 });
+    doc.fontSize(8).font('Helvetica').fillColor('#cbd5e1').text(`Período: ${periodStr}`, PAGE_X + 345, 57, { align: 'right', width: 150 });
+    doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado em: ${generatedAtStr}`, PAGE_X + 345, 71, { align: 'right', width: 150 });
+    doc.fontSize(7).font('Helvetica').fillColor('#f97316').text('Documento Oficial PetHub', PAGE_X + 345, 84, { align: 'right', width: 150 });
 
     let y = 125;
 
@@ -175,41 +190,45 @@ export const adminExportController = {
       doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff');
 
       if (type === 'finance') {
-        const dividers = [95, 148, 330, 415, 480];
+        // Widths: 72, 50, 168, 65, 55, 95 = 505
+        const dividers = [117, 167, 335, 400, 455];
         dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
         doc.text('TIPO', 50, currentY + 6);
-        doc.text('DATA', 100, currentY + 6);
-        doc.text('CÓDIGO / DETALHAMENTO', 153, currentY + 6);
-        doc.text('MÉTODO', 335, currentY + 6);
-        doc.text('STATUS', 420, currentY + 6);
-        doc.text('VALOR', 484, currentY + 6, { align: 'right', width: 60 });
-      } else if (type === 'appointments') {
-        const dividers = [110, 185, 330, 425, 485];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('CÓDIGO', 51, currentY + 6);
-        doc.text('DATA/HORA', 116, currentY + 6);
-        doc.text('TUTOR / PET', 191, currentY + 6);
-        doc.text('SERVIÇO', 336, currentY + 6);
-        doc.text('STATUS', 431, currentY + 6);
-        doc.text('VALOR', 489, currentY + 6, { align: 'right', width: 55 });
-      } else if (type === 'pets') {
-        const dividers = [165, 245, 365, 445, 505];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('NOME DO PET', 51, currentY + 6);
-        doc.text('ESPÉCIE', 171, currentY + 6);
-        doc.text('RAÇA', 251, currentY + 6);
-        doc.text('PESO / IDADE', 371, currentY + 6);
-        doc.text('CADASTRO', 451, currentY + 6);
-        doc.text('STATUS', 511, currentY + 6);
-      } else if (type === 'moderation') {
-        const dividers = [115, 170, 270, 370, 490];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('PROTOCOLO', 51, currentY + 6);
         doc.text('DATA', 121, currentY + 6);
-        doc.text('DENUNCIANTE', 176, currentY + 6);
-        doc.text('DENUNCIADO', 276, currentY + 6);
-        doc.text('MOTIVO', 376, currentY + 6);
-        doc.text('STATUS', 496, currentY + 6);
+        doc.text('CÓDIGO / DETALHAMENTO', 172, currentY + 6);
+        doc.text('MÉTODO', 340, currentY + 6);
+        doc.text('STATUS', 405, currentY + 6);
+        doc.text('VALOR', 458, currentY + 6, { align: 'right', width: 87 });
+      } else if (type === 'appointments') {
+        // Widths: 65, 72, 140, 95, 48, 85 = 505
+        const dividers = [110, 182, 322, 417, 465];
+        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
+        doc.text('CÓDIGO', 49, currentY + 6);
+        doc.text('DATA/HORA', 114, currentY + 6);
+        doc.text('TUTOR / PET', 186, currentY + 6);
+        doc.text('SERVIÇO', 326, currentY + 6);
+        doc.text('STATUS', 421, currentY + 6);
+        doc.text('VALOR', 469, currentY + 6, { align: 'right', width: 77 });
+      } else if (type === 'pets') {
+        // Widths: 110, 65, 125, 75, 45, 85 = 505
+        const dividers = [155, 220, 345, 420, 465];
+        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
+        doc.text('NOME DO PET', 49, currentY + 6);
+        doc.text('ESPÉCIE', 159, currentY + 6);
+        doc.text('RAÇA', 224, currentY + 6);
+        doc.text('PESO / IDADE', 349, currentY + 6);
+        doc.text('CADASTRO', 424, currentY + 6);
+        doc.text('STATUS', 469, currentY + 6);
+      } else if (type === 'moderation') {
+        // Widths: 65, 50, 95, 95, 105, 95 = 505
+        const dividers = [110, 160, 255, 350, 455];
+        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
+        doc.text('PROTOCOLO', 49, currentY + 6);
+        doc.text('DATA', 114, currentY + 6);
+        doc.text('DENUNCIANTE', 164, currentY + 6);
+        doc.text('DENUNCIADO', 259, currentY + 6);
+        doc.text('MOTIVO', 354, currentY + 6);
+        doc.text('STATUS', 459, currentY + 6);
       }
       return currentY + 20;
     };
@@ -308,40 +327,45 @@ export const adminExportController = {
         doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8').text('Nenhuma transação registrada no período selecionado.', PAGE_X, y + 10, { align: 'center', width: PAGE_WIDTH });
         y += 35;
       } else {
-        const dividers = [95, 148, 330, 415, 480];
+        const dividers = [117, 167, 335, 400, 455];
         rows.forEach((r, i) => {
-          if (y > 720) {
+          doc.fontSize(7.5).font('Helvetica');
+          const hDesc = doc.heightOfString(`${r.code} - ${r.desc}`, { width: 160 });
+          const rowHeight = Math.max(20, Math.ceil(hDesc + 7));
+
+          if (y + rowHeight > 730) {
             doc.addPage();
             drawSubsequentHeader();
             y = drawTableHead(80);
           }
 
           const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-          doc.rect(PAGE_X, y, PAGE_WIDTH, 20).fill(bg);
-          doc.rect(PAGE_X, y, PAGE_WIDTH, 20).stroke('#e2e8f0');
+          doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
+          doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
           dividers.forEach((x) => {
-            doc.moveTo(x, y).lineTo(x, y + 20).stroke('#e2e8f0');
+            doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
           });
 
-          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(r.type, 50, y + 5.5, { width: 42, ellipsis: true });
-          doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.date), 100, y + 5.5, { width: 44 });
-          doc.text(`${r.code} - ${r.desc}`, 153, y + 5.5, { width: 172, ellipsis: true });
-          doc.text(r.method, 335, y + 5.5, { width: 76, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor('#059669').text(formatStatus(r.status), 420, y + 5.5, { width: 56, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(r.amount), 484, y + 5.5, { align: 'right', width: 60 });
+          const textY = y + 5.5;
+          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(r.type, 50, textY, { width: 64, ellipsis: true });
+          doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.date), 121, textY, { width: 44 });
+          doc.text(`${r.code} - ${r.desc}`, 172, textY, { width: 160 });
+          doc.text(r.method, 340, textY, { width: 57, ellipsis: true });
+          doc.font('Helvetica-Bold').fillColor(getStatusColor(r.status)).text(formatStatus(r.status), 405, textY, { width: 47, ellipsis: true });
+          doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(r.amount), 458, textY, { align: 'right', width: 87 });
 
-          y += 20;
+          y += rowHeight;
         });
 
         // Summary Total Row
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 22).fill('#f1f5f9');
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 22).stroke('#cbd5e1');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, 24).fill('#f1f5f9');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, 24).stroke('#cbd5e1');
         dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + 22).stroke('#cbd5e1');
+          doc.moveTo(x, y).lineTo(x, y + 24).stroke('#cbd5e1');
         });
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a').text(`TOTAL CONSOLIDADO (${rows.length} transações)`, 51, y + 6.5);
-        doc.text(formatCurrency(gross), 484, y + 6.5, { align: 'right', width: 60 });
-        y += 26;
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a').text(`TOTAL CONSOLIDADO (${rows.length} transações)`, 50, y + 7.5);
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(gross), 458, y + 6.5, { align: 'right', width: 87 });
+        y += 30;
       }
     } else if (type === 'appointments') {
       const appointments = await prisma.appointment.findMany({
@@ -370,29 +394,35 @@ export const adminExportController = {
 
       y = drawTableHead(y);
 
-      const dividers = [110, 185, 330, 425, 485];
+      const dividers = [110, 182, 322, 417, 465];
       appointments.forEach((a, i) => {
-        if (y > 720) {
+        doc.fontSize(7.5).font('Helvetica');
+        const h1 = doc.heightOfString(`${a.tutor.name} (${a.pet.name})`, { width: 132 });
+        const h2 = doc.heightOfString(a.service?.name || 'Serviço', { width: 87 });
+        const rowHeight = Math.max(20, Math.ceil(Math.max(h1, h2) + 7));
+
+        if (y + rowHeight > 730) {
           doc.addPage();
           drawSubsequentHeader();
           y = drawTableHead(80);
         }
 
         const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).stroke('#e2e8f0');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
         dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + 20).stroke('#e2e8f0');
+          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
         });
 
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#AGD-${a.id.slice(0, 6).toUpperCase()}`, 51, y + 5.5);
-        doc.font('Helvetica').fillColor('#1e293b').text(formatDate(a.date), 116, y + 5.5);
-        doc.text(`${a.tutor.name} (${a.pet.name})`, 191, y + 5.5, { width: 134, ellipsis: true });
-        doc.text(a.service?.name || 'Serviço', 336, y + 5.5, { width: 84, ellipsis: true });
-        doc.font('Helvetica-Bold').fillColor('#059669').text(formatStatus(a.status), 431, y + 5.5, { width: 50, ellipsis: true });
-        doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(a.service?.price || 0), 489, y + 5.5, { align: 'right', width: 55 });
+        const textY = y + 5.5;
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#AGD-${a.id.slice(0, 6).toUpperCase()}`, 49, textY, { width: 58, ellipsis: true });
+        doc.font('Helvetica').fillColor('#1e293b').text(formatDate(a.date), 114, textY, { width: 65 });
+        doc.text(`${a.tutor.name} (${a.pet.name})`, 186, textY, { width: 132 });
+        doc.text(a.service?.name || 'Serviço', 326, textY, { width: 87 });
+        doc.font('Helvetica-Bold').fillColor(getStatusColor(a.status)).text(formatStatus(a.status), 421, textY, { width: 40, ellipsis: true });
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(a.service?.price || 0), 469, textY, { align: 'right', width: 77 });
 
-        y += 20;
+        y += rowHeight;
       });
     } else if (type === 'pets') {
       const pets = await prisma.pet.findMany({
@@ -415,29 +445,35 @@ export const adminExportController = {
 
       y = drawTableHead(y);
 
-      const dividers = [165, 245, 365, 445, 505];
+      const dividers = [155, 220, 345, 420, 465];
       pets.forEach((p, i) => {
-        if (y > 720) {
+        doc.fontSize(7.5).font('Helvetica');
+        const h1 = doc.heightOfString(p.name, { width: 102 });
+        const h2 = doc.heightOfString(p.breed || 'SRD', { width: 117 });
+        const rowHeight = Math.max(20, Math.ceil(Math.max(h1, h2) + 7));
+
+        if (y + rowHeight > 730) {
           doc.addPage();
           drawSubsequentHeader();
           y = drawTableHead(80);
         }
 
         const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).stroke('#e2e8f0');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
         dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + 20).stroke('#e2e8f0');
+          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
         });
 
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1e293b').text(p.name, 51, y + 5.5, { width: 110, ellipsis: true });
-        doc.font('Helvetica').fillColor('#475569').text(p.species, 171, y + 5.5, { width: 70, ellipsis: true });
-        doc.text(p.breed || 'SRD', 251, y + 5.5, { width: 110, ellipsis: true });
-        doc.text(`${p.weight ? p.weight + ' kg' : '-'} / ${p.approximateAge || '-'}`, 371, y + 5.5, { width: 70 });
-        doc.text(formatDateShort(p.createdAt), 451, y + 5.5, { width: 50 });
-        doc.font('Helvetica-Bold').fillColor('#059669').text('Ativo', 511, y + 5.5);
+        const textY = y + 5.5;
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1e293b').text(p.name, 49, textY, { width: 102 });
+        doc.font('Helvetica').fillColor('#475569').text(p.species, 159, textY, { width: 57, ellipsis: true });
+        doc.text(p.breed || 'SRD', 224, textY, { width: 117 });
+        doc.text(`${p.weight ? p.weight + ' kg' : '-'} / ${p.approximateAge || '-'}`, 349, textY, { width: 67 });
+        doc.text(formatDateShort(p.createdAt), 424, textY, { width: 38 });
+        doc.font('Helvetica-Bold').fillColor('#059669').text('Ativo', 469, textY, { width: 77 });
 
-        y += 20;
+        y += rowHeight;
       });
     } else if (type === 'moderation') {
       const reports = await prisma.moderationReport.findMany({
@@ -462,29 +498,34 @@ export const adminExportController = {
 
       y = drawTableHead(y);
 
-      const dividers = [115, 170, 270, 370, 490];
+      const dividers = [110, 160, 255, 350, 455];
       reports.forEach((r, i) => {
-        if (y > 720) {
+        doc.fontSize(7.5).font('Helvetica');
+        const h1 = doc.heightOfString(r.reason, { width: 97 });
+        const rowHeight = Math.max(20, Math.ceil(h1 + 7));
+
+        if (y + rowHeight > 730) {
           doc.addPage();
           drawSubsequentHeader();
           y = drawTableHead(80);
         }
 
         const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 20).stroke('#e2e8f0');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
+        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
         dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + 20).stroke('#e2e8f0');
+          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
         });
 
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#${r.reportNumber}`, 51, y + 5.5);
-        doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.createdAt), 121, y + 5.5);
-        doc.text(r.reporter?.name || 'Anônimo', 176, y + 5.5, { width: 90, ellipsis: true });
-        doc.text(r.reportedUser?.name || 'Perfil', 276, y + 5.5, { width: 90, ellipsis: true });
-        doc.text(r.reason, 376, y + 5.5, { width: 110, ellipsis: true });
-        doc.font('Helvetica-Bold').fillColor('#dc2626').text(formatStatus(r.status), 496, y + 5.5, { width: 50, ellipsis: true });
+        const textY = y + 5.5;
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#${r.reportNumber}`, 49, textY, { width: 58, ellipsis: true });
+        doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.createdAt), 114, textY, { width: 42 });
+        doc.text(r.reporter?.name || 'Anônimo', 164, textY, { width: 87, ellipsis: true });
+        doc.text(r.reportedUser?.name || 'Perfil', 259, textY, { width: 87, ellipsis: true });
+        doc.text(r.reason, 354, textY, { width: 97 });
+        doc.font('Helvetica-Bold').fillColor(getStatusColor(r.status)).text(formatStatus(r.status), 459, textY, { width: 87, ellipsis: true });
 
-        y += 20;
+        y += rowHeight;
       });
     }
 

@@ -32,7 +32,7 @@ export default function EstablishmentEmployeesPage() {
 
   // Form
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Tosador');
+  const [role, setRole] = useState('Funcionário');
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
   const [avatar, setAvatar] = useState('');
@@ -90,7 +90,7 @@ export default function EstablishmentEmployeesPage() {
   const openCreateModal = () => {
     setEditingId(null);
     setName('');
-    setRole('Tosador');
+    setRole('Funcionário');
     setPhone('');
     setDescription('');
     setAvatar('');
@@ -209,7 +209,15 @@ export default function EstablishmentEmployeesPage() {
                   <div className="flex items-center gap-3">
                     <Avatar src={emp.avatar ? getFullImageUrl(emp.avatar) : '/user.jpg'} name={emp.name} size="md" />
                     <div>
-                      <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{emp.name}</h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{emp.name}</h3>
+                        {emp.role === 'Gerente' && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
+                            <Shield size={10} className="text-amber-600 dark:text-amber-400" />
+                            Gerência
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">{emp.role}</span>
                     </div>
                   </div>
@@ -291,17 +299,19 @@ export default function EstablishmentEmployeesPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Função / Cargo *</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Cargo / Função *</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium"
                 >
-                  <option value="Tosador">Tosador</option>
+                  <option value="Funcionário">Funcionário</option>
                   <option value="Banhista">Banhista</option>
+                  <option value="Tosador">Tosador</option>
+                  <option value="Atendente">Atendente</option>
+                  <option value="Gerente">Gerente</option>
                   <option value="Veterinário">Veterinário</option>
                   <option value="Adestrador">Adestrador</option>
-                  <option value="Atendente / Recepção">Atendente / Recepção</option>
                   <option value="Outro">Outro</option>
                 </select>
               </div>

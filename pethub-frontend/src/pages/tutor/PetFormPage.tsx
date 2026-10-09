@@ -19,19 +19,8 @@ import {
   normalizeSpecies, 
   getSpeciesInfo 
 } from '@/utils/species';
-
-const APPROXIMATE_AGE_OPTIONS = [
-  'Filhote (menos de 6 meses)',
-  'Jovem (6 meses a 1 ano)',
-  'Aproximadamente 1 ano',
-  'Aproximadamente 2 anos',
-  'Aproximadamente 3 anos',
-  'Aproximadamente 4 anos',
-  'Aproximadamente 5 anos',
-  'Adulto (6 a 8 anos)',
-  'Sênior (9 a 12 anos)',
-  'Idoso (mais de 12 anos)',
-];
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { getApproximateAgeOptions } from '@/utils/speciesAgeRules';
 
 const COMMON_VACCINE_SUGGESTIONS: Record<string, string[]> = {
   dog: ['V10 (Décupla)', 'V8 (Óctupla)', 'Antirrábica', 'Gripe Canina (Pneumodog)', 'Giárdia'],
@@ -434,7 +423,7 @@ export default function PetFormPage({ isEditing = false }: PetFormPageProps) {
                   className="w-full h-[46px] px-3.5 bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl flex items-center justify-between hover:border-orange-400 dark:hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-left transition-all"
                 >
                   <span className="text-neutral-800 dark:text-[#E3E3E3] text-sm font-medium truncate flex items-center gap-2">
-                    <PawPrint size={16} className="text-orange-500 shrink-0" />
+                    <SpeciesIcon speciesId={species} size={18} className="text-orange-500 shrink-0" />
                     <span>{currentSpeciesInfo.label}</span>
                   </span>
                   <div className="shrink-0 ml-2 text-neutral-400 dark:text-[#8E918F]">
@@ -480,7 +469,7 @@ export default function PetFormPage({ isEditing = false }: PetFormPageProps) {
                               }`}
                             >
                               <span className="flex items-center gap-2.5 truncate">
-                                <PawPrint size={15} className="text-neutral-400 shrink-0" />
+                                <SpeciesIcon speciesId={opt.id} size={16} className={species === opt.id ? "text-orange-500 shrink-0" : "text-neutral-400 shrink-0"} />
                                 <span>{opt.label}</span>
                               </span>
                               {species === opt.id && <Check size={16} className="text-orange-500 shrink-0" />}
@@ -692,7 +681,7 @@ export default function PetFormPage({ isEditing = false }: PetFormPageProps) {
             {ageMode === 'approximate' && (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {APPROXIMATE_AGE_OPTIONS.map((opt) => (
+                  {getApproximateAgeOptions(species).map((opt) => (
                     <button
                       key={opt}
                       type="button"
@@ -733,33 +722,38 @@ export default function PetFormPage({ isEditing = false }: PetFormPageProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setWeightUnknown(!weightUnknown);
-                  if (!weightUnknown) setWeight('');
+                  const nextState = !weightUnknown;
+                  setWeightUnknown(nextState);
+                  if (nextState) setWeight('');
                 }}
-                className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-all inline-flex items-center gap-1.5 ${
+                className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                   weightUnknown
                     ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-semibold'
-                    : 'border-neutral-200 dark:border-[#313335] text-neutral-500 dark:text-[#8E918F]'
+                    : 'border-neutral-200 dark:border-[#313335] text-neutral-500 dark:text-[#8E918F] hover:border-neutral-300'
                 }`}
               >
                 {weightUnknown && <Check size={13} className="stroke-[3]" />}
-                {weightUnknown ? 'Não informado' : 'Marcar como não informado'}
+                {weightUnknown ? 'Não sei o peso (selecionado)' : 'Não sei o peso'}
               </button>
             </div>
 
-            {!weightUnknown && (
+            {!weightUnknown ? (
               <div className="relative flex items-center">
                 <input
                   type="text"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  placeholder="Ex: 8.5"
+                  placeholder="Ex: 10.5"
                   className="w-full h-[46px] px-3.5 pr-12 bg-white dark:bg-[#1E1F20] border border-neutral-200 dark:border-[#313335] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-sm text-neutral-900 dark:text-[#E3E3E3]"
                 />
                 <span className="absolute right-3.5 text-xs font-bold text-neutral-400 dark:text-[#8E918F]">
                   kg
                 </span>
               </div>
+            ) : (
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F] bg-neutral-50 dark:bg-[#282A2C] border border-neutral-200 dark:border-[#313335] p-3 rounded-xl">
+                Peso marcado como não informado. Poderá ser pesado na balança da clínica ou pet shop.
+              </p>
             )}
           </div>
 
@@ -1040,7 +1034,7 @@ export default function PetFormPage({ isEditing = false }: PetFormPageProps) {
         {/* ============================================================ */}
         <div className="bg-white dark:bg-[#1E1F20] rounded-2xl p-5 md:p-6 border border-neutral-200 dark:border-[#313335] shadow-sm space-y-3">
           <div className="flex items-center gap-2 border-b border-neutral-100 dark:border-[#313335] pb-3">
-            <PawPrint size={20} className="text-orange-500 shrink-0" />
+            <SpeciesIcon speciesId={species} size={20} className="text-orange-500 shrink-0" />
             <div>
               <h2 className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3]">
                 4. Informações Comportamentais

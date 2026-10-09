@@ -9,7 +9,7 @@ import {
   PawPrint,
 } from 'lucide-react';
 import SpeciesIcon from '@/components/shared/SpeciesIcon';
-import { getSpeciesInfo } from '@/utils/species';
+import { getSpeciesInfo, getSpeciesFallbackAvatar } from '@/utils/species';
 
 export interface PetItem {
   id: string;
@@ -198,11 +198,11 @@ export const TutorPetsSection: React.FC<TutorPetsSectionProps> = ({
                 {/* Pet Hero Photography */}
                 <div className="relative h-36 sm:h-40 md:h-44 w-full overflow-hidden bg-neutral-100 dark:bg-[#282A2C]">
                   <img
-                    src={pet.photo || '/fallback-dog.png'}
+                    src={pet.photo || getSpeciesFallbackAvatar(pet.species)}
                     alt={pet.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/fallback-dog.png';
+                      (e.target as HTMLImageElement).src = getSpeciesFallbackAvatar(pet.species);
                     }}
                   />
                   {/* Subtle lighting overlay */}

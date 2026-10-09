@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { FluidText } from '../components/ui/FluidText';
 import { availablePlans } from '@/data/plans';
-import { PlanPixModal } from '@/components/shared/PlanPixModal';
+import { useAuthStore } from '@/store/authStore';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -65,8 +65,7 @@ const testimonials = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const [isPixModalOpen, setIsPixModalOpen] = useState<boolean>(false);
+  const { isAuthenticated, currentRole } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white font-sans selection:bg-orange-500/30">
@@ -88,18 +87,30 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate('/auth/login')}
-              className="text-sm font-medium text-neutral-300 hover:text-white transition-colors hidden sm:block"
-            >
-              Entrar
-            </button>
-            <button 
-              onClick={() => navigate('/auth/register')}
-              className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25"
-            >
-              Criar conta grátis
-            </button>
+            {isAuthenticated ? (
+              <button 
+                onClick={() => navigate(`/${currentRole || 'tutor'}`)}
+                className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 cursor-pointer flex items-center gap-2"
+              >
+                <span>Meu Painel</span>
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/auth/login')}
+                  className="text-sm font-medium text-neutral-300 hover:text-white transition-colors hidden sm:block cursor-pointer"
+                >
+                  Entrar
+                </button>
+                <button 
+                  onClick={() => navigate('/auth/register')}
+                  className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
+                >
+                  Criar conta grátis
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -471,7 +482,7 @@ export default function LandingPage() {
                         {plan.name}
                       </h3>
                       <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                        {plan.establishmentName}
+                        Plano PetHub
                       </span>
                     </div>
 
@@ -484,7 +495,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Benefícios */}
-                    <div className="space-y-3 mb-8 pt-4 border-t border-neutral-200/50 dark:border-neutral-800">
+                    <div className="space-y-3 pt-4 border-t border-neutral-200/50 dark:border-neutral-800">
                       <p className={`text-xs font-bold uppercase tracking-wider ${isPopular ? 'text-orange-400' : 'text-neutral-500'}`}>
                         Benefícios Inclusos
                       </p>
@@ -496,21 +507,6 @@ export default function LandingPage() {
                       ))}
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedPlan(plan);
-                      setIsPixModalOpen(true);
-                    }}
-                    className={`w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                      isPopular
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30'
-                        : 'bg-neutral-900 hover:bg-neutral-800 text-white'
-                    }`}
-                  >
-                    <QrCode size={16} />
-                    <span>Assinar via Pix (Simulação)</span>
-                  </button>
                 </motion.div>
               );
             })}
@@ -613,12 +609,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      <PlanPixModal
-        isOpen={isPixModalOpen}
-        onClose={() => setIsPixModalOpen(false)}
-        plan={selectedPlan}
-      />
 
     </div>
   );

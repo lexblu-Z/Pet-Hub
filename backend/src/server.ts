@@ -28,6 +28,7 @@ import { messagesRoutes } from './routes/messages.routes';
 import { reportsRoutes } from './routes/reports.routes';
 import { partnerProgramRoutes } from './routes/partner-program.routes';
 import { reviewsRoutes } from './routes/reviews.routes';
+import { plansRoutes } from './routes/plans.routes';
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ fastify.register(messagesRoutes, { prefix: '/api/messages' });
 fastify.register(reportsRoutes, { prefix: '/api/reports' });
 fastify.register(partnerProgramRoutes, { prefix: '/api' });
 fastify.register(reviewsRoutes, { prefix: '/api/reviews' });
+fastify.register(plansRoutes, { prefix: '/api/plans' });
 
 // Basic route
 fastify.get('/', async (request, reply) => {

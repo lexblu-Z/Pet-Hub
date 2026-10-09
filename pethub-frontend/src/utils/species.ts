@@ -399,3 +399,50 @@ export function getAnimalTypeLabel(type?: string | null): string {
   return info.label || type;
 }
 
+/**
+ * Returns a high quality species-tailored photo fallback for pets without a custom photo.
+ */
+export function getSpeciesFallbackAvatar(speciesRaw?: string | null): string {
+  const norm = normalizeSpecies(speciesRaw);
+  if (norm === 'cat') {
+    return 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=600&auto=format&fit=crop';
+  }
+  if (
+    norm === 'bird' ||
+    norm === 'cockatiel' ||
+    norm === 'parrot' ||
+    norm === 'parakeet' ||
+    norm === 'canary' ||
+    norm === 'lovebird'
+  ) {
+    return 'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?q=80&w=600&auto=format&fit=crop';
+  }
+  if (
+    norm === 'rabbit' ||
+    norm === 'rodent' ||
+    norm === 'hamster' ||
+    norm === 'guinea_pig' ||
+    norm === 'ferret' ||
+    norm === 'rat' ||
+    norm === 'hedgehog'
+  ) {
+    return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?q=80&w=600&auto=format&fit=crop';
+  }
+  if (
+    norm === 'turtle' ||
+    norm === 'reptile' ||
+    norm === 'iguana' ||
+    norm === 'gecko' ||
+    norm === 'snake'
+  ) {
+    return 'https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?q=80&w=600&auto=format&fit=crop';
+  }
+  if (norm === 'fish') {
+    return 'https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?q=80&w=600&auto=format&fit=crop';
+  }
+  if (norm === 'dog') {
+    return 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop';
+  }
+  return 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=600&auto=format&fit=crop';
+}
+

@@ -36,6 +36,9 @@ export async function listTutorOrders(request: FastifyRequest, reply: FastifyRep
     where: { tutorId: user.sub },
     orderBy: { createdAt: 'desc' },
     include: {
+      review: {
+        select: { id: true, rating: true, comment: true, createdAt: true },
+      },
       items: {
         include: {
           product: true,
@@ -73,6 +76,9 @@ export async function getOrderById(request: FastifyRequest, reply: FastifyReply)
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
+      review: {
+        select: { id: true, rating: true, comment: true, createdAt: true },
+      },
       items: {
         include: {
           product: true,
@@ -500,12 +506,13 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Atomic check and update
+      // 1. Atomic check and update with refund recording
       const updateResult = await tx.order.updateMany({
         where: {
           id,
           tutorId: user.sub,
           status: { in: cancellableStatuses },
+          refundStatus: { not: 'REFUNDED' }, // Idempotency protection against duplicate refund
         },
         data: {
           status: OrderStatus.CANCELLED,
@@ -513,6 +520,11 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
           cancelledBy: 'TUTOR',
           cancellationReason: reason,
           cancellationNotes: notes || null,
+          refundStatus: 'REFUNDED',
+          refundAmount: order.totalAmount,
+          refundedAt: new Date(),
+          refundMethod: order.paymentMethod || 'Simulado',
+          refundReason: reason,
         },
       });
 
@@ -558,14 +570,25 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
 
       // 4. Create notification for establishment
       const establishmentId = order.items[0]?.establishmentId;
+      const orderShortId = order.id.slice(0, 8).toUpperCase();
+      const refundFormatted = (order.totalAmount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
       if (establishmentId) {
         await createAndEmitNotification({
           userId: establishmentId,
-          title: 'Pedido cancelado',
-          message: 'Um pedido de produtos foi cancelado.',
+          title: 'Pedido cancelado pelo cliente',
+          message: `O pedido #${orderShortId} foi cancelado pelo tutor com estorno financeiro de ${refundFormatted}.`,
           type: 'ORDER',
         });
       }
+
+      // 5. Create notification for tutor confirming cancellation & refund
+      await createAndEmitNotification({
+        userId: user.sub,
+        title: 'Cancelamento e Reembolso Confirmados',
+        message: `Seu pedido #${orderShortId} foi cancelado com sucesso. Reembolso demonstrativo de ${refundFormatted} processado.`,
+        type: 'ORDER',
+      });
 
       return updated;
     });

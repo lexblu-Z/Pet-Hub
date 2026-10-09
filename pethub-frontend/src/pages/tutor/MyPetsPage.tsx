@@ -5,6 +5,8 @@ import { Plus, MoreVertical, Calendar, Edit, Trash2, HelpCircle, ArrowRight, Shi
 import { usePetStore } from '@/store/petStore';
 import { EmptyState, SkeletonCard, Badge, ConfirmModal, Button } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { formatPetAgeDisplay } from '@/utils/speciesAgeRules';
 
 export default function MyPetsPage() {
   const navigate = useNavigate();
@@ -29,18 +31,7 @@ export default function MyPetsPage() {
   };
 
   const formatAge = (pet: any) => {
-    if (pet.birthDate) {
-      const birth = new Date(pet.birthDate);
-      const now = new Date();
-      const years = now.getFullYear() - birth.getFullYear();
-      const months = now.getMonth() - birth.getMonth();
-      if (years === 0) return `${Math.max(1, months)} ${months <= 1 ? 'mês' : 'meses'}`;
-      return `${years} ${years === 1 ? 'ano' : 'anos'}`;
-    }
-    if (pet.approximateAge) {
-      return pet.approximateAge;
-    }
-    return 'Idade não informada';
+    return formatPetAgeDisplay(pet);
   };
 
   const handleDelete = async () => {
@@ -152,7 +143,7 @@ export default function MyPetsPage() {
 
                   <div className="absolute bottom-0 left-0 p-4">
                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      <PawPrint size={18} className="text-white/80 shrink-0" />
+                      <SpeciesIcon speciesId={pet.species} size={18} className="text-white/90 shrink-0" />
                       <span>{pet.name}</span>
                     </h3>
                     <p className="text-white/80 text-xs mt-0.5">{pet.breed || 'Raça não informada'} · {formatAge(pet)}</p>

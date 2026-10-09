@@ -23,9 +23,18 @@ import {
   XCircle,
   Filter,
   X,
+  Flag,
+  Plus,
+  UserCheck,
+  Check,
+  Ban,
+  FileDown,
+  Download,
 } from 'lucide-react';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
 import { ServiceLogo } from '@/components/shared/ServiceLogo';
+import { ReportModal } from '@/components/shared/ReportModal';
 import {
   getBrasiliaToday,
   formatBrasiliaDate,
@@ -112,6 +121,7 @@ export default function EstablishmentAppointmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedApt, setSelectedApt] = useState<AppointmentData | null>(null);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const [reportModalData, setReportModalData] = useState<{ tutorId: string; tutorName: string; appointmentId: string } | null>(null);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -731,7 +741,7 @@ export default function EstablishmentAppointmentsPage() {
                           {apt.petPhoto ? (
                             <img src={getFullImageUrl(apt.petPhoto)} alt={apt.petName} className="w-full h-full object-cover" />
                           ) : (
-                            <PawPrint size={18} className="text-neutral-400 dark:text-[#8E918F]" />
+                            <SpeciesIcon speciesId={apt.petSpecies} size={20} className="text-orange-500" />
                           )}
                         </div>
                         <div>
@@ -788,6 +798,20 @@ export default function EstablishmentAppointmentsPage() {
 
                   {/* Ações do Estabelecimento */}
                   <div className="flex items-center gap-2 justify-end border-t border-neutral-100 dark:border-[#313335] pt-3 mt-4 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setReportModalData({
+                        tutorId: apt.tutorId,
+                        tutorName: apt.tutorName,
+                        appointmentId: apt.id,
+                      })}
+                      className="text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 font-medium px-2 py-1 transition-colors cursor-pointer inline-flex items-center gap-1"
+                      title="Denunciar este tutor"
+                    >
+                      <Flag size={13} />
+                      <span className="hidden sm:inline">Denunciar Tutor</span>
+                    </button>
+
                     <button
                       onClick={() => setSelectedApt(apt)}
                       className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 font-bold px-3 py-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
@@ -888,7 +912,7 @@ export default function EstablishmentAppointmentsPage() {
                     {selectedApt.petPhoto ? (
                       <img src={getFullImageUrl(selectedApt.petPhoto)} alt={selectedApt.petName} className="w-full h-full object-cover" />
                     ) : (
-                      <PawPrint size={22} className="text-neutral-400" />
+                      <SpeciesIcon speciesId={selectedApt.petSpecies} size={24} className="text-orange-500" />
                     )}
                   </div>
                   <div>
@@ -991,9 +1015,24 @@ export default function EstablishmentAppointmentsPage() {
 
             {/* Rodapé do Modal com Ações */}
             <div className="p-4 border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between gap-2 bg-neutral-50/50 dark:bg-[#282A2C]/50">
-              <Button variant="ghost" size="xs" onClick={() => setSelectedApt(null)}>
-                Fechar
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setReportModalData({
+                    tutorId: selectedApt.tutorId,
+                    tutorName: selectedApt.tutorName,
+                    appointmentId: selectedApt.id,
+                  })}
+                  className="text-rose-600 hover:text-rose-700 border-rose-200 dark:border-rose-900/50"
+                  leftIcon={<Flag size={13} />}
+                >
+                  Denunciar Tutor
+                </Button>
+                <Button variant="ghost" size="xs" onClick={() => setSelectedApt(null)}>
+                  Fechar
+                </Button>
+              </div>
               <div className="flex items-center gap-2">
                 {selectedApt.status === 'PENDING' && (
                   <Button size="xs" onClick={() => handleUpdateStatus(selectedApt.id, 'CONFIRMED')}>
@@ -1022,6 +1061,19 @@ export default function EstablishmentAppointmentsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModalData && (
+        <ReportModal
+          isOpen={!!reportModalData}
+          onClose={() => setReportModalData(null)}
+          targetType="USER"
+          reportedUserId={reportModalData.tutorId}
+          targetName={reportModalData.tutorName}
+          contextType="APPOINTMENT"
+          contextId={reportModalData.appointmentId}
+        />
       )}
     </div>
   );

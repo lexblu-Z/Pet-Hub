@@ -1,4 +1,4 @@
-﻿import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { ReportTargetType, ReportStatus, ReportPriority } from '@prisma/client';
 import { prisma } from '../lib/prisma';
@@ -10,6 +10,8 @@ const createReportSchema = z.object({
   reportedEstablishmentId: z.string().optional().nullable(),
   reason: z.string().min(3, 'O motivo deve ter pelo menos 3 caracteres.'),
   description: z.string().min(10, 'A descrição deve ter pelo menos 10 caracteres.'),
+  contextType: z.string().optional().nullable(),
+  contextId: z.string().optional().nullable(),
 });
 
 export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -48,6 +50,11 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
         }
       }
 
+      let finalDescription = data.description.trim();
+      if (data.contextType || data.contextId) {
+        finalDescription = `[Contexto: ${data.contextType || 'Geral'}${data.contextId ? ` #${data.contextId}` : ''}]\n${finalDescription}`;
+      }
+
       const report = await prisma.moderationReport.create({
         data: {
           reporterId: user.sub,
@@ -55,7 +62,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
           reportedEstablishmentId: finalEstablishmentId,
           targetType: data.targetType,
           reason: data.reason.trim(),
-          description: data.description.trim(),
+          description: finalDescription,
           status: ReportStatus.NOVA,
           priority: ReportPriority.MEDIA,
         },

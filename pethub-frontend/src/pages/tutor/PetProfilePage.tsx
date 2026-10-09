@@ -10,32 +10,14 @@ import {
 import { api } from '@/services/api';
 import { Badge, EmptyState } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
-import { getSpeciesInfo, normalizeSpecies } from '@/utils/species';
+import { getSpeciesInfo, normalizeSpecies, getSpeciesFallbackAvatar } from '@/utils/species';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { calculateExactAge, formatPetAgeDisplay } from '@/utils/speciesAgeRules';
 
 function getAge(birthDate: string) {
-  const birth = new Date(birthDate);
-  const now = new Date();
-  const years = now.getFullYear() - birth.getFullYear();
-  if (years === 0) {
-    const months = Math.max(1, now.getMonth() - birth.getMonth());
-    return `${months} ${months === 1 ? 'mês' : 'meses'}`;
-  }
-  return `${years} ${years === 1 ? 'ano' : 'anos'}`;
+  return calculateExactAge(birthDate).formatted;
 }
 
-function getSpeciesFallbackAvatar(speciesRaw?: string | null): string {
-  const norm = normalizeSpecies(speciesRaw);
-  if (norm === 'cat') {
-    return 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=600&auto=format&fit=crop';
-  }
-  if (norm === 'bird') {
-    return 'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?q=80&w=600&auto=format&fit=crop';
-  }
-  if (norm === 'rabbit' || norm === 'rodent') {
-    return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?q=80&w=600&auto=format&fit=crop';
-  }
-  return 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop';
-}
 
 interface PendingPhoto {
   type: 'cover' | 'avatar';
@@ -381,7 +363,8 @@ export default function PetProfilePage() {
               <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-[#E3E3E3] tracking-tight">
                 {pet.name}
               </h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-md bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold border border-orange-200 dark:border-orange-900/50">
+              <span className="text-xs px-2.5 py-0.5 rounded-md bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 font-bold border border-orange-200 dark:border-orange-900/50 inline-flex items-center gap-1.5">
+                <SpeciesIcon speciesId={pet.species} size={14} />
                 {speciesInfo.label}
               </span>
             </div>
@@ -391,7 +374,7 @@ export default function PetProfilePage() {
               <span>•</span>
               <span>{sexFormatted}</span>
               <span>•</span>
-              <span>{pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || 'Idade não informada')}</span>
+              <span>{formatPetAgeDisplay(pet)}</span>
               {pet.weight && (
                 <>
                   <span>•</span>
@@ -460,7 +443,9 @@ export default function PetProfilePage() {
               </div>
 
               <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200 dark:border-[#313335] p-4 text-center shadow-xs">
-                <PawPrint size={20} className="mx-auto mb-1.5 text-neutral-400" />
+                <div className="flex justify-center mb-1.5">
+                  <SpeciesIcon speciesId={pet.species} size={20} className="text-orange-500" />
+                </div>
                 <p className="text-sm sm:text-base font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">
                   {speciesInfo.label}
                 </p>
@@ -470,7 +455,7 @@ export default function PetProfilePage() {
               <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200 dark:border-[#313335] p-4 text-center shadow-xs">
                 <Calendar size={20} className="mx-auto mb-1.5 text-blue-500" />
                 <p className="text-sm sm:text-base font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">
-                  {pet.birthDate ? getAge(pet.birthDate) : (pet.approximateAge || '—')}
+                  {formatPetAgeDisplay(pet)}
                 </p>
                 <p className="text-xs text-neutral-500 dark:text-[#8E918F]">Idade</p>
               </div>
@@ -479,7 +464,7 @@ export default function PetProfilePage() {
             {/* General Info Card */}
             <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200 dark:border-[#313335] p-5 space-y-3 shadow-xs">
               <h3 className="font-bold text-base text-neutral-900 dark:text-[#E3E3E3] flex items-center gap-2 border-b border-neutral-100 dark:border-[#313335] pb-3">
-                <PawPrint size={18} className="text-orange-500" /> Informações Gerais
+                <SpeciesIcon speciesId={pet.species} size={18} className="text-orange-500" /> Informações Gerais
               </h3>
               {[
                 { label: 'Nome', value: pet.name },
@@ -489,7 +474,7 @@ export default function PetProfilePage() {
                 { 
                   label: 'Data de Nascimento', 
                   value: pet.birthDate 
-                    ? `${new Date(pet.birthDate).toLocaleDateString('pt-BR')} (${getAge(pet.birthDate)})` 
+                    ? `${new Date(pet.birthDate).toLocaleDateString('pt-BR')} (${formatPetAgeDisplay(pet)})` 
                     : (pet.approximateAge || 'Não informada') 
                 },
                 { label: 'Peso', value: pet.weight ? `${pet.weight} kg` : 'Não informado' },

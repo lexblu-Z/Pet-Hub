@@ -97,7 +97,7 @@ export default function EstablishmentProductsPage() {
     setDescription('');
     setCategory('Rações e Alimentos');
     setPrice('');
-    setStock('10');
+    setStock('');
     setPhoto('');
     setModalOpen(true);
   };
@@ -336,9 +336,12 @@ export default function EstablishmentProductsPage() {
               <Input
                 label="Quantidade em Estoque *"
                 type="number"
+                min="0"
+                step="1"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                placeholder="15"
+                onWheel={(e) => (e.target as HTMLElement).blur()}
+                placeholder="Ex: 50"
                 required
               />
             </div>

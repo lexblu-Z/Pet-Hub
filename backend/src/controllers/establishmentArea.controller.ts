@@ -23,6 +23,25 @@ async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply)
   return user;
 }
 
+export const ALLOWED_EMPLOYEE_ROLES = [
+  'Funcionário',
+  'Banhista',
+  'Tosador',
+  'Atendente',
+  'Gerente',
+  'Veterinário',
+  'Adestrador',
+  'Outro',
+] as const;
+
+export function findAllowedRole(val: string): string | null {
+  const trimmed = val.trim();
+  const found = ALLOWED_EMPLOYEE_ROLES.find(
+    (r) => r.toLowerCase() === trimmed.toLowerCase()
+  );
+  return found || null;
+}
+
 export const establishmentAreaController = {
   // =========================================================================
   // 1. DASHBOARD
@@ -81,7 +100,45 @@ export const establishmentAreaController = {
     });
 
     const productRevenue = orderItems.reduce((sum, item) => sum + (item.priceAtTime * item.quantity), 0);
-    const totalRevenue = appointmentRevenue + productRevenue;
+
+    // Cancelled / Refunded orders in this period
+    const cancelledOrderItems = await prisma.orderItem.findMany({
+      where: {
+        establishmentId: user.id,
+        order: {
+          status: OrderStatus.CANCELLED,
+          createdAt: { gte: startDate },
+        },
+      },
+      include: {
+        order: {
+          select: {
+            id: true,
+            totalAmount: true,
+            refundStatus: true,
+            refundAmount: true,
+            refundedAt: true,
+            refundReason: true,
+          },
+        },
+      },
+    });
+
+    const cancelledOrdersMap = new Map<string, any>();
+    cancelledOrderItems.forEach(item => {
+      if (item.order && !cancelledOrdersMap.has(item.order.id)) {
+        cancelledOrdersMap.set(item.order.id, item.order);
+      }
+    });
+
+    const cancelledOrdersList = Array.from(cancelledOrdersMap.values());
+    const totalCancelledAmount = cancelledOrdersList.reduce((sum, ord) => sum + (ord.totalAmount || 0), 0);
+    const totalRefundedAmount = cancelledOrdersList.reduce((sum, ord) => sum + (ord.refundAmount || 0), 0);
+
+    const grossProductRevenue = productRevenue + totalRefundedAmount;
+    const grossRevenue = appointmentRevenue + grossProductRevenue;
+    const netRevenue = grossRevenue - totalRefundedAmount;
+    const totalRevenue = netRevenue;
 
     // 3. Appointments count breakdown
     const todayStart = new Date();
@@ -229,9 +286,26 @@ export const establishmentAreaController = {
 
     return reply.send({
       hasData,
-      revenue: totalRevenue,
+      revenue: netRevenue,
+      grossRevenue,
+      netRevenue,
+      totalRefundedAmount,
+      totalCancelledAmount,
+      cancelledOrdersCount: cancelledOrdersList.length,
       appointmentRevenue,
       productRevenue,
+      cancellations: {
+        ordersCount: cancelledOrdersList.length,
+        totalCancelledAmount,
+        totalRefundedAmount,
+      },
+      financialSummary: {
+        grossRevenue,
+        refundedAmount: totalRefundedAmount,
+        netRevenue,
+        appointmentRevenue,
+        productRevenue,
+      },
       appointments: {
         today: appointmentsToday,
         upcoming: upcomingAppointments,
@@ -241,6 +315,7 @@ export const establishmentAreaController = {
       orders: {
         pending: pendingOrdersCount,
         completed: completedOrdersCount,
+        cancelled: cancelledOrdersList.length,
       },
       clientsCount: uniqueClientIds.size,
       petsCount: uniquePets.length,
@@ -610,7 +685,13 @@ export const establishmentAreaController = {
 
     const schema = z.object({
       name: z.string().min(2, 'Nome é obrigatório'),
-      role: z.string().min(2, 'Função é obrigatória'),
+      role: z.string().min(2, 'Função / cargo é obrigatório').refine(
+        (val) => findAllowedRole(val) !== null,
+        {
+          message:
+            'Cargo ou função inválida. Opções permitidas: Funcionário, Banhista, Tosador, Atendente, Gerente, Veterinário, Adestrador ou Outro.',
+        }
+      ),
       phone: z.string().optional(),
       description: z.string().optional(),
       avatar: z.string().optional(),
@@ -619,28 +700,37 @@ export const establishmentAreaController = {
       serviceIds: z.array(z.string()).optional(),
     });
 
-    const data = schema.parse(request.body);
+    try {
+      const data = schema.parse(request.body);
+      const canonicalRole = findAllowedRole(data.role) || data.role.trim();
 
-    const employee = await prisma.employee.create({
-      data: {
-        establishmentId: user.id,
-        name: data.name,
-        role: data.role,
-        phone: data.phone,
-        description: data.description,
-        avatar: data.avatar,
-        active: data.active,
-        workingDays: data.workingDays,
-        services: data.serviceIds && data.serviceIds.length > 0 ? {
-          create: data.serviceIds.map(srvId => ({ serviceId: srvId }))
-        } : undefined,
-      },
-      include: {
-        services: { include: { service: true } }
+      const employee = await prisma.employee.create({
+        data: {
+          establishmentId: user.id,
+          name: data.name.trim(),
+          role: canonicalRole,
+          phone: data.phone?.trim() || null,
+          description: data.description?.trim() || null,
+          avatar: data.avatar || null,
+          active: data.active,
+          workingDays: data.workingDays,
+          services: data.serviceIds && data.serviceIds.length > 0 ? {
+            create: data.serviceIds.map(srvId => ({ serviceId: srvId }))
+          } : undefined,
+        },
+        include: {
+          services: { include: { service: true } }
+        }
+      });
+
+      return reply.status(201).send(employee);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
       }
-    });
-
-    return reply.status(201).send(employee);
+      request.log.error(error, 'Erro ao criar funcionário');
+      return reply.status(500).send({ error: 'Erro interno ao cadastrar funcionário.' });
+    }
   },
 
   async updateEmployee(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
@@ -655,8 +745,14 @@ export const establishmentAreaController = {
     if (!existing) return reply.status(404).send({ error: 'Funcionário não encontrado ou acesso negado.' });
 
     const schema = z.object({
-      name: z.string().min(2).optional(),
-      role: z.string().min(2).optional(),
+      name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').optional(),
+      role: z.string().min(2, 'Função / cargo é obrigatório').refine(
+        (val) => findAllowedRole(val) !== null,
+        {
+          message:
+            'Cargo ou função inválida. Opções permitidas: Funcionário, Banhista, Tosador, Atendente, Gerente, Veterinário, Adestrador ou Outro.',
+        }
+      ).optional(),
       phone: z.string().optional(),
       description: z.string().optional(),
       avatar: z.string().optional(),
@@ -665,32 +761,42 @@ export const establishmentAreaController = {
       serviceIds: z.array(z.string()).optional(),
     });
 
-    const data = schema.parse(request.body);
+    try {
+      const data = schema.parse(request.body);
 
-    if (data.serviceIds !== undefined) {
-      await prisma.employeeService.deleteMany({ where: { employeeId: id } });
-    }
-
-    const updated = await prisma.employee.update({
-      where: { id },
-      data: {
-        name: data.name,
-        role: data.role,
-        phone: data.phone,
-        description: data.description,
-        avatar: data.avatar,
-        active: data.active,
-        workingDays: data.workingDays,
-        services: data.serviceIds && data.serviceIds.length > 0 ? {
-          create: data.serviceIds.map(srvId => ({ serviceId: srvId }))
-        } : undefined,
-      },
-      include: {
-        services: { include: { service: true } }
+      if (data.serviceIds !== undefined) {
+        await prisma.employeeService.deleteMany({ where: { employeeId: id } });
       }
-    });
 
-    return reply.send(updated);
+      const canonicalRole = data.role ? (findAllowedRole(data.role) || data.role.trim()) : undefined;
+
+      const updated = await prisma.employee.update({
+        where: { id },
+        data: {
+          name: data.name !== undefined ? data.name.trim() : undefined,
+          role: canonicalRole,
+          phone: data.phone !== undefined ? (data.phone?.trim() || null) : undefined,
+          description: data.description !== undefined ? (data.description?.trim() || null) : undefined,
+          avatar: data.avatar !== undefined ? data.avatar : undefined,
+          active: data.active !== undefined ? data.active : undefined,
+          workingDays: data.workingDays !== undefined ? data.workingDays : undefined,
+          services: data.serviceIds && data.serviceIds.length > 0 ? {
+            create: data.serviceIds.map(srvId => ({ serviceId: srvId }))
+          } : undefined,
+        },
+        include: {
+          services: { include: { service: true } }
+        }
+      });
+
+      return reply.send(updated);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: error.issues[0]?.message || 'Dados inválidos.' });
+      }
+      request.log.error(error, 'Erro ao atualizar funcionário');
+      return reply.status(500).send({ error: 'Erro interno ao atualizar funcionário.' });
+    }
   },
 
   async deleteEmployee(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {

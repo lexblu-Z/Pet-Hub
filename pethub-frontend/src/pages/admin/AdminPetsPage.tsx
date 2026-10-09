@@ -15,6 +15,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/services/api';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { formatPetAgeDisplay } from '@/utils/speciesAgeRules';
 
 export default function AdminPetsPage() {
   const [pets, setPets] = useState<any[]>([]);
@@ -250,7 +252,10 @@ export default function AdminPetsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-neutral-700 dark:text-neutral-300">
-                      <span className="font-medium capitalize">{pet.species}</span>
+                      <span className="font-medium capitalize flex items-center gap-1.5">
+                        <SpeciesIcon speciesId={pet.species} size={15} className="text-orange-500 shrink-0" />
+                        {pet.species}
+                      </span>
                       <span className="text-neutral-400 block text-[11px]">{pet.breed || 'SRD'}</span>
                     </td>
                     <td className="px-5 py-3.5 text-xs">
@@ -260,7 +265,7 @@ export default function AdminPetsPage() {
                       <span className="text-neutral-400 block text-[11px]">{pet.tutor?.email || ''}</span>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-neutral-600 dark:text-neutral-400">
-                      {pet.weight ? `${pet.weight} kg` : '-'} · {pet.approximateAge || '-'}
+                      {pet.weight ? `${pet.weight} kg` : '-'} · {formatPetAgeDisplay(pet)}
                     </td>
                     <td className="px-5 py-3.5 text-xs">
                       {pet.isNeutered ? (
@@ -368,7 +373,7 @@ export default function AdminPetsPage() {
                 <div className="p-3 bg-neutral-50 dark:bg-[#131314] rounded-xl border border-neutral-100 dark:border-[#313335]">
                   <span className="text-neutral-400 block text-[10px] uppercase">Idade / Nascimento</span>
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200 text-xs">
-                    {selectedPet.approximateAge || (selectedPet.birthDate ? new Date(selectedPet.birthDate).toLocaleDateString('pt-BR') : 'Não informado')}
+                    {formatPetAgeDisplay(selectedPet)}
                   </span>
                 </div>
                 <div className="p-3 bg-neutral-50 dark:bg-[#131314] rounded-xl border border-neutral-100 dark:border-[#313335]">

@@ -13,6 +13,9 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { useAuthStore } from '@/store/authStore';
+import { api } from '@/services/api';
+import { useToast } from '@/store/toastStore';
 
 interface PlanPixModalProps {
   isOpen: boolean;
@@ -32,6 +35,8 @@ export const PlanPixModal: React.FC<PlanPixModalProps> = ({
   plan,
   onSuccess,
 }) => {
+  const { isAuthenticated } = useAuthStore();
+  const toast = useToast();
   const [timeLeft, setTimeLeft] = useState<number>(600); // 10 minutes in seconds
   const [txId, setTxId] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
@@ -73,7 +78,7 @@ export const PlanPixModal: React.FC<PlanPixModalProps> = ({
     return () => clearInterval(interval);
   }, [isOpen, isConfirmed, timeLeft]);
 
-  if (!isOpen || !plan) return null;
+  if (!isOpen || !plan || !isAuthenticated) return null;
 
   const isExpired = timeLeft <= 0;
   const minutes = Math.floor(timeLeft / 60);
@@ -95,15 +100,26 @@ export const PlanPixModal: React.FC<PlanPixModalProps> = ({
     }
   };
 
-  const handleSimulatePayment = () => {
+  const handleSimulatePayment = async () => {
+    if (!isAuthenticated) {
+      toast.error('Autenticação necessária para simular contratação.');
+      onClose();
+      return;
+    }
+
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      await api.post('/plans/simulate', { planId: plan.id });
       setIsConfirmed(true);
       if (onSuccess) {
         onSuccess(plan.id);
       }
-    }, 1200);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Erro ao validar simulação de plano no servidor.';
+      toast.error(msg);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (

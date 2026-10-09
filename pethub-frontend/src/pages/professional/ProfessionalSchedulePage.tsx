@@ -17,16 +17,16 @@ import {
   CalendarDays,
   CalendarCheck2,
   SlidersHorizontal,
-  ArrowRight,
-  ArrowLeft,
   Calendar,
-  X
+  X,
+  Flag
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
+import { ReportModal } from '@/components/shared/ReportModal';
 import { 
   getBrasiliaToday, 
   formatBrasiliaDate, 
@@ -103,6 +103,7 @@ export default function ProfessionalSchedulePage() {
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
   const [showGoogleCard, setShowGoogleCard] = useState(false);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const [reportModalData, setReportModalData] = useState<{ tutorId: string; tutorName: string; appointmentId: string } | null>(null);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -726,7 +727,21 @@ export default function ProfessionalSchedulePage() {
                   </div>
 
                   {/* Ações do Profissional */}
-                  <div className="flex items-center gap-2 justify-end border-t border-neutral-100 dark:border-[#313335] pt-3 mt-4">
+                  <div className="flex items-center gap-2 justify-end border-t border-neutral-100 dark:border-[#313335] pt-3 mt-4 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setReportModalData({
+                        tutorId: apt.tutorId,
+                        tutorName: apt.tutorName,
+                        appointmentId: apt.id,
+                      })}
+                      className="text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 font-medium px-2 py-1 transition-colors cursor-pointer inline-flex items-center gap-1"
+                      title="Denunciar este tutor"
+                    >
+                      <Flag size={13} />
+                      <span className="hidden sm:inline">Denunciar Tutor</span>
+                    </button>
+
                     <button
                       onClick={() => setSelectedApt(apt)}
                       className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-700 font-bold px-3 py-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
@@ -943,6 +958,18 @@ export default function ProfessionalSchedulePage() {
                   </Button>
                 )}
                 <button
+                  type="button"
+                  onClick={() => setReportModalData({
+                    tutorId: selectedApt.tutorId,
+                    tutorName: selectedApt.tutorName,
+                    appointmentId: selectedApt.id,
+                  })}
+                  className="w-full py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Flag size={13} />
+                  <span>Denunciar Tutor</span>
+                </button>
+                <button
                   onClick={() => setSelectedApt(null)}
                   className="w-full py-2.5 rounded-xl border border-neutral-200 dark:border-[#313335] text-xs font-bold text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
                 >
@@ -952,6 +979,19 @@ export default function ProfessionalSchedulePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModalData && (
+        <ReportModal
+          isOpen={!!reportModalData}
+          onClose={() => setReportModalData(null)}
+          targetType="USER"
+          reportedUserId={reportModalData.tutorId}
+          targetName={reportModalData.tutorName}
+          contextType="APPOINTMENT"
+          contextId={reportModalData.appointmentId}
+        />
       )}
     </div>
   );

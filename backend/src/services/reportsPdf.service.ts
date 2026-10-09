@@ -43,26 +43,24 @@ function formatNowBr(): string {
 
 export const reportsPdfService = {
   async generateReportPdf(metadata: ReportPdfMetadata, reply: FastifyReply) {
-    const isLandscape = true;
+    // Official standard: A4 Portrait (595.28 x 841.89 pt), margins: 45pt, printable width: 505pt
     const doc = new PDFDocument({
       size: 'A4',
-      layout: isLandscape ? 'landscape' : 'portrait',
-      margin: 35,
+      layout: 'portrait',
+      margin: 45,
       bufferPages: true,
     });
 
     const chunks: Buffer[] = [];
     doc.on('data', (chunk) => chunks.push(chunk));
 
-    const PAGE_WIDTH = isLandscape ? 841.89 : 595.28;
-    const PAGE_HEIGHT = isLandscape ? 595.28 : 841.89;
-    const MARGIN = 35;
-    const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2; // ~771.89
-    const BOTTOM_LIMIT = PAGE_HEIGHT - 45;
+    const PAGE_X = 45;
+    const PAGE_WIDTH = 505;
+    const BOTTOM_LIMIT = 730;
 
     const logoPath = getOfficialLogoPath();
     const generatedAtStr = formatNowBr();
-    const periodStr = `${metadata.startDateStr} até ${metadata.endDateStr}`;
+    const periodStr = `${metadata.startDateStr} a ${metadata.endDateStr}`;
 
     const titleMap: Record<string, string> = {
       services: 'RELATÓRIO GERENCIAL DE SERVIÇOS',
@@ -72,151 +70,109 @@ export const reportsPdfService = {
     };
     const reportTitle = titleMap[metadata.reportType] || 'RELATÓRIO GERENCIAL';
 
-    // Helper: Draw Main Header (Page 1)
+    // 1. Helper: Draw Main Header (Page 1)
     const drawMainHeader = () => {
-      const headerHeight = 72;
-      doc.roundedRect(MARGIN, MARGIN, CONTENT_WIDTH, headerHeight, 6).fill('#09090b');
+      doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 68, 6).fill('#0f172a');
 
+      // Transparent Logo
       if (logoPath) {
         try {
-          doc.image(logoPath, MARGIN + 12, MARGIN + 16, { fit: [140, 40] });
+          doc.image(logoPath, PAGE_X + 8, 55, { fit: [102, 36] });
         } catch {
-          doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text('PetHub', MARGIN + 14, MARGIN + 26);
+          doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
         }
       } else {
-        doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text('PetHub', MARGIN + 14, MARGIN + 26);
+        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
       }
 
-      // Center title and entity
-      const centerStartX = MARGIN + 165;
-      doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text(
-        `PAINEL OFICIAL DE CONTROLE | ${metadata.scope}`,
-        centerStartX,
-        MARGIN + 14
-      );
-
-      doc.fontSize(13).font('Helvetica-Bold').fillColor('#ffffff').text(
-        reportTitle,
-        centerStartX,
-        MARGIN + 27
-      );
-
-      doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8').text(
-        `Titular: ${metadata.entityName}${metadata.documentNumber ? ` • ${metadata.documentNumber}` : ''}`,
-        centerStartX,
-        MARGIN + 46
-      );
+      // Center title and subtag
+      const scopeLabel = metadata.scope === 'ESTABELECIMENTO' ? 'PAINEL DO ESTABELECIMENTO' : 'PAINEL DO PROFISSIONAL';
+      doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text(scopeLabel, PAGE_X + 122, 56);
+      doc.fontSize(10.5).font('Helvetica-Bold').fillColor('#ffffff').text(reportTitle, PAGE_X + 122, 68, { width: 225, lineBreak: false, ellipsis: true });
+      const entityStr = `Titular: ${metadata.entityName}${metadata.documentNumber ? ` • ${metadata.documentNumber}` : ''}`;
+      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(entityStr, PAGE_X + 122, 82, { width: 225, lineBreak: false, ellipsis: true });
 
       // Right-aligned metadata
-      const rightX = MARGIN + CONTENT_WIDTH - 210;
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#f8fafc').text(
-        `Período: ${periodStr}`,
-        rightX,
-        MARGIN + 14,
-        { width: 198, align: 'right' }
-      );
-
-      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(
-        `Emitido em: ${generatedAtStr}`,
-        rightX,
-        MARGIN + 29,
-        { width: 198, align: 'right' }
-      );
-
-      doc.fontSize(7).font('Helvetica-Bold').fillColor('#f97316').text(
-        'PetHub Enterprise Analytics',
-        rightX,
-        MARGIN + 45,
-        { width: 198, align: 'right' }
-      );
+      doc.fontSize(8).font('Helvetica').fillColor('#cbd5e1').text(`Período: ${periodStr}`, PAGE_X + 345, 57, { align: 'right', width: 150 });
+      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado em: ${generatedAtStr}`, PAGE_X + 345, 71, { align: 'right', width: 150 });
+      doc.fontSize(7).font('Helvetica').fillColor('#f97316').text('Documento Oficial PetHub', PAGE_X + 345, 84, { align: 'right', width: 150 });
     };
 
-    // Helper: Subsequent page header
+    // 2. Helper: Subsequent page compact header
     const drawSubsequentHeader = () => {
-      const headerHeight = 28;
-      doc.roundedRect(MARGIN, MARGIN, CONTENT_WIDTH, headerHeight, 4).fill('#09090b');
-
-      if (logoPath) {
-        try {
-          doc.image(logoPath, MARGIN + 8, MARGIN + 5, { fit: [65, 18] });
-        } catch {
-          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#ffffff').text('PetHub', MARGIN + 8, MARGIN + 8);
-        }
-      } else {
-        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#ffffff').text('PetHub', MARGIN + 8, MARGIN + 8);
-      }
-
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff').text(
-        `|  ${reportTitle}  •  ${metadata.entityName}  (${periodStr})`,
-        MARGIN + 80,
-        MARGIN + 9
-      );
-
-      doc.fontSize(7).font('Helvetica').fillColor('#94a3b8').text(
-        `Emitido em: ${generatedAtStr}`,
-        MARGIN + CONTENT_WIDTH - 200,
-        MARGIN + 9,
-        { width: 190, align: 'right' }
-      );
+      doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 26, 4).fill('#0f172a');
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#f97316').text('PetHub', PAGE_X + 10, 53);
+      doc.fontSize(8).font('Helvetica').fillColor('#ffffff').text(`|  ${reportTitle} (${periodStr})`, PAGE_X + 45, 53);
+      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado: ${generatedAtStr}`, PAGE_X + 340, 53, { align: 'right', width: 155 });
     };
 
-    // Helper: Draw Summary KPIs (Page 1 only)
+    // 3. Helper: Draw Summary KPIs (Page 1 only)
     const drawSummaryCards = (startY: number): number => {
       const cards = metadata.summaryCards;
       if (!cards || cards.length === 0) return startY;
 
-      const cardCount = Math.min(cards.length, 5);
-      const gap = 8;
-      const totalGaps = (cardCount - 1) * gap;
-      const cardWidth = (CONTENT_WIDTH - totalGaps) / cardCount;
-      const cardHeight = 44;
+      const cardHeight = cards.length > 2 ? 68 : 50;
+      doc.roundedRect(PAGE_X, startY, PAGE_WIDTH, cardHeight, 5).fill('#f8fafc');
+      doc.roundedRect(PAGE_X, startY, PAGE_WIDTH, cardHeight, 5).stroke('#e2e8f0');
 
-      for (let i = 0; i < cardCount; i++) {
-        const c = cards[i];
-        const cardX = MARGIN + i * (cardWidth + gap);
+      doc.fillColor('#0f172a').fontSize(10).font('Helvetica-Bold').text('CONSOLIDAÇÃO OPERACIONAL OFICIAL', PAGE_X + 12, startY + 10);
 
-        // Card background and border
-        doc.roundedRect(cardX, startY, cardWidth, cardHeight, 4).fill('#f8fafc');
-        doc.roundedRect(cardX, startY, cardWidth, cardHeight, 4).lineWidth(0.8).stroke('#e2e8f0');
+      const col1X = PAGE_X + 12;
+      const col2X = PAGE_X + 260;
 
-        // Top accent line
-        doc.rect(cardX, startY, cardWidth, 2.5).fill('#f97316');
+      cards.forEach((c, idx) => {
+        const isSecondCol = idx % 2 === 1;
+        const rowIdx = Math.floor(idx / 2);
+        const posX = isSecondCol ? col2X : col1X;
+        const posY = startY + 28 + (rowIdx * 16);
 
-        // Text
-        doc.fontSize(7).font('Helvetica-Bold').fillColor('#64748b').text(
-          c.label.toUpperCase(),
-          cardX + 8,
-          startY + 7,
-          { width: cardWidth - 16, align: 'left' }
-        );
-
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#09090b').text(
-          c.value,
-          cardX + 8,
-          startY + 20,
-          { width: cardWidth - 16, align: 'left' }
-        );
-      }
+        doc.fontSize(8.5).font('Helvetica').fillColor('#475569').text(`${c.label}:`, posX, posY);
+        const labelWidth = doc.widthOfString(`${c.label}: `);
+        doc.font('Helvetica-Bold').fillColor('#0f172a').text(c.value, posX + labelWidth + 4, posY);
+      });
 
       return startY + cardHeight + 14;
     };
 
-    // Helper: Draw Table Headers
+    // 4. Normalize Column Widths so sum is strictly 505pt
+    const totalInputWidth = metadata.tableHeaders.reduce((s, h) => s + h.width, 0);
+    const normalizedHeaders = metadata.tableHeaders.map((h, i, arr) => {
+      if (i === arr.length - 1) {
+        const prevSum = arr.slice(0, i).reduce((s, prev) => s + Math.round((prev.width / totalInputWidth) * PAGE_WIDTH), 0);
+        return { ...h, width: PAGE_WIDTH - prevSum };
+      }
+      return { ...h, width: Math.round((h.width / totalInputWidth) * PAGE_WIDTH) };
+    });
+
+    // Compute divider X positions
+    const dividers: number[] = [];
+    let curDivX = PAGE_X;
+    for (let i = 0; i < normalizedHeaders.length - 1; i++) {
+      curDivX += normalizedHeaders[i].width;
+      dividers.push(curDivX);
+    }
+
+    // 5. Helper: Draw Table Headers
     const drawTableHead = (currentY: number) => {
       const rowHeight = 22;
-      doc.rect(MARGIN, currentY, CONTENT_WIDTH, rowHeight).fill('#1e293b');
+      doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).fill('#1e293b');
+      doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).stroke('#0f172a');
 
-      let currentX = MARGIN;
+      dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).stroke('#334155'));
+
+      let currentX = PAGE_X;
       doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#ffffff');
 
-      for (const col of metadata.tableHeaders) {
+      for (const col of normalizedHeaders) {
         const align = col.align || 'left';
         const textX = align === 'right' ? currentX : currentX + 6;
         const textW = align === 'right' ? col.width - 6 : col.width - 12;
 
-        doc.text(col.label.toUpperCase(), textX, currentY + 6.5, {
+        doc.text(col.label.toUpperCase(), textX, currentY + 7, {
           width: textW,
           align: align,
+          lineBreak: false,
+          ellipsis: true,
         });
         currentX += col.width;
       }
@@ -226,65 +182,66 @@ export const reportsPdfService = {
 
     // --- Page 1 Render ---
     drawMainHeader();
-    let currentY = MARGIN + 72 + 12;
+    let currentY = 125;
 
     currentY = drawSummaryCards(currentY);
+
+    // Section Title
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Detalhamento de Registros Operacionais', PAGE_X, currentY);
+    currentY += 16;
+
     currentY = drawTableHead(currentY);
 
     // --- Render Rows ---
     const rows = metadata.tableRows;
     if (rows.length === 0) {
-      doc.rect(MARGIN, currentY, CONTENT_WIDTH, 36).fill('#ffffff');
-      doc.rect(MARGIN, currentY, CONTENT_WIDTH, 36).stroke('#e2e8f0');
-      doc.fontSize(8.5).font('Helvetica').fillColor('#64748b').text(
+      doc.roundedRect(PAGE_X, currentY, PAGE_WIDTH, 30, 3).fill('#f8fafc');
+      doc.roundedRect(PAGE_X, currentY, PAGE_WIDTH, 30, 3).stroke('#e2e8f0');
+      doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8').text(
         'Nenhum registro localizado para os filtros e período selecionados.',
-        MARGIN,
-        currentY + 13,
-        { width: CONTENT_WIDTH, align: 'center' }
+        PAGE_X,
+        currentY + 10,
+        { width: PAGE_WIDTH, align: 'center' }
       );
       currentY += 36;
     } else {
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
 
-        // 1. Calculate row height dynamically based on longest text column
-        let maxColHeight = 16;
+        // 1. Calculate row height dynamically based on longest cell text
+        let maxTextHeight = 10;
         for (let c = 0; c < row.length; c++) {
-          const colDef = metadata.tableHeaders[c];
-          if (!colDef) continue;
+          const col = normalizedHeaders[c];
+          if (!col) continue;
           const text = row[c]?.text || '-';
-          doc.font('Helvetica').fontSize(7.5);
-          const h = doc.heightOfString(text, {
-            width: colDef.width - 12,
-          });
-          if (h + 8 > maxColHeight) {
-            maxColHeight = h + 8;
-          }
+          doc.fontSize(7.5).font('Helvetica');
+          const h = doc.heightOfString(text, { width: col.width - 10 });
+          if (h > maxTextHeight) maxTextHeight = h;
         }
-        const rowHeight = Math.max(18, Math.min(maxColHeight, 60)); // bound between 18 and 60pt
+        const rowHeight = Math.max(20, Math.ceil(maxTextHeight + 7));
 
         // 2. Check if page break is required
         if (currentY + rowHeight > BOTTOM_LIMIT) {
           doc.addPage();
           drawSubsequentHeader();
-          currentY = MARGIN + 28 + 10;
-          currentY = drawTableHead(currentY);
+          currentY = drawTableHead(80);
         }
 
-        // 3. Row background (zebra stripes)
+        // 3. Row background (zebra striping) & borders
         const isEven = r % 2 === 0;
-        doc.rect(MARGIN, currentY, CONTENT_WIDTH, rowHeight).fill(isEven ? '#ffffff' : '#f8fafc');
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).fill(isEven ? '#ffffff' : '#f8fafc');
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
 
-        // Row bottom divider
-        doc.moveTo(MARGIN, currentY + rowHeight)
-          .lineTo(MARGIN + CONTENT_WIDTH, currentY + rowHeight)
-          .lineWidth(0.5)
-          .stroke('#e2e8f0');
+        dividers.forEach((x) => {
+          doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).stroke('#e2e8f0');
+        });
 
         // 4. Draw columns text
-        let cellX = MARGIN;
+        let cellX = PAGE_X;
+        const textY = currentY + 5.5;
+
         for (let c = 0; c < row.length; c++) {
-          const colDef = metadata.tableHeaders[c];
+          const colDef = normalizedHeaders[c];
           if (!colDef) continue;
 
           const cellData = row[c] || { text: '-' };
@@ -299,7 +256,7 @@ export const reportsPdfService = {
           const textX = align === 'right' ? cellX : cellX + 6;
           const textW = align === 'right' ? colDef.width - 6 : colDef.width - 12;
 
-          doc.text(cellData.text, textX, currentY + 5, {
+          doc.text(cellData.text, textX, textY, {
             width: textW,
             align: align,
           });
@@ -319,25 +276,16 @@ export const reportsPdfService = {
       doc.switchToPage(i);
       doc.page.margins.bottom = 0;
 
-      // Bottom divider line
-      const footerY = PAGE_HEIGHT - 28;
-      doc.moveTo(MARGIN, footerY)
-        .lineTo(MARGIN + CONTENT_WIDTH, footerY)
-        .lineWidth(0.6)
-        .stroke('#cbd5e1');
+      const footerLabel = metadata.scope === 'ESTABELECIMENTO'
+        ? 'PetHub Painel do Estabelecimento'
+        : 'PetHub Painel do Profissional';
 
-      doc.fontSize(7).font('Helvetica').fillColor('#64748b').text(
-        'PetHub Gestão Inteligente • Documento emitido eletronicamente para fins de controle e conformidade operacional.',
-        MARGIN,
-        footerY + 6,
-        { width: CONTENT_WIDTH - 120, align: 'left', lineBreak: false }
-      );
-
-      doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#09090b').text(
-        `Página ${i + 1} de ${totalPages}`,
-        MARGIN + CONTENT_WIDTH - 110,
-        footerY + 6,
-        { width: 110, align: 'right', lineBreak: false }
+      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8');
+      doc.text(
+        `${footerLabel} — Página ${i + 1} de ${totalPages} — Emitido em ${generatedAtStr}`,
+        PAGE_X,
+        785,
+        { align: 'center', width: PAGE_WIDTH, lineBreak: false }
       );
     }
 

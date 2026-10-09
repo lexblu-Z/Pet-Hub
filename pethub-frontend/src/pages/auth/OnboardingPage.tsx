@@ -17,19 +17,8 @@ import {
   normalizeSpecies, 
   getSpeciesInfo 
 } from '@/utils/species';
-
-const APPROXIMATE_AGE_OPTIONS = [
-  'Filhote (menos de 6 meses)',
-  'Jovem (6 meses a 1 ano)',
-  'Aproximadamente 1 ano',
-  'Aproximadamente 2 anos',
-  'Aproximadamente 3 anos',
-  'Aproximadamente 4 anos',
-  'Aproximadamente 5 anos',
-  'Adulto (6 a 8 anos)',
-  'Sênior (9 a 12 anos)',
-  'Idoso (mais de 12 anos)',
-];
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { getApproximateAgeOptions } from '@/utils/speciesAgeRules';
 
 interface PetDraft {
   name: string;
@@ -57,7 +46,7 @@ const createInitialPet = (): PetDraft => ({
   birthDate: '',
   approximateAge: '',
   weight: '',
-  weightUnknown: true,
+  weightUnknown: false,
   isNeutered: null,
   vaccinationStatus: 'UNKNOWN',
   specialCareNotes: '',
@@ -624,7 +613,7 @@ export default function OnboardingPage() {
                           className="w-full h-[46px] px-3.5 bg-neutral-800/90 border border-white/15 rounded-xl flex items-center justify-between text-white hover:border-orange-400 transition-all text-left text-sm cursor-pointer"
                         >
                           <span className="flex items-center gap-2 font-medium truncate">
-                            <PawPrint size={16} className="text-orange-400 shrink-0" />
+                            <SpeciesIcon speciesId={currentPet.species} size={18} className="text-orange-400 shrink-0" />
                             <span className="truncate">{getSpeciesInfo(currentPet.species).label}</span>
                           </span>
                           <div className="shrink-0 ml-2 text-white/50 pointer-events-none">
@@ -654,7 +643,7 @@ export default function OnboardingPage() {
                                       }`}
                                     >
                                       <span className="flex items-center gap-2 truncate">
-                                        <PawPrint size={14} className="text-orange-400/80 shrink-0" />
+                                        <SpeciesIcon speciesId={opt.id} size={16} className={isSelected ? "text-orange-400 shrink-0" : "text-orange-400/80 shrink-0"} />
                                         <span className="truncate">{opt.label}</span>
                                       </span>
                                       {isSelected && <Check size={16} className="text-orange-400 shrink-0" />}
@@ -845,7 +834,7 @@ export default function OnboardingPage() {
                             className="w-full bg-neutral-800 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm cursor-pointer"
                           >
                             <option value="">Selecione a faixa etária aproximada...</option>
-                            {APPROXIMATE_AGE_OPTIONS.map((opt) => (
+                            {getApproximateAgeOptions(currentPet.species).map((opt) => (
                               <option key={opt} value={opt}>
                                 {opt}
                               </option>
@@ -871,31 +860,36 @@ export default function OnboardingPage() {
                         </label>
                         <button
                           type="button"
-                          onClick={() => updateCurrentPet({ weightUnknown: !currentPet.weightUnknown, weight: '' })}
-                          className={`text-xs font-semibold transition-colors cursor-pointer ${
-                            currentPet.weightUnknown ? 'text-orange-400' : 'text-white/60 hover:text-white'
+                          onClick={() => {
+                            const nextUnknown = !currentPet.weightUnknown;
+                            updateCurrentPet({ 
+                              weightUnknown: nextUnknown, 
+                              weight: nextUnknown ? '' : currentPet.weight 
+                            });
+                          }}
+                          className={`text-xs font-semibold transition-colors cursor-pointer px-2 py-0.5 rounded-lg border ${
+                            currentPet.weightUnknown 
+                              ? 'text-orange-400 border-orange-500/50 bg-orange-500/10' 
+                              : 'text-white/60 border-white/10 hover:text-white hover:border-white/20'
                           }`}
                         >
-                          {currentPet.weightUnknown ? '✓ Não sei o peso' : 'Não sei o peso'}
+                          {currentPet.weightUnknown ? '✓ Não sei o peso (selecionado)' : 'Não sei o peso'}
                         </button>
                       </div>
 
                       {!currentPet.weightUnknown ? (
                         <div className="relative">
                           <input
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            max="300"
+                            type="text"
                             value={currentPet.weight}
                             onChange={(e) => updateCurrentPet({ weight: e.target.value })}
-                            placeholder="Ex: 8.5"
+                            placeholder="Ex: 10.5"
                             className="w-full bg-neutral-800/90 border border-white/15 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm"
                           />
                         </div>
                       ) : (
                         <p className="text-xs text-white/60 bg-white/5 border border-white/10 p-3 rounded-xl">
-                          Peso marcado como desconhecido. Poderá ser pesado na balança da clínica ou pet shop.
+                          Peso marcado como não informado. Poderá ser pesado na balança da clínica ou pet shop.
                         </p>
                       )}
                     </div>
