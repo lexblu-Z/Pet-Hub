@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Building2, MapPin, Phone, Mail, Clock, Camera, Plus, Trash2, CheckCircle, Search, ShieldCheck, Upload, PawPrint } from 'lucide-react';
-import { Input, Button, Badge } from '@/components/ui';
+import { Building2, MapPin, Phone, Mail, Clock, Camera, Plus, Trash2, CheckCircle, Search, ShieldCheck, Upload, PawPrint, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Input, Button, Badge, Modal } from '@/components/ui';
 import { SPECIES_OPTIONS } from '@/utils/species';
 import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
 
@@ -44,12 +44,23 @@ export default function EstablishmentProfilePage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   
-  // Address (Ourinhos - SP)
+  // Official Address (Ourinhos - SP)
   const [cep, setCep] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Ourinhos');
   const [state, setState] = useState('SP');
-  const [isCepLoading, setIsCepLoading] = useState(false);
+
+  // Address Request Workflow
+  const [addressRequest, setAddressRequest] = useState<any | null>(null);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [submittingAddressReq, setSubmittingAddressReq] = useState(false);
+
+  const [reqCep, setReqCep] = useState('');
+  const [reqAddress, setReqAddress] = useState('');
+  const [reqCity, setReqCity] = useState('Ourinhos');
+  const [reqState, setReqState] = useState('SP');
+  const [reqReason, setReqReason] = useState('');
+  const [isReqCepLoading, setIsReqCepLoading] = useState(false);
 
   // Accepted Species
   const [acceptedSpecies, setAcceptedSpecies] = useState<string[]>(['dog', 'cat']);
@@ -104,6 +115,8 @@ export default function EstablishmentProfilePage() {
       if (hoursRes.data && typeof hoursRes.data === 'object') {
         setWorkingHours(prev => ({ ...prev, ...hoursRes.data }));
       }
+
+      await fetchAddressRequest();
     } catch (err) {
       console.error('Error fetching profile:', err);
       toast.error('Erro ao carregar dados do estabelecimento.');
@@ -112,27 +125,74 @@ export default function EstablishmentProfilePage() {
     }
   };
 
+  const fetchAddressRequest = async () => {
+    try {
+      const res = await api.get('/establishment/address-request');
+      setAddressRequest(res.data?.request || null);
+    } catch (err) {
+      console.error('Error fetching address request:', err);
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
   }, []);
 
-  const handleCepLookup = async (value: string) => {
+  const handleReqCepLookup = async (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 8);
-    setCep(raw);
+    const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
+    setReqCep(formatted);
+
     if (raw.length === 8) {
-      setIsCepLoading(true);
+      setIsReqCepLoading(true);
       try {
         const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
         const data = await res.json();
         if (data && !data.erro) {
-          setAddress(`${data.logradouro || ''}, , ${data.bairro || ''}`);
-          toast.success('Endereço preenchido!');
+          if (data.localidade && data.localidade.toLowerCase() !== 'ourinhos') {
+            toast.error('O PetHub opera exclusivamente em Ourinhos - SP.');
+            return;
+          }
+          setReqAddress(`${data.logradouro || ''}${data.bairro ? ` - ${data.bairro}` : ''}`);
+          setReqCity(data.localidade || 'Ourinhos');
+          setReqState(data.uf || 'SP');
+          toast.success('Endereço localizado via CEP!');
+        } else {
+          toast.error('CEP não encontrado na base dos Correios.');
         }
-      } catch (e) {
-        // silent fail
+      } catch (err) {
+        console.error('Error fetching CEP:', err);
       } finally {
-        setIsCepLoading(false);
+        setIsReqCepLoading(false);
       }
+    }
+  };
+
+  const handleSubmitAddressRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reqAddress.trim() || reqAddress.trim().length < 5) {
+      toast.error('Informe o logradouro completo com número.');
+      return;
+    }
+
+    setSubmittingAddressReq(true);
+    try {
+      const res = await api.post('/establishment/address-request', {
+        requestedAddress: reqAddress.trim(),
+        requestedZipCode: reqCep.trim() || null,
+        requestedCity: reqCity.trim() || 'Ourinhos',
+        requestedState: reqState.trim() || 'SP',
+        reason: reqReason.trim() || null,
+      });
+
+      toast.success(res.data?.message || 'Solicitação enviada com sucesso para aprovação do Administrador!');
+      setAddressModalOpen(false);
+      setReqReason('');
+      await fetchAddressRequest();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao enviar solicitação.');
+    } finally {
+      setSubmittingAddressReq(false);
     }
   };
 
@@ -151,10 +211,6 @@ export default function EstablishmentProfilePage() {
         businessName,
         type,
         description,
-        address,
-        zipCode: cep,
-        city: 'Ourinhos',
-        state: 'SP',
         phone,
         email,
         acceptedSpecies,
@@ -379,30 +435,89 @@ export default function EstablishmentProfilePage() {
         </div>
       </div>
 
-      {/* 2. Address (Ourinhos - SP) */}
+      {/* 2. Official Address (Ourinhos - SP) with Admin Approval Workflow */}
       <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 sm:p-6 shadow-xs space-y-5">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 dark:border-[#313335] font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
-          <MapPin size={18} className="text-orange-500" />
-          <span>Localização e Endereço</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-neutral-100 dark:border-[#313335] gap-3">
+          <div className="flex items-center gap-2.5 font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">
+            <MapPin size={18} className="text-orange-500" />
+            <span>Localização e Endereço Oficial</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40">
+              <ShieldCheck size={13} />
+              Endereço Homologado
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setReqCep(cep);
+                setReqAddress(address);
+                setReqReason('');
+                setAddressModalOpen(true);
+              }}
+              disabled={addressRequest?.status === 'PENDING'}
+              className="text-xs"
+            >
+              {addressRequest?.status === 'PENDING' ? 'Alteração em Análise' : 'Solicitar alteração de endereço'}
+            </Button>
+          </div>
         </div>
 
+        {/* Pending Request Alert */}
+        {addressRequest?.status === 'PENDING' && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20 space-y-2">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-semibold text-xs">
+              <Clock size={16} />
+              <span>Solicitação de alteração de endereço em análise pelo Administrador</span>
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              <strong>Novo endereço solicitado:</strong> {addressRequest.requestedAddress}, {addressRequest.requestedCity} - {addressRequest.requestedState} {addressRequest.requestedZipCode ? `(CEP: ${addressRequest.requestedZipCode})` : ''}
+            </p>
+            {addressRequest.reason && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400/80">
+                <strong>Justificativa:</strong> {addressRequest.reason}
+              </p>
+            )}
+            <p className="text-[10px] text-amber-500">
+              Enviada em {new Date(addressRequest.createdAt).toLocaleDateString('pt-BR')}. Enquanto a solicitação estiver em análise, seu endereço oficial permanece inalterado.
+            </p>
+          </div>
+        )}
+
+        {/* Rejected Request Alert */}
+        {addressRequest?.status === 'REJECTED' && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900/50 dark:bg-rose-950/20 space-y-1.5">
+            <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-semibold text-xs">
+              <AlertCircle size={16} />
+              <span>Última solicitação de alteração recusada pela moderação</span>
+            </div>
+            <p className="text-xs text-rose-700 dark:text-rose-400">
+              <strong>Motivo informado:</strong> {addressRequest.rejectionReason || 'Dados inconsistentes.'}
+            </p>
+            <p className="text-[11px] text-rose-500">
+              Você pode enviar uma nova solicitação clicando no botão acima com os dados corrigidos.
+            </p>
+          </div>
+        )}
+
+        {/* Current official address fields (Read-only) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Input
-              label="CEP (ViaCEP)"
-              value={cep}
-              onChange={(e) => handleCepLookup(e.target.value)}
-              placeholder="19900-010"
-              maxLength={9}
-              leftIcon={<Search size={14} className={isCepLoading ? 'animate-spin text-orange-500' : ''} />}
+              label="CEP Oficial"
+              value={cep || '19900-000'}
+              readOnly
+              className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]"
             />
           </div>
           <div className="sm:col-span-2">
             <Input
-              label="Logradouro e Número"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Rua Duque de Caxias, 340 - Centro"
+              label="Logradouro e Número Oficial"
+              value={address || 'Endereço ainda não cadastrado'}
+              readOnly
+              className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5]"
             />
           </div>
         </div>
@@ -541,6 +656,81 @@ export default function EstablishmentProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* Address Request Modal */}
+      <Modal
+        isOpen={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        title="Solicitar Alteração de Endereço Oficial"
+        size="md"
+      >
+        <form onSubmit={handleSubmitAddressRequest} className="space-y-4">
+          <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+            Para garantir a segurança dos tutores e a conformidade do PetHub, alterações de endereço físico passam por validação administrativa antes de se tornarem oficiais.
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <Input
+                label="Novo CEP (ViaCEP) *"
+                value={reqCep}
+                onChange={(e) => handleReqCepLookup(e.target.value)}
+                placeholder="19900-010"
+                maxLength={9}
+                required
+                leftIcon={<Search size={14} className={isReqCepLoading ? 'animate-spin text-orange-500' : ''} />}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Novo Logradouro e Número *"
+                value={reqAddress}
+                onChange={(e) => setReqAddress(e.target.value)}
+                placeholder="Ex: Rua Nove de Julho, 120 - Centro"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Cidade" value={reqCity} readOnly className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-500" />
+              <Input label="Estado" value={reqState} readOnly className="bg-neutral-50 dark:bg-[#282A2C] text-neutral-500" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1.5">
+                Motivo / Justificativa da Mudança *
+              </label>
+              <textarea
+                value={reqReason}
+                onChange={(e) => setReqReason(e.target.value)}
+                rows={3}
+                required
+                placeholder="Ex: Mudança para prédio próprio com maior espaço para banho e tosa..."
+                className="w-full border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#282A2C] rounded-xl p-3 text-xs text-neutral-800 dark:text-[#E3E3E3] focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-[#313335]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddressModalOpen(false)}
+              disabled={submittingAddressReq}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              isLoading={submittingAddressReq}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Enviar Solicitação
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

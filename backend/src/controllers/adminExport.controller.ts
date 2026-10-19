@@ -1,10 +1,22 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
 import { prisma } from '../lib/prisma';
-import { AppointmentStatus, OrderStatus, ReportStatus } from '@prisma/client';
+import { AppointmentStatus, OrderStatus } from '@prisma/client';
+import {
+  PDF_PAGE_X,
+  PDF_PAGE_WIDTH,
+  PDF_BOTTOM_LIMIT,
+  PDF_FOOTER_Y,
+  PDF_CELL_PADDING_X,
+  PDF_CELL_PADDING_TOP,
+  renderOfficialPdfLogo,
+  renderCompactPdfLogo,
+  calculateRowHeight,
+  formatPdfDateTimeBr,
+  formatPdfDateShortBr,
+  formatPdfCurrency,
+} from '../utils/pdfCommon';
 
 const exportQuerySchema = z.object({
   type: z.enum(['finance', 'appointments', 'pets', 'moderation']),
@@ -13,31 +25,6 @@ const exportQuerySchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function formatDateShort(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-  }).format(date);
-}
-
-function formatCurrency(val: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(val);
-}
 
 function formatStatus(status: string): string {
   const map: Record<string, string> = {
@@ -66,21 +53,17 @@ function getStatusColor(status: string): string {
   return '#475569';
 }
 
-function getOfficialLogoPath(): string | null {
-  const candidates = [
-    path.resolve(process.cwd(), 'src/assets/logo_transparent.png'),
-    path.resolve(process.cwd(), 'backend/src/assets/logo_transparent.png'),
-    path.resolve(process.cwd(), '../logo_transparent.png'),
-    path.resolve(process.cwd(), 'logo_transparent.png'),
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet-Hub-main/Pet-Hub-main/backend/src/assets/logo_transparent.png',
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet-Hub-main/Pet-Hub-main/logo_transparent.png',
-    path.resolve(process.cwd(), 'src/assets/logo.jpg'),
-    path.resolve(process.cwd(), '../logo.jpg'),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  return null;
+interface TableColumnDef {
+  label: string;
+  width: number;
+  align?: 'left' | 'center' | 'right';
+}
+
+interface TableCellDef {
+  text: string;
+  align?: 'left' | 'center' | 'right';
+  color?: string;
+  bold?: boolean;
 }
 
 export const adminExportController = {
@@ -138,8 +121,7 @@ export const adminExportController = {
     doc.on('data', (chunk) => chunks.push(chunk));
 
     const periodStr = `${start.toLocaleDateString('pt-BR')} a ${end.toLocaleDateString('pt-BR')}`;
-    const generatedAtStr = formatDate(new Date());
-    const logoPath = getOfficialLogoPath();
+    const generatedAtStr = formatPdfDateTimeBr(new Date());
 
     const typeTitleMap: Record<string, string> = {
       finance: 'RELATÓRIO FINANCEIRO & CONTÁBIL',
@@ -149,25 +131,18 @@ export const adminExportController = {
     };
     const typeTitle = typeTitleMap[type] || `RELATÓRIO: ${type.toUpperCase()}`;
 
-    // --- Page 1 Header Banner ---
-    const PAGE_X = 45;
-    const PAGE_WIDTH = 505;
+    const PAGE_X = PDF_PAGE_X;
+    const PAGE_WIDTH = PDF_PAGE_WIDTH;
+    const BOTTOM_LIMIT = PDF_BOTTOM_LIMIT;
 
+    // --- Page 1 Header Banner ---
     doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 68, 6).fill('#0f172a');
 
-    // Official Logo insertion (transparent PNG)
-    if (logoPath) {
-      try {
-        doc.image(logoPath, PAGE_X + 8, 55, { fit: [102, 36] });
-      } catch {
-        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
-      }
-    } else {
-      doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
-    }
+    // Official Logo insertion with protective white badge container
+    renderOfficialPdfLogo(doc, PAGE_X + 8, 51);
 
     doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text('CENTRO DE CONTROLE OPERACIONAL', PAGE_X + 122, 57);
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff').text(typeTitle, PAGE_X + 122, 70, { width: 225, lineBreak: false, ellipsis: true });
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff').text(typeTitle, PAGE_X + 122, 70, { width: 220, lineBreak: false, ellipsis: true });
 
     doc.fontSize(8).font('Helvetica').fillColor('#cbd5e1').text(`Período: ${periodStr}`, PAGE_X + 345, 57, { align: 'right', width: 150 });
     doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado em: ${generatedAtStr}`, PAGE_X + 345, 71, { align: 'right', width: 150 });
@@ -178,59 +153,121 @@ export const adminExportController = {
     // Helper to draw subsequent page compact headers
     const drawSubsequentHeader = () => {
       doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 26, 4).fill('#0f172a');
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#f97316').text('PetHub', PAGE_X + 10, 53);
-      doc.fontSize(8).font('Helvetica').fillColor('#ffffff').text(`|  ${typeTitle} (${periodStr})`, PAGE_X + 45, 53);
+      renderCompactPdfLogo(doc, PAGE_X + 6, 49);
+      doc.fontSize(8).font('Helvetica').fillColor('#ffffff').text(`|  ${typeTitle} (${periodStr})`, PAGE_X + 48, 53, { width: 290, ellipsis: true });
       doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado: ${generatedAtStr}`, PAGE_X + 340, 53, { align: 'right', width: 155 });
     };
 
-    // Helper for table column header
-    const drawTableHead = (currentY: number) => {
-      doc.rect(PAGE_X, currentY, PAGE_WIDTH, 20).fill('#1e293b');
-      doc.rect(PAGE_X, currentY, PAGE_WIDTH, 20).stroke('#0f172a');
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff');
-
-      if (type === 'finance') {
-        // Widths: 72, 50, 168, 65, 55, 95 = 505
-        const dividers = [117, 167, 335, 400, 455];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('TIPO', 50, currentY + 6);
-        doc.text('DATA', 121, currentY + 6);
-        doc.text('CÓDIGO / DETALHAMENTO', 172, currentY + 6);
-        doc.text('MÉTODO', 340, currentY + 6);
-        doc.text('STATUS', 405, currentY + 6);
-        doc.text('VALOR', 458, currentY + 6, { align: 'right', width: 87 });
-      } else if (type === 'appointments') {
-        // Widths: 65, 72, 140, 95, 48, 85 = 505
-        const dividers = [110, 182, 322, 417, 465];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('CÓDIGO', 49, currentY + 6);
-        doc.text('DATA/HORA', 114, currentY + 6);
-        doc.text('TUTOR / PET', 186, currentY + 6);
-        doc.text('SERVIÇO', 326, currentY + 6);
-        doc.text('STATUS', 421, currentY + 6);
-        doc.text('VALOR', 469, currentY + 6, { align: 'right', width: 77 });
-      } else if (type === 'pets') {
-        // Widths: 110, 65, 125, 75, 45, 85 = 505
-        const dividers = [155, 220, 345, 420, 465];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('NOME DO PET', 49, currentY + 6);
-        doc.text('ESPÉCIE', 159, currentY + 6);
-        doc.text('RAÇA', 224, currentY + 6);
-        doc.text('PESO / IDADE', 349, currentY + 6);
-        doc.text('CADASTRO', 424, currentY + 6);
-        doc.text('STATUS', 469, currentY + 6);
-      } else if (type === 'moderation') {
-        // Widths: 65, 50, 95, 95, 105, 95 = 505
-        const dividers = [110, 160, 255, 350, 455];
-        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + 20).stroke('#334155'));
-        doc.text('PROTOCOLO', 49, currentY + 6);
-        doc.text('DATA', 114, currentY + 6);
-        doc.text('DENUNCIANTE', 164, currentY + 6);
-        doc.text('DENUNCIADO', 259, currentY + 6);
-        doc.text('MOTIVO', 354, currentY + 6);
-        doc.text('STATUS', 459, currentY + 6);
+    // Generic Table Renderer supporting dynamic heights across ALL columns and clean Z-order
+    const renderTable = (
+      columns: TableColumnDef[],
+      rows: TableCellDef[][],
+      initialY: number
+    ): number => {
+      // Calculate dividers dynamically
+      const dividers: number[] = [];
+      let curX = PAGE_X;
+      for (let i = 0; i < columns.length - 1; i++) {
+        curX += columns[i].width;
+        dividers.push(curX);
       }
-      return currentY + 20;
+
+      // Draw table header
+      const drawTableHead = (currentY: number): number => {
+        const headerH = 22;
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, headerH).fill('#1e293b');
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, headerH).stroke('#0f172a');
+
+        dividers.forEach((x) => doc.moveTo(x, currentY).lineTo(x, currentY + headerH).stroke('#334155'));
+
+        let colX = PAGE_X;
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#ffffff');
+
+        for (const col of columns) {
+          const align = col.align || 'left';
+          const textX = colX + PDF_CELL_PADDING_X;
+          const textW = col.width - (PDF_CELL_PADDING_X * 2);
+
+          doc.text(col.label.toUpperCase(), textX, currentY + 7, {
+            width: textW,
+            align: align,
+            lineBreak: false,
+            ellipsis: true,
+          });
+          colX += col.width;
+        }
+
+        return currentY + headerH;
+      };
+
+      let currentY = drawTableHead(initialY);
+
+      if (rows.length === 0) {
+        doc.roundedRect(PAGE_X, currentY, PAGE_WIDTH, 30, 3).fill('#f8fafc');
+        doc.roundedRect(PAGE_X, currentY, PAGE_WIDTH, 30, 3).stroke('#e2e8f0');
+        doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8').text(
+          'Nenhum registro localizado para o período selecionado.',
+          PAGE_X,
+          currentY + 10,
+          { align: 'center', width: PAGE_WIDTH }
+        );
+        return currentY + 36;
+      }
+
+      for (let r = 0; r < rows.length; r++) {
+        const row = rows[r];
+
+        // 1. Dynamic row height calculation inspecting ALL columns with exact available text width
+        const rowHeight = calculateRowHeight(doc, columns, row, 7.5);
+
+        // 2. Pagination check (never split row across page boundary)
+        if (currentY + rowHeight > BOTTOM_LIMIT) {
+          doc.addPage();
+          drawSubsequentHeader();
+          currentY = drawTableHead(80);
+        }
+
+        // 3. Draw backgrounds and borders FIRST (prevents lines or fills from cutting text)
+        const isEven = r % 2 === 0;
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).fill(isEven ? '#ffffff' : '#f8fafc');
+        doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
+
+        dividers.forEach((x) => {
+          doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).stroke('#e2e8f0');
+        });
+
+        // 4. Draw texts ON TOP with generous vertical padding preventing baseline/descender clipping
+        let cellX = PAGE_X;
+        const textY = currentY + PDF_CELL_PADDING_TOP;
+
+        for (let c = 0; c < columns.length; c++) {
+          const colDef = columns[c];
+          if (!colDef) continue;
+
+          const cellData = row[c] || { text: '-' };
+          const align = cellData.align || colDef.align || 'left';
+          const textColor = cellData.color || '#1e293b';
+          const isBold = cellData.bold || false;
+
+          doc.fontSize(7.5)
+            .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
+            .fillColor(textColor);
+
+          const textX = cellX + PDF_CELL_PADDING_X;
+          const textW = colDef.width - (PDF_CELL_PADDING_X * 2);
+
+          doc.text(cellData.text, textX, textY, {
+            width: textW,
+            align: align,
+          });
+
+          cellX += colDef.width;
+        }
+
+        currentY += rowHeight;
+      }
+
+      return currentY;
     };
 
     if (type === 'finance') {
@@ -264,16 +301,16 @@ export const adminExportController = {
       doc.fontSize(8.5).font('Helvetica').fillColor('#475569');
 
       doc.text(`Faturamento Bruto:`, PAGE_X + 12, y + 28);
-      doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(gross), PAGE_X + 115, y + 28);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatPdfCurrency(gross), PAGE_X + 115, y + 28);
 
       doc.font('Helvetica').fillColor('#475569').text(`Taxas Plataforma (10%):`, PAGE_X + 12, y + 43);
-      doc.font('Helvetica-Bold').fillColor('#ea580c').text(formatCurrency(platformFee), PAGE_X + 115, y + 43);
+      doc.font('Helvetica-Bold').fillColor('#ea580c').text(formatPdfCurrency(platformFee), PAGE_X + 115, y + 43);
 
       doc.font('Helvetica').fillColor('#475569').text(`Cashback Resgatado:`, PAGE_X + 270, y + 28);
-      doc.font('Helvetica-Bold').fillColor('#7c3aed').text(formatCurrency(cashbackUsed), PAGE_X + 380, y + 28);
+      doc.font('Helvetica-Bold').fillColor('#7c3aed').text(formatPdfCurrency(cashbackUsed), PAGE_X + 380, y + 28);
 
       doc.font('Helvetica').fillColor('#475569').text(`Faturamento Líquido:`, PAGE_X + 270, y + 43);
-      doc.font('Helvetica-Bold').fillColor('#0284c7').text(formatCurrency(net), PAGE_X + 380, y + 43);
+      doc.font('Helvetica-Bold').fillColor('#0284c7').text(formatPdfCurrency(net), PAGE_X + 380, y + 43);
 
       doc.font('Helvetica').fillColor('#64748b').text(
         `Total de Transações Concluídas: ${appointments.length + orders.length} (${appointments.length} agendamentos + ${orders.length} pedidos em loja)`,
@@ -287,10 +324,15 @@ export const adminExportController = {
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Detalhamento de Transações Contábeis', PAGE_X, y);
       y += 16;
 
-      // Initial Table Header
-      y = drawTableHead(y);
+      const financeColumns: TableColumnDef[] = [
+        { label: 'Tipo', width: 74, align: 'left' },
+        { label: 'Data', width: 50, align: 'left' },
+        { label: 'Código / Detalhamento', width: 166, align: 'left' },
+        { label: 'Método', width: 75, align: 'left' },
+        { label: 'Status', width: 55, align: 'left' },
+        { label: 'Valor', width: 85, align: 'right' },
+      ];
 
-      // Merge transactions chronologically
       type TransactionRow = {
         type: string;
         date: Date;
@@ -301,7 +343,7 @@ export const adminExportController = {
         amount: number;
       };
 
-      const rows: TransactionRow[] = [
+      const rawRows: TransactionRow[] = [
         ...orders.map((o) => ({
           type: 'PEDIDO',
           date: o.createdAt,
@@ -322,50 +364,45 @@ export const adminExportController = {
         })),
       ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
-      if (rows.length === 0) {
-        doc.roundedRect(PAGE_X, y, PAGE_WIDTH, 30, 3).fill('#f8fafc');
-        doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8').text('Nenhuma transação registrada no período selecionado.', PAGE_X, y + 10, { align: 'center', width: PAGE_WIDTH });
-        y += 35;
-      } else {
-        const dividers = [117, 167, 335, 400, 455];
-        rows.forEach((r, i) => {
-          doc.fontSize(7.5).font('Helvetica');
-          const hDesc = doc.heightOfString(`${r.code} - ${r.desc}`, { width: 160 });
-          const rowHeight = Math.max(20, Math.ceil(hDesc + 7));
+      const tableRows: TableCellDef[][] = rawRows.map((r) => [
+        { text: r.type, bold: true, color: '#475569' },
+        { text: formatPdfDateShortBr(r.date) },
+        { text: `${r.code} - ${r.desc}` },
+        { text: r.method },
+        { text: formatStatus(r.status), bold: true, color: getStatusColor(r.status) },
+        { text: formatPdfCurrency(r.amount), bold: true, align: 'right' },
+      ]);
 
-          if (y + rowHeight > 730) {
-            doc.addPage();
-            drawSubsequentHeader();
-            y = drawTableHead(80);
-          }
+      y = renderTable(financeColumns, tableRows, y);
 
-          const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-          doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
-          doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
-          dividers.forEach((x) => {
-            doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
-          });
+      // Render Total Summary Row with proper pagination check
+      if (rawRows.length > 0) {
+        if (y + 28 > BOTTOM_LIMIT) {
+          doc.addPage();
+          drawSubsequentHeader();
+          y = 80;
+        }
 
-          const textY = y + 5.5;
-          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(r.type, 50, textY, { width: 64, ellipsis: true });
-          doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.date), 121, textY, { width: 44 });
-          doc.text(`${r.code} - ${r.desc}`, 172, textY, { width: 160 });
-          doc.text(r.method, 340, textY, { width: 57, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor(getStatusColor(r.status)).text(formatStatus(r.status), 405, textY, { width: 47, ellipsis: true });
-          doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(r.amount), 458, textY, { align: 'right', width: 87 });
+        const totalRowH = 26;
+        doc.rect(PAGE_X, y, PAGE_WIDTH, totalRowH).fill('#f1f5f9');
+        doc.rect(PAGE_X, y, PAGE_WIDTH, totalRowH).stroke('#cbd5e1');
 
-          y += rowHeight;
-        });
+        // Vertical divider before total amount
+        const lastDivX = PAGE_X + PAGE_WIDTH - 85;
+        doc.moveTo(lastDivX, y).lineTo(lastDivX, y + totalRowH).stroke('#cbd5e1');
 
-        // Summary Total Row
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 24).fill('#f1f5f9');
-        doc.rect(PAGE_X, y, PAGE_WIDTH, 24).stroke('#cbd5e1');
-        dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + 24).stroke('#cbd5e1');
-        });
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a').text(`TOTAL CONSOLIDADO (${rows.length} transações)`, 50, y + 7.5);
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(gross), 458, y + 6.5, { align: 'right', width: 87 });
-        y += 30;
+        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a').text(
+          `TOTAL CONSOLIDADO (${rawRows.length} transações)`,
+          PAGE_X + PDF_CELL_PADDING_X,
+          y + 8
+        );
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text(
+          formatPdfCurrency(gross),
+          PAGE_X + PAGE_WIDTH - 85 + PDF_CELL_PADDING_X,
+          y + 7,
+          { align: 'right', width: 85 - (PDF_CELL_PADDING_X * 2) }
+        );
+        y += totalRowH + 16;
       }
     } else if (type === 'appointments') {
       const appointments = await prisma.appointment.findMany({
@@ -385,45 +422,32 @@ export const adminExportController = {
       doc.fontSize(8.5).font('Helvetica').fillColor('#475569');
       doc.text(`Total de agendamentos no período: ${appointments.length}`, PAGE_X + 12, y + 28);
       const totalAppointmentsValue = appointments.reduce((s, a) => s + (a.service?.price || 0), 0);
-      doc.text(`Valor total estimado: ${formatCurrency(totalAppointmentsValue)}`, PAGE_X + 270, y + 28);
+      doc.text(`Valor total estimado: ${formatPdfCurrency(totalAppointmentsValue)}`, PAGE_X + 270, y + 28);
 
       y += 62;
 
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Relação Completa de Atendimentos', PAGE_X, y);
       y += 16;
 
-      y = drawTableHead(y);
+      const appointmentColumns: TableColumnDef[] = [
+        { label: 'Código', width: 65, align: 'left' },
+        { label: 'Data/Hora', width: 75, align: 'left' },
+        { label: 'Tutor / Pet', width: 135, align: 'left' },
+        { label: 'Serviço', width: 95, align: 'left' },
+        { label: 'Status', width: 55, align: 'left' },
+        { label: 'Valor', width: 80, align: 'right' },
+      ];
 
-      const dividers = [110, 182, 322, 417, 465];
-      appointments.forEach((a, i) => {
-        doc.fontSize(7.5).font('Helvetica');
-        const h1 = doc.heightOfString(`${a.tutor.name} (${a.pet.name})`, { width: 132 });
-        const h2 = doc.heightOfString(a.service?.name || 'Serviço', { width: 87 });
-        const rowHeight = Math.max(20, Math.ceil(Math.max(h1, h2) + 7));
+      const tableRows: TableCellDef[][] = appointments.map((a) => [
+        { text: `#AGD-${a.id.slice(0, 6).toUpperCase()}`, bold: true, color: '#475569' },
+        { text: formatPdfDateTimeBr(a.date) },
+        { text: `${a.tutor.name} (${a.pet.name})` },
+        { text: a.service?.name || 'Serviço' },
+        { text: formatStatus(a.status), bold: true, color: getStatusColor(a.status) },
+        { text: formatPdfCurrency(a.service?.price || 0), bold: true, align: 'right' },
+      ]);
 
-        if (y + rowHeight > 730) {
-          doc.addPage();
-          drawSubsequentHeader();
-          y = drawTableHead(80);
-        }
-
-        const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
-        dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
-        });
-
-        const textY = y + 5.5;
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#AGD-${a.id.slice(0, 6).toUpperCase()}`, 49, textY, { width: 58, ellipsis: true });
-        doc.font('Helvetica').fillColor('#1e293b').text(formatDate(a.date), 114, textY, { width: 65 });
-        doc.text(`${a.tutor.name} (${a.pet.name})`, 186, textY, { width: 132 });
-        doc.text(a.service?.name || 'Serviço', 326, textY, { width: 87 });
-        doc.font('Helvetica-Bold').fillColor(getStatusColor(a.status)).text(formatStatus(a.status), 421, textY, { width: 40, ellipsis: true });
-        doc.font('Helvetica-Bold').fillColor('#0f172a').text(formatCurrency(a.service?.price || 0), 469, textY, { align: 'right', width: 77 });
-
-        y += rowHeight;
-      });
+      y = renderTable(appointmentColumns, tableRows, y);
     } else if (type === 'pets') {
       const pets = await prisma.pet.findMany({
         where: { createdAt: { gte: start, lte: end } },
@@ -443,38 +467,25 @@ export const adminExportController = {
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Relação de Animais Registrados', PAGE_X, y);
       y += 16;
 
-      y = drawTableHead(y);
+      const petColumns: TableColumnDef[] = [
+        { label: 'Nome do Pet', width: 105, align: 'left' },
+        { label: 'Espécie', width: 65, align: 'left' },
+        { label: 'Raça', width: 125, align: 'left' },
+        { label: 'Peso / Idade', width: 85, align: 'left' },
+        { label: 'Cadastro', width: 55, align: 'left' },
+        { label: 'Status', width: 70, align: 'left' },
+      ];
 
-      const dividers = [155, 220, 345, 420, 465];
-      pets.forEach((p, i) => {
-        doc.fontSize(7.5).font('Helvetica');
-        const h1 = doc.heightOfString(p.name, { width: 102 });
-        const h2 = doc.heightOfString(p.breed || 'SRD', { width: 117 });
-        const rowHeight = Math.max(20, Math.ceil(Math.max(h1, h2) + 7));
+      const tableRows: TableCellDef[][] = pets.map((p) => [
+        { text: p.name, bold: true, color: '#1e293b' },
+        { text: p.species },
+        { text: p.breed || 'SRD' },
+        { text: `${p.weight ? p.weight + ' kg' : '-'} / ${p.approximateAge || '-'}` },
+        { text: formatPdfDateShortBr(p.createdAt) },
+        { text: 'Ativo', bold: true, color: '#059669' },
+      ]);
 
-        if (y + rowHeight > 730) {
-          doc.addPage();
-          drawSubsequentHeader();
-          y = drawTableHead(80);
-        }
-
-        const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
-        dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
-        });
-
-        const textY = y + 5.5;
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1e293b').text(p.name, 49, textY, { width: 102 });
-        doc.font('Helvetica').fillColor('#475569').text(p.species, 159, textY, { width: 57, ellipsis: true });
-        doc.text(p.breed || 'SRD', 224, textY, { width: 117 });
-        doc.text(`${p.weight ? p.weight + ' kg' : '-'} / ${p.approximateAge || '-'}`, 349, textY, { width: 67 });
-        doc.text(formatDateShort(p.createdAt), 424, textY, { width: 38 });
-        doc.font('Helvetica-Bold').fillColor('#059669').text('Ativo', 469, textY, { width: 77 });
-
-        y += rowHeight;
-      });
+      y = renderTable(petColumns, tableRows, y);
     } else if (type === 'moderation') {
       const reports = await prisma.moderationReport.findMany({
         where: { createdAt: { gte: start, lte: end } },
@@ -496,37 +507,25 @@ export const adminExportController = {
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Ocorrências Registradas', PAGE_X, y);
       y += 16;
 
-      y = drawTableHead(y);
+      const modColumns: TableColumnDef[] = [
+        { label: 'Protocolo', width: 65, align: 'left' },
+        { label: 'Data', width: 50, align: 'left' },
+        { label: 'Denunciante', width: 95, align: 'left' },
+        { label: 'Denunciado', width: 95, align: 'left' },
+        { label: 'Motivo', width: 110, align: 'left' },
+        { label: 'Status', width: 90, align: 'left' },
+      ];
 
-      const dividers = [110, 160, 255, 350, 455];
-      reports.forEach((r, i) => {
-        doc.fontSize(7.5).font('Helvetica');
-        const h1 = doc.heightOfString(r.reason, { width: 97 });
-        const rowHeight = Math.max(20, Math.ceil(h1 + 7));
+      const tableRows: TableCellDef[][] = reports.map((r) => [
+        { text: `#${r.reportNumber}`, bold: true, color: '#475569' },
+        { text: formatPdfDateShortBr(r.createdAt) },
+        { text: r.reporter?.name || 'Anônimo' },
+        { text: r.reportedUser?.name || 'Perfil' },
+        { text: r.reason },
+        { text: formatStatus(r.status), bold: true, color: getStatusColor(r.status) },
+      ]);
 
-        if (y + rowHeight > 730) {
-          doc.addPage();
-          drawSubsequentHeader();
-          y = drawTableHead(80);
-        }
-
-        const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).fill(bg);
-        doc.rect(PAGE_X, y, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
-        dividers.forEach((x) => {
-          doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke('#e2e8f0');
-        });
-
-        const textY = y + 5.5;
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#475569').text(`#${r.reportNumber}`, 49, textY, { width: 58, ellipsis: true });
-        doc.font('Helvetica').fillColor('#1e293b').text(formatDateShort(r.createdAt), 114, textY, { width: 42 });
-        doc.text(r.reporter?.name || 'Anônimo', 164, textY, { width: 87, ellipsis: true });
-        doc.text(r.reportedUser?.name || 'Perfil', 259, textY, { width: 87, ellipsis: true });
-        doc.text(r.reason, 354, textY, { width: 97 });
-        doc.font('Helvetica-Bold').fillColor(getStatusColor(r.status)).text(formatStatus(r.status), 459, textY, { width: 87, ellipsis: true });
-
-        y += rowHeight;
-      });
+      y = renderTable(modColumns, tableRows, y);
     }
 
     // Footers & Page numbering on ALL pages
@@ -538,7 +537,7 @@ export const adminExportController = {
       doc.text(
         `PetHub Centro de Controle Operacional — Página ${i + 1} de ${range.count} — Emitido em ${generatedAtStr}`,
         PAGE_X,
-        785,
+        PDF_FOOTER_Y,
         { align: 'center', width: PAGE_WIDTH, lineBreak: false }
       );
     }
@@ -567,7 +566,7 @@ export const adminExportController = {
         include: { tutor: { select: { name: true } } },
       });
       orders.forEach((o) => {
-        csv += `Pedido;#PED-${o.id.slice(0, 6).toUpperCase()};${formatDate(o.createdAt)};"${o.tutor?.name || ''}";"Itens do pedido";${o.status};${o.totalAmount.toFixed(2)}\r\n`;
+        csv += `Pedido;#PED-${o.id.slice(0, 6).toUpperCase()};${formatPdfDateTimeBr(o.createdAt)};"${o.tutor?.name || ''}";"Itens do pedido";${o.status};${o.totalAmount.toFixed(2)}\r\n`;
       });
     } else if (type === 'appointments') {
       csv += 'Código;Data/Hora;Tutor;Pet;Espécie;Serviço;Status;Valor (R$)\r\n';
@@ -580,7 +579,7 @@ export const adminExportController = {
         },
       });
       apps.forEach((a) => {
-        csv += `#AGD-${a.id.slice(0, 6).toUpperCase()};${formatDate(a.date)};"${a.tutor.name}";"${a.pet.name}";${a.pet.species};"${a.service?.name || ''}";${a.status};${(a.service?.price || 0).toFixed(2)}\r\n`;
+        csv += `#AGD-${a.id.slice(0, 6).toUpperCase()};${formatPdfDateTimeBr(a.date)};"${a.tutor.name}";"${a.pet.name}";${a.pet.species};"${a.service?.name || ''}";${a.status};${(a.service?.price || 0).toFixed(2)}\r\n`;
       });
     } else if (type === 'pets') {
       csv += 'ID;Nome;Espécie;Raça;Sexo;Peso (kg);Idade Aprox;Data Cadastro\r\n';
@@ -588,7 +587,7 @@ export const adminExportController = {
         where: { createdAt: { gte: start, lte: end } },
       });
       pets.forEach((p) => {
-        csv += `"${p.id}";"${p.name}";"${p.species}";"${p.breed || ''}";"${p.gender || ''}";"${p.weight || ''}";"${p.approximateAge || ''}";${formatDate(p.createdAt)}\r\n`;
+        csv += `"${p.id}";"${p.name}";"${p.species}";"${p.breed || ''}";"${p.gender || ''}";"${p.weight || ''}";"${p.approximateAge || ''}";${formatPdfDateTimeBr(p.createdAt)}\r\n`;
       });
     } else if (type === 'moderation') {
       csv += 'Protocolo;Data;Denunciante;Denunciado;Motivo;Status\r\n';
@@ -600,7 +599,7 @@ export const adminExportController = {
         },
       });
       reports.forEach((r) => {
-        csv += `#${r.reportNumber};${formatDate(r.createdAt)};"${r.reporter?.name || 'Anônimo'}";"${r.reportedUser?.name || 'Perfil'}";"${r.reason}";${r.status}\r\n`;
+        csv += `#${r.reportNumber};${formatPdfDateTimeBr(r.createdAt)};"${r.reporter?.name || 'Anônimo'}";"${r.reportedUser?.name || 'Perfil'}";"${r.reason}";${r.status}\r\n`;
       });
     }
 

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { authController } from '../controllers/auth.controller';
+import { userAddressController } from '../controllers/userAddress.controller';
 import { prisma } from '../lib/prisma';
 import { validateAndNormalizeDocument } from '../utils/documentValidation';
 import bcrypt from 'bcrypt';
@@ -105,7 +106,15 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
     });
   });
 
-  // Dedicated Address update endpoint for Tutor and Checkout
+  // Address Management (Multiple addresses)
+  fastify.get('/me/addresses', userAddressController.list);
+  fastify.post('/me/addresses', userAddressController.create);
+  fastify.put('/me/addresses/:id', userAddressController.update as any);
+  fastify.delete('/me/addresses/:id', userAddressController.delete as any);
+  fastify.patch('/me/addresses/:id/default', userAddressController.setDefault as any);
+  fastify.put('/me/addresses/:id/default', userAddressController.setDefault as any);
+
+  // Dedicated Address update endpoint for Tutor and Checkout (maintains backward compatibility)
   fastify.put('/me/address', async (request, reply) => {
     const user = request.user as any;
     const userId = user?.sub || user?.id;
@@ -138,6 +147,43 @@ export const usersRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
         zipCode: String(zipCode).trim(),
       },
     });
+
+    try {
+      const defaultAddr = await prisma.userAddress.findFirst({
+        where: { userId, isDefault: true },
+      });
+      if (defaultAddr) {
+        await prisma.userAddress.update({
+          where: { id: defaultAddr.id },
+          data: {
+            street: street.trim(),
+            number: String(number).trim(),
+            complement: complement ? String(complement).trim() : null,
+            neighborhood: String(neighborhood).trim(),
+            city: 'Ourinhos',
+            state: 'SP',
+            zipCode: String(zipCode).trim(),
+          },
+        });
+      } else {
+        await prisma.userAddress.create({
+          data: {
+            userId,
+            label: 'Principal',
+            street: street.trim(),
+            number: String(number).trim(),
+            complement: complement ? String(complement).trim() : null,
+            neighborhood: String(neighborhood).trim(),
+            city: 'Ourinhos',
+            state: 'SP',
+            zipCode: String(zipCode).trim(),
+            isDefault: true,
+          },
+        });
+      }
+    } catch {
+      // Don't fail the request if address sync hits an edge case
+    }
 
     return reply.send({
       success: true,

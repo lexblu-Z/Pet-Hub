@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 import {
@@ -74,6 +74,9 @@ interface AppointmentData {
     role: string;
   } | null;
   petTransport?: 'PICKUP_BY_TUTOR' | 'PICKUP_BY_PROVIDER' | string | null;
+  paymentStatus?: 'PENDING' | 'PAID' | 'REFUNDED' | 'CANCELLED' | string;
+  paymentMethod?: string | null;
+  finalAmount?: number;
 }
 
 interface EmployeeItem {
@@ -103,6 +106,24 @@ const statusConfig: Record<string, { label: string; badge: 'warning' | 'info' | 
   CANCELLED: { label: 'Cancelado', badge: 'error' },
 };
 
+const paymentStatusConfig: Record<string, { label: string; badge: 'warning' | 'info' | 'brand' | 'success' | 'error' }> = {
+  PENDING: { label: 'Pagamento Pendente', badge: 'warning' },
+  PAID: { label: 'Pago', badge: 'success' },
+  REFUNDED: { label: 'Estornado', badge: 'brand' },
+  CANCELLED: { label: 'Cancelado', badge: 'error' },
+};
+
+function formatPaymentMethodName(method?: string | null): string {
+  if (!method) return 'A combinar';
+  switch (method) {
+    case 'CREDIT_CARD': return 'Cartão de Crédito';
+    case 'DEBIT_CARD': return 'Cartão de Débito';
+    case 'PIX': return 'PIX';
+    case 'CASH': return 'Dinheiro';
+    default: return method;
+  }
+}
+
 function getFullImageUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('/uploads')) return `http://localhost:3000${url}`;
@@ -122,6 +143,23 @@ export default function EstablishmentAppointmentsPage() {
   const [selectedApt, setSelectedApt] = useState<AppointmentData | null>(null);
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [reportModalData, setReportModalData] = useState<{ tutorId: string; tutorName: string; appointmentId: string } | null>(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const handledAptIdRef = useRef<string | null>(null);
+
+  const targetAptId = useMemo(() => {
+    return searchParams.get('appointmentId') || (location.state as any)?.appointmentId || null;
+  }, [searchParams, location.state]);
+
+  const handleCloseModal = () => {
+    setSelectedApt(null);
+    if (searchParams.has('appointmentId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('appointmentId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
@@ -198,13 +236,29 @@ export default function EstablishmentAppointmentsPage() {
     }
   };
 
+  const [availabilityData, setAvailabilityData] = useState<any>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+
   useEffect(() => {
     fetchWorkingHours();
     fetchEmployees();
   }, []);
 
+  const fetchDayAvailability = async (dateToFetch: string) => {
+    setLoadingAvailability(true);
+    try {
+      const res = await api.get('/establishment/availability', { params: { date: dateToFetch } });
+      setAvailabilityData(res.data);
+    } catch (err) {
+      console.warn('Não foi possível carregar disponibilidade inteligente:', err);
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
+
   useEffect(() => {
     fetchDayAppointments(selectedDate, statusFilter);
+    fetchDayAvailability(selectedDate);
   }, [selectedDate, statusFilter]);
 
   useEffect(() => {
@@ -212,6 +266,71 @@ export default function EstablishmentAppointmentsPage() {
       fetchWeekSummary(currentWeekDays[0].iso, currentWeekDays[6].iso);
     }
   }, [currentWeekDays]);
+
+  // 5. Suporte a abertura direta e destaque de agendamento via Notificação (?appointmentId=... ou location.state)
+  useEffect(() => {
+    if (!targetAptId || handledAptIdRef.current === targetAptId) return;
+
+    let isMounted = true;
+
+    async function loadTargetAppointment() {
+      try {
+        const res = await api.get('/establishment/appointments', {
+          params: { id: targetAptId }
+        });
+        if (!isMounted) return;
+
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (list.length > 0) {
+          const apt: AppointmentData = list[0];
+          handledAptIdRef.current = targetAptId;
+
+          // Se o agendamento for de outra data, navega para a data correspondente
+          if (apt.date && apt.date !== selectedDate) {
+            setSelectedDate(apt.date);
+          } else {
+            // Se já for a mesma data, assegura presença imediata na lista
+            setAppointments(prev => {
+              if (prev.some(a => a.id === apt.id)) return prev;
+              return [apt, ...prev];
+            });
+          }
+
+          // Se houver filtro de status ativo incompatível, redefine para TODOS
+          if (statusFilter !== 'ALL' && statusFilter !== apt.status) {
+            setStatusFilter('ALL');
+          }
+
+          // Abre imediatamente a ficha/modal com os dados completos
+          setSelectedApt(apt);
+        } else {
+          toast.error('Agendamento não encontrado ou não pertence a este estabelecimento.');
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        toast.error('Não foi possível carregar os dados do agendamento.');
+      }
+    }
+
+    loadTargetAppointment();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetAptId, selectedDate, statusFilter]);
+
+  // Rolar suavemente até o card do agendamento correspondente
+  useEffect(() => {
+    if (selectedApt?.id) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`apt-${selectedApt.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedApt?.id]);
 
   // Navegação de datas
   const handlePrevDay = () => {
@@ -243,12 +362,41 @@ export default function EstablishmentAppointmentsPage() {
     try {
       await api.put(`/establishment/appointments/${id}/status`, { status: newStatus });
       toast.success('Status do agendamento atualizado com sucesso!');
-      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+      setAppointments(prev => prev.map(a => {
+        if (a.id !== id) return a;
+        let updatedPaymentStatus = a.paymentStatus;
+        if (newStatus === 'CANCELLED') {
+          updatedPaymentStatus = a.paymentStatus === 'PAID' ? 'REFUNDED' : 'CANCELLED';
+        }
+        return { ...a, status: newStatus, paymentStatus: updatedPaymentStatus };
+      }));
       if (selectedApt?.id === id) {
-        setSelectedApt(prev => prev ? { ...prev, status: newStatus } : null);
+        setSelectedApt(prev => {
+          if (!prev) return null;
+          let updatedPaymentStatus = prev.paymentStatus;
+          if (newStatus === 'CANCELLED') {
+            updatedPaymentStatus = prev.paymentStatus === 'PAID' ? 'REFUNDED' : 'CANCELLED';
+          }
+          return { ...prev, status: newStatus, paymentStatus: updatedPaymentStatus };
+        });
       }
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Erro ao atualizar status do agendamento.';
+      toast.error(msg);
+    }
+  };
+
+  // Registrar / Confirmar Pagamento do Agendamento
+  const handleRegisterPayment = async (id: string, paymentStatus: 'PAID' | 'REFUNDED' | 'PENDING') => {
+    try {
+      await api.put(`/establishment/appointments/${id}/payment`, { paymentStatus });
+      toast.success(paymentStatus === 'PAID' ? 'Pagamento confirmado com sucesso!' : 'Status financeiro atualizado!');
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, paymentStatus } : a));
+      if (selectedApt?.id === id) {
+        setSelectedApt(prev => prev ? { ...prev, paymentStatus } : null);
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Erro ao registrar pagamento.';
       toast.error(msg);
     }
   };
@@ -579,6 +727,93 @@ export default function EstablishmentAppointmentsPage() {
         )}
       </div>
 
+      {/* 3.1 GRADE INTELIGENTE DE DISPONIBILIDADE DO DIA */}
+      {isDayEnabled && daySchedule && (
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-4 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-orange-500 shrink-0" />
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                Disponibilidade e Grade de Horários ({formatBrasiliaDate(selectedDate)})
+              </h3>
+              {isToday && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  Tempo Real
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 text-xs font-semibold flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5]">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                {availabilityData?.availableSlots?.length ?? 0} horários livres
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5]">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+                {filtered.filter(a => a.status !== 'CANCELLED').length} agendados
+              </span>
+              {isToday && (
+                <span className="inline-flex items-center gap-1.5 text-neutral-400 dark:text-[#8E918F]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+                  Passados bloqueados
+                </span>
+              )}
+            </div>
+          </div>
+
+          {loadingAvailability ? (
+            <div className="p-4 text-center text-xs text-neutral-400 animate-pulse">
+              Calculando disponibilidade inteligente com base nos serviços e atendimentos...
+            </div>
+          ) : availabilityData?.allSlots && availabilityData.allSlots.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 pt-1">
+              {availabilityData.allSlots.map((slot: any) => {
+                let badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800';
+                let label = 'Livre';
+                if (!slot.available) {
+                  if (slot.reason === 'PAST') {
+                    badgeClass = 'bg-neutral-100 text-neutral-400 border-neutral-200 dark:bg-[#282A2C] dark:text-[#8E918F] dark:border-[#313335] opacity-60';
+                    label = 'Passado';
+                  } else if (slot.reason === 'BREAK') {
+                    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800';
+                    label = 'Intervalo';
+                  } else if (slot.reason === 'EXCEEDS_CLOSING') {
+                    badgeClass = 'bg-neutral-100 text-neutral-400 border-neutral-200 dark:bg-[#282A2C] dark:text-[#8E918F] dark:border-[#313335] opacity-50';
+                    label = 'Fechado';
+                  } else {
+                    badgeClass = 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800';
+                    label = slot.occupiedBy?.petName ? `${slot.occupiedBy.petName}` : 'Ocupado';
+                  }
+                }
+
+                return (
+                  <div
+                    key={slot.time}
+                    className={`p-2 rounded-xl border text-center transition-all flex flex-col justify-between gap-1 ${badgeClass}`}
+                    title={slot.occupiedBy ? `Ocupado por ${slot.occupiedBy.petName || 'Pet'} (${slot.occupiedBy.serviceName || 'Serviço'})` : undefined}
+                  >
+                    <span className="font-bold text-xs tracking-tight">{slot.time}</span>
+                    <span className="text-[10px] font-semibold truncate px-1 py-0.5 rounded">
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+              {availabilityData?.message || 'Sem horários disponíveis para exibição.'}
+            </p>
+          )}
+
+          {isToday && (
+            <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] pt-1">
+              * Horários anteriores ao momento atual no fuso de Brasília são automaticamente bloqueados para novos agendamentos de clientes, preservando o histórico de atendimentos realizados.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* 4. FILTROS E BUSCA */}
       <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
@@ -683,7 +918,12 @@ export default function EstablishmentAppointmentsPage() {
             return (
               <div
                 key={apt.id}
-                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] shadow-xs overflow-hidden hover:border-orange-300 dark:hover:border-orange-500/40 transition-all"
+                id={`apt-${apt.id}`}
+                className={`bg-white dark:bg-[#1E1F20] rounded-2xl border shadow-xs overflow-hidden transition-all ${
+                  targetAptId === apt.id || selectedApt?.id === apt.id
+                    ? 'border-orange-500 ring-2 ring-orange-500/25 shadow-md'
+                    : 'border-neutral-200/80 dark:border-[#313335] hover:border-orange-300 dark:hover:border-orange-500/40'
+                }`}
               >
                 <div className="p-5">
                   <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
@@ -705,6 +945,11 @@ export default function EstablishmentAppointmentsPage() {
                             </span>
                           </div>
                           <Badge variant={status.badge}>{status.label}</Badge>
+                          {apt.paymentStatus && (
+                            <Badge variant={paymentStatusConfig[apt.paymentStatus]?.badge || 'default'}>
+                              {paymentStatusConfig[apt.paymentStatus]?.label || apt.paymentStatus}
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-[#8E918F] mt-1.5 flex-wrap">
@@ -715,6 +960,14 @@ export default function EstablishmentAppointmentsPage() {
                           <span className="font-bold text-green-700 dark:text-emerald-400">
                             R$ {priceFormatted}
                           </span>
+                          {apt.paymentMethod && (
+                            <>
+                              <span>•</span>
+                              <span className="font-medium text-neutral-600 dark:text-neutral-300">
+                                {formatPaymentMethodName(apt.paymentMethod)}
+                              </span>
+                            </>
+                          )}
                           {apt.serviceCategory && (
                             <>
                               <span>•</span>
@@ -819,6 +1072,17 @@ export default function EstablishmentAppointmentsPage() {
                       Ver detalhes →
                     </button>
 
+                    {apt.status !== 'CANCELLED' && apt.paymentStatus === 'PENDING' && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold"
+                        onClick={() => handleRegisterPayment(apt.id, 'PAID')}
+                      >
+                        <Check size={12} className="mr-1" /> Confirmar Pagamento
+                      </Button>
+                    )}
+
                     {apt.status === 'PENDING' && (
                       <Button size="xs" variant="outline" onClick={() => handleUpdateStatus(apt.id, 'CONFIRMED')}>
                         Confirmar
@@ -867,7 +1131,7 @@ export default function EstablishmentAppointmentsPage() {
       {selectedApt && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && setSelectedApt(null)}
+          onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
           <div className="bg-white dark:bg-[#1E1F20] rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-neutral-200 dark:border-[#313335] animate-in fade-in zoom-in-95 duration-150">
             {/* Cabeçalho do Modal */}
@@ -877,7 +1141,10 @@ export default function EstablishmentAppointmentsPage() {
                 <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-0.5">ID: {selectedApt.id.slice(0, 8)}</p>
               </div>
               <button
-                onClick={() => setSelectedApt(null)}
+                type="button"
+                onClick={handleCloseModal}
+                aria-label="Fechar"
+                data-testid="close-appointment-modal"
                 className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F] transition-colors cursor-pointer"
               >
                 <X size={18} />
@@ -986,6 +1253,24 @@ export default function EstablishmentAppointmentsPage() {
                 </div>
               </div>
 
+              {/* Informações Financeiras e de Pagamento */}
+              <div className="p-4 rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-2">
+                <p className="text-xs font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider">Situação Financeira</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3] text-sm">
+                      Forma: {formatPaymentMethodName(selectedApt.paymentMethod)}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                      Valor do Serviço: R$ {Number(selectedApt.price ?? 0).toFixed(2).replace('.', ',')}
+                    </p>
+                  </div>
+                  <Badge variant={paymentStatusConfig[selectedApt.paymentStatus || 'PENDING']?.badge || 'default'}>
+                    {paymentStatusConfig[selectedApt.paymentStatus || 'PENDING']?.label || selectedApt.paymentStatus || 'Pagamento Pendente'}
+                  </Badge>
+                </div>
+              </div>
+
               {/* Atribuição de Funcionário */}
               <div className="p-4 rounded-2xl border border-neutral-100 dark:border-[#313335] space-y-2">
                 <p className="text-xs font-bold text-neutral-400 dark:text-[#8E918F] uppercase tracking-wider">Profissional Designado</p>
@@ -1029,11 +1314,20 @@ export default function EstablishmentAppointmentsPage() {
                 >
                   Denunciar Tutor
                 </Button>
-                <Button variant="ghost" size="xs" onClick={() => setSelectedApt(null)}>
+                <Button variant="ghost" size="xs" onClick={handleCloseModal}>
                   Fechar
                 </Button>
               </div>
               <div className="flex items-center gap-2">
+                {selectedApt.status !== 'CANCELLED' && selectedApt.paymentStatus === 'PENDING' && (
+                  <Button
+                    size="xs"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    onClick={() => handleRegisterPayment(selectedApt.id, 'PAID')}
+                  >
+                    <Check size={13} className="mr-1" /> Confirmar Pagamento
+                  </Button>
+                )}
                 {selectedApt.status === 'PENDING' && (
                   <Button size="xs" onClick={() => handleUpdateStatus(selectedApt.id, 'CONFIRMED')}>
                     Confirmar Agendamento

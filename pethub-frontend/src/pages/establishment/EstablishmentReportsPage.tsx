@@ -46,8 +46,8 @@ const STATUS_OPTIONS = [
 export const EstablishmentReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('services');
 
-  // Default dates: last 30 days
-  const defaultDates = DATE_PRESETS[3].getDates();
+  // Default dates: Este mês (Mês vigente)
+  const defaultDates = DATE_PRESETS[2].getDates();
   const [startDate, setStartDate] = useState(defaultDates.start);
   const [endDate, setEndDate] = useState(defaultDates.end);
 
@@ -57,6 +57,7 @@ export const EstablishmentReportsPage: React.FC = () => {
   const [professionalId, setProfessionalId] = useState<string>('');
   const [species, setSpecies] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [operationType, setOperationType] = useState<'ALL' | 'SERVICES' | 'PRODUCTS'>('ALL');
   const [lowStockOnly, setLowStockOnly] = useState<boolean>(false);
 
   // Data states
@@ -72,6 +73,18 @@ export const EstablishmentReportsPage: React.FC = () => {
   // Available options loaded from backend
   const [professionalsList, setProfessionalsList] = useState<Array<{ id: string; name: string }>>([]);
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
+
+  // Load real employees on mount for the professional filter
+  useEffect(() => {
+    api.get('/establishment/employees').then((res) => {
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setProfessionalsList(res.data.map((e: any) => ({
+          id: e.id,
+          name: `${e.name}${e.role ? ` (${e.role})` : ''}`,
+        })));
+      }
+    }).catch(() => {});
+  }, []);
 
   // Fetch report data for active tab
   const fetchData = useCallback(async () => {
@@ -89,13 +102,15 @@ export const EstablishmentReportsPage: React.FC = () => {
         });
         setServicesData(res.data);
 
-        // Populate professionals list from productivity if available
+        // Supplement professionals list if productivity has external professionals
         if (res.data?.productivity) {
-          setProfessionalsList(
-            res.data.productivity
-              .filter((p: any) => p.id !== 'none')
-              .map((p: any) => ({ id: p.id, name: p.name }))
-          );
+          setProfessionalsList((prev) => {
+            const existingIds = new Set(prev.map((p) => p.id));
+            const newOnes = res.data.productivity
+              .filter((p: any) => p.id !== 'none' && !existingIds.has(p.id))
+              .map((p: any) => ({ id: p.id, name: p.name }));
+            return [...prev, ...newOnes];
+          });
         }
         if (res.data?.servicesRanking) {
           const cats = Array.from(new Set(res.data.servicesRanking.map((s: any) => s.category).filter(Boolean))) as string[];
@@ -107,6 +122,7 @@ export const EstablishmentReportsPage: React.FC = () => {
             startDate,
             endDate,
             paymentMethod: paymentMethod || undefined,
+            operationType,
           },
         });
         setFinancialData(res.data);
@@ -136,7 +152,7 @@ export const EstablishmentReportsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, startDate, endDate, status, category, professionalId, species, paymentMethod, lowStockOnly]);
+  }, [activeTab, startDate, endDate, status, category, professionalId, species, paymentMethod, operationType, lowStockOnly]);
 
   useEffect(() => {
     fetchData();
@@ -144,7 +160,7 @@ export const EstablishmentReportsPage: React.FC = () => {
 
   // Reset filters
   const handleResetFilters = () => {
-    const d = DATE_PRESETS[3].getDates();
+    const d = DATE_PRESETS[2].getDates();
     setStartDate(d.start);
     setEndDate(d.end);
     setStatus('');
@@ -152,6 +168,7 @@ export const EstablishmentReportsPage: React.FC = () => {
     setProfessionalId('');
     setSpecies('');
     setPaymentMethod('');
+    setOperationType('ALL');
     setLowStockOnly(false);
   };
 
@@ -167,6 +184,8 @@ export const EstablishmentReportsPage: React.FC = () => {
           endDate,
           status: status || undefined,
           serviceType: category || undefined,
+          professionalId: professionalId || undefined,
+          operationType: activeTab === 'financial' ? operationType : undefined,
           paymentMethod: paymentMethod || undefined,
           category: category || undefined,
           species: species || undefined,
@@ -202,6 +221,8 @@ export const EstablishmentReportsPage: React.FC = () => {
           endDate,
           status: status || undefined,
           serviceType: category || undefined,
+          professionalId: professionalId || undefined,
+          operationType: activeTab === 'financial' ? operationType : undefined,
           paymentMethod: paymentMethod || undefined,
           category: category || undefined,
           species: species || undefined,
@@ -274,6 +295,8 @@ export const EstablishmentReportsPage: React.FC = () => {
         professionals={professionalsList}
         species={activeTab === 'customers' ? species : undefined}
         onSpeciesChange={activeTab === 'customers' ? setSpecies : undefined}
+        operationType={activeTab === 'financial' ? operationType : undefined}
+        onOperationTypeChange={activeTab === 'financial' ? ((op: string) => setOperationType(op as any)) : undefined}
         paymentMethod={activeTab === 'financial' ? paymentMethod : undefined}
         onPaymentMethodChange={activeTab === 'financial' ? setPaymentMethod : undefined}
         lowStockOnly={activeTab === 'inventory' ? lowStockOnly : undefined}
@@ -331,8 +354,8 @@ export const EstablishmentReportsPage: React.FC = () => {
                 />
                 <ReportSummaryCard
                   title="Avaliação Média"
-                  value="—"
-                  subtitle="Módulo não persistido"
+                  value={servicesData.summary.averageRating ? `${servicesData.summary.averageRating} ★` : '—'}
+                  subtitle={servicesData.summary.reviewCount ? `${servicesData.summary.reviewCount} avaliações reais` : 'Sem avaliações'}
                   notice={servicesData.summary.averageRatingNotice}
                   icon={Star}
                   iconColor="text-amber-500"
@@ -491,12 +514,96 @@ export const EstablishmentReportsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Pending / Forecast Services Banner */}
+              {financialData.summary.pendingServicesCount > 0 && (
+                <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-2xl border border-blue-200/60 dark:border-blue-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-blue-950 dark:text-blue-200">
+                  <div className="flex items-center gap-2.5">
+                    <Clock size={16} className="text-blue-500 shrink-0" />
+                    <span>
+                      <strong>Previsão de Serviços em Aberto:</strong> Há {financialData.summary.pendingServicesCount} agendamento(s) pendente(s) ou confirmado(s) no período selecionado, totalizando <strong>{fmtMoney(financialData.summary.projectedServicesRevenue || 0)}</strong>.
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-2.5 py-1 rounded-lg shrink-0">
+                    Contabilizado no caixa apenas após a conclusão
+                  </span>
+                </div>
+              )}
+
+              {/* Pending Receivables Banner */}
+              {financialData.summary.pendingPaymentsCount > 0 && (
+                <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 dark:text-amber-200">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                    <span>
+                      <strong>Contas a Receber (Atendimentos Concluídos com Pagamento Pendente):</strong> Há {financialData.summary.pendingPaymentsCount} atendimento(s) concluído(s) aguardando confirmação de recebimento, totalizando <strong>{fmtMoney(financialData.summary.pendingPaymentsServices || 0)}</strong>.
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2.5 py-1 rounded-lg shrink-0">
+                    Não contabilizado no faturamento recebido
+                  </span>
+                </div>
+              )}
+
+              {/* Detailed Sales Metrics */}
+              {(operationType === 'ALL' || operationType === 'PRODUCTS') && (
+                <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
+                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <ShoppingBag size={16} className="text-orange-500" />
+                      Métricas Consolidadas de Vendas de Produtos
+                    </h3>
+                    <span className="text-[11px] font-medium text-neutral-400">
+                      {financialData.summary.ordersCount} pedidos registrados
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/60">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Qtd. Pedidos</span>
+                      <p className="text-base font-bold text-neutral-900 dark:text-white mt-0.5">
+                        {financialData.summary.ordersCount}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/60">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Itens Vendidos</span>
+                      <p className="text-base font-bold text-neutral-900 dark:text-white mt-0.5">
+                        {financialData.summary.soldProductsCount}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/60">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Faturamento Bruto</span>
+                      <p className="text-base font-bold text-neutral-900 dark:text-white mt-0.5">
+                        {fmtMoney(financialData.summary.grossRevenueProducts)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/60">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Descontos</span>
+                      <p className="text-base font-bold text-neutral-900 dark:text-white mt-0.5">
+                        {fmtMoney(financialData.summary.discounts || 0)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/60">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Cancel./Estornos</span>
+                      <p className="text-base font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                        - {fmtMoney(financialData.summary.refunds || 0)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/40 border border-emerald-200/50 dark:border-emerald-800/30">
+                      <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">Líquido de Vendas</span>
+                      <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        {fmtMoney(financialData.summary.netRevenueProducts ?? (financialData.summary.grossRevenueProducts - (financialData.summary.refunds || 0)))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Methods & Cash Flow Overview */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div className="rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
                   <h3 className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
                     <CreditCard size={16} className="text-orange-500" />
-                    Vendas de Produtos por Forma de Pagamento
+                    Faturamento Realizado por Forma de Pagamento
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center border-b border-neutral-100 pb-2 dark:border-neutral-800">
@@ -560,15 +667,28 @@ export const EstablishmentReportsPage: React.FC = () => {
                     { header: 'Data', accessor: 'formattedDate' },
                     {
                       header: 'Tipo',
-                      render: (row: any) => (
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          row.type === 'SERVICO'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                        }`}>
-                          {row.type}
-                        </span>
-                      ),
+                      render: (row: any) => {
+                        let badgeClass = 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300';
+                        let label = row.type;
+                        if (row.type === 'SERVICO') {
+                          badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300';
+                          label = 'SERVIÇO (PAGO)';
+                        } else if (row.type === 'PRODUTO') {
+                          badgeClass = 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300';
+                          label = 'PRODUTO';
+                        } else if (row.type === 'ESTORNO') {
+                          badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300';
+                          label = 'ESTORNO';
+                        } else if (row.type === 'SERVICO_PENDENTE') {
+                          badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+                          label = 'PENDENTE';
+                        }
+                        return (
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}>
+                            {label}
+                          </span>
+                        );
+                      },
                     },
                     { header: 'Descrição / Item', accessor: 'description' },
                     { header: 'Cliente', accessor: 'clientName' },
@@ -576,8 +696,8 @@ export const EstablishmentReportsPage: React.FC = () => {
                     {
                       header: 'Valor',
                       render: (row: any) => (
-                        <span className="font-bold text-neutral-900 dark:text-white">
-                          {fmtMoney(row.amount)}
+                        <span className={`font-bold ${row.type === 'ESTORNO' ? 'text-rose-600 dark:text-rose-400' : 'text-neutral-900 dark:text-white'}`}>
+                          {row.type === 'ESTORNO' ? `- ${fmtMoney(Math.abs(row.amount))}` : fmtMoney(row.amount)}
                         </span>
                       ),
                     },

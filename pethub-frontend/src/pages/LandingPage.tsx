@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { FluidText } from '../components/ui/FluidText';
 import { availablePlans } from '@/data/plans';
-import { useAuthStore } from '@/store/authStore';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -65,7 +64,6 @@ const testimonials = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, currentRole } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white font-sans selection:bg-orange-500/30">
@@ -87,30 +85,18 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            {isAuthenticated ? (
-              <button 
-                onClick={() => navigate(`/${currentRole || 'tutor'}`)}
-                className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 cursor-pointer flex items-center gap-2"
-              >
-                <span>Meu Painel</span>
-                <ArrowRight size={16} />
-              </button>
-            ) : (
-              <>
-                <button 
-                  onClick={() => navigate('/auth/login')}
-                  className="text-sm font-medium text-neutral-300 hover:text-white transition-colors hidden sm:block cursor-pointer"
-                >
-                  Entrar
-                </button>
-                <button 
-                  onClick={() => navigate('/auth/register')}
-                  className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
-                >
-                  Criar conta grátis
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => navigate('/auth/login')}
+              className="text-sm font-medium text-neutral-300 hover:text-white transition-colors hidden sm:block cursor-pointer"
+            >
+              Entrar
+            </button>
+            <button 
+              onClick={() => navigate('/auth/register')}
+              className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 cursor-pointer"
+            >
+              Criar conta grátis
+            </button>
           </div>
         </div>
       </nav>

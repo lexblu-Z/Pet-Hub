@@ -3,6 +3,7 @@ import { Role, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
 import { createAndEmitNotification } from '../utils/notificationEvents';
+import { appointmentsController } from './appointments.controller';
 
 // Helper to check professional access
 async function ensureProfessional(request: FastifyRequest, reply: FastifyReply) {
@@ -187,6 +188,41 @@ export const professionalController = {
 
     const upcomingSchedule = upcomingAppointmentsList.map(formatApt);
 
+    // 7. Top 3 booked services for this professional
+    const profActiveAppointments = await prisma.appointment.findMany({
+      where: {
+        ...providerFilter,
+        status: { not: AppointmentStatus.CANCELLED },
+      },
+      include: {
+        service: true,
+      },
+    });
+
+    const profServiceBookingsMap: Record<string, { id: string; name: string; count: number; revenue: number; category?: string | null }> = {};
+    for (const apt of profActiveAppointments) {
+      const sId = apt.serviceId || 'unknown';
+      const sName = apt.service?.name || 'Serviço';
+      const sPrice = Number(apt.service?.price ?? 0);
+      const sCat = apt.service?.category || null;
+
+      if (!profServiceBookingsMap[sId]) {
+        profServiceBookingsMap[sId] = {
+          id: sId,
+          name: sName,
+          count: 0,
+          revenue: 0,
+          category: sCat,
+        };
+      }
+      profServiceBookingsMap[sId].count += 1;
+      profServiceBookingsMap[sId].revenue += sPrice;
+    }
+
+    const topServices = Object.values(profServiceBookingsMap)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
     return reply.send({
       todayAppointments: todayAppointmentsCount,
       upcomingAppointments: upcomingAppointmentsCount,
@@ -194,23 +230,28 @@ export const professionalController = {
       averageRating,
       todaySchedule,
       upcomingSchedule,
+      topServices,
     });
   },
 
   // =========================================================================
   // 2. APPOINTMENTS LIST (AGENDA COMPLETA DO PROFISSIONAL)
   // =========================================================================
-  async getAppointments(request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string } }>, reply: FastifyReply) {
+  async getAppointments(request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string; id?: string } }>, reply: FastifyReply) {
     const user = await ensureProfessional(request, reply);
     if (!user) return;
 
-    const { date, startDate, endDate, status } = request.query;
+    const { date, startDate, endDate, status, id } = request.query;
     const where: any = {
       OR: [
         { professionalId: user.id },
         { establishmentId: user.id },
       ],
     };
+
+    if (id) {
+      where.id = id;
+    }
 
     if (status && status !== 'ALL') {
       where.status = status;
@@ -306,10 +347,21 @@ export const professionalController = {
       return reply.status(404).send({ error: 'Agendamento não encontrado.' });
     }
 
+    if (appointment.status === AppointmentStatus.CANCELLED && (status as AppointmentStatus) !== AppointmentStatus.CANCELLED) {
+      return reply.status(400).send({ error: 'Não é permitido reativar um agendamento cancelado.' });
+    }
+
+    if (appointment.status === AppointmentStatus.COMPLETED && (status as AppointmentStatus) !== AppointmentStatus.COMPLETED) {
+      return reply.status(400).send({ error: 'Não é permitido alterar o status de um agendamento já concluído.' });
+    }
+
     const updated = await prisma.appointment.update({
       where: { id },
       data: {
         status: status as AppointmentStatus,
+        ...(status === AppointmentStatus.CANCELLED ? {
+          paymentStatus: appointment.paymentStatus === 'PAID' ? 'REFUNDED' : 'CANCELLED',
+        } : {}),
       },
     });
 
@@ -334,6 +386,7 @@ export const professionalController = {
         title: notifTitle,
         message: notifMsg,
         type: 'APPOINTMENT',
+        appointmentId: appointment.id,
       });
     } catch (notifErr) {
       request.log.warn({ err: notifErr }, 'Could not create notification for tutor on status change');
@@ -628,4 +681,5 @@ export const professionalController = {
       bookingSettings: updated.bookingSettings,
     });
   },
+  registerPayment: appointmentsController.registerPayment,
 };

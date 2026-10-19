@@ -60,6 +60,8 @@ model User {
   reviewsAsTutor              Review[]                  @relation("TutorReviews")
   reviewsAsEstablishment      Review[]                  @relation("EstablishmentReviews")
   reviewsAsProfessional       Review[]                  @relation("ProfessionalReviews")
+  addressRequests             EstablishmentAddressRequest[] @relation("EstablishmentAddressRequests")
+  addresses                   UserAddress[]                 @relation("UserAddresses")
 }
 
 model Pet {
@@ -253,6 +255,7 @@ model Appointment {
   calendarEventSyncs CalendarEventSync[]
   partnerPayout   PartnerPayout?
   review          Review?
+  notifications   Notification[]
 }
 
 model Product {
@@ -432,6 +435,7 @@ model Employee {
   establishmentId String
   name            String
   role            String
+  email           String?
   phone           String?
   description     String?
   avatar          String?
@@ -455,14 +459,17 @@ model EmployeeService {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  title     String
-  message   String
-  type      String   // 'APPOINTMENT' | 'ORDER' | 'SYSTEM'
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String        @id @default(uuid())
+  userId         String
+  title          String
+  message        String
+  type           String   // 'APPOINTMENT' | 'ORDER' | 'SYSTEM'
+  read           Boolean       @default(false)
+  appointmentId  String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointment    Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 }
 
 model AuthVerificationCode {
@@ -645,3 +652,45 @@ model Review {
   @@index([orderId])
 }
 
+model EstablishmentAddressRequest {
+  id                String         @id @default(uuid())
+  establishmentId   String
+  currentAddress    String?
+  currentZipCode    String?
+  currentCity       String?
+  currentState      String?
+  requestedAddress  String
+  requestedZipCode  String?
+  requestedCity     String   @default("Ourinhos")
+  requestedState    String   @default("SP")
+  reason            String?
+  status            String   @default("PENDING")
+  rejectionReason   String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  establishment     User           @relation("EstablishmentAddressRequests", fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId])
+  @@index([status])
+}
+
+model UserAddress {
+  id           String   @id @default(uuid())
+  userId       String
+  label        String   @default("Casa")
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String   @default("Ourinhos")
+  state        String   @default("SP")
+  zipCode      String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

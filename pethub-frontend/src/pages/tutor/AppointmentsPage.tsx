@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, ChevronRight, X, Plus, Stethoscope, Scissors, PawPrint, DollarSign, Flag } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, X, Plus, Stethoscope, Scissors, PawPrint, DollarSign, Flag, Star } from 'lucide-react';
 import { api } from '@/services/api';
 import { Tabs, Badge, EmptyState, Modal, Button } from '@/components/ui';
 import { GoogleCalendarPromptModal } from '@/components/shared/GoogleCalendarPromptModal';
 import { GoogleCalendarCard } from '@/components/shared/GoogleCalendarCard';
 import { GoogleCalendarViewModal } from '@/components/shared/GoogleCalendarViewModal';
 import { ReportModal } from '@/components/shared/ReportModal';
+import { ReviewModal } from '@/components/shared/ReviewModal';
 import { useToast } from '@/store/toastStore';
 import { useBookingStore } from '@/store/bookingStore';
 import { formatAppointmentTime, formatBrasiliaDate } from '@/utils/date';
@@ -25,17 +26,34 @@ const statusConfig: Record<string, { label: string; variant: 'success' | 'warnin
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [reviewModalAppointment, setReviewModalAppointment] = useState<any | null>(null);
   const [reportModalData, setReportModalData] = useState<{
     targetType: 'ESTABLISHMENT' | 'PROFESSIONAL';
     targetId?: string;
     targetName: string;
     appointmentId: string;
   } | null>(null);
+
+  const targetAptId = React.useMemo(() => {
+    return searchParams.get('appointmentId') || (location.state as any)?.appointmentId || null;
+  }, [searchParams, location.state]);
+  const handledAptIdRef = React.useRef<string | null>(null);
+
+  const handleCloseModal = () => {
+    setSelectedAppointment(null);
+    if (searchParams.has('appointmentId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('appointmentId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   // Google Calendar Integration states
   const [googleStatus, setGoogleStatus] = useState<{ isConnected: boolean; googleEmail?: string } | null>(null);
@@ -45,18 +63,19 @@ export default function AppointmentsPage() {
   const [showManageModal, setShowManageModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  const loadAppointments = React.useCallback(async () => {
+    try {
+      const response = await api.get('/appointments/me');
+      setAppointments(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error('Erro ao carregar agendamentos:', err);
+      setAppointments([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        const response = await api.get('/appointments/me');
-        setAppointments(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        console.error('Erro ao carregar agendamentos:', err);
-        setAppointments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
     const checkGoogleAndPrefs = async () => {
       try {
@@ -84,6 +103,23 @@ export default function AppointmentsPage() {
     loadAppointments();
     checkGoogleAndPrefs();
   }, []);
+
+  // Auto-open and select appointment from notification / deep-link
+  useEffect(() => {
+    if (!targetAptId || handledAptIdRef.current === targetAptId) return;
+    if (appointments.length === 0) return;
+
+    const apt = appointments.find((a) => a.id === targetAptId);
+    if (apt) {
+      handledAptIdRef.current = targetAptId;
+      if (['COMPLETED', 'CANCELLED'].includes(apt.status)) {
+        setActiveTab('past');
+      } else {
+        setActiveTab('upcoming');
+      }
+      setSelectedAppointment(apt);
+    }
+  }, [targetAptId, appointments]);
 
   const handleConnect = async () => {
     try {
@@ -292,27 +328,53 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-sm pt-2 border-t border-neutral-50 dark:border-[#313335]">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const isProf = !!apt.professional?.id || !!apt.professionalId;
-                      setReportModalData({
-                        targetType: isProf ? 'PROFESSIONAL' : 'ESTABLISHMENT',
-                        targetId: apt.professional?.id || apt.professionalId || apt.establishment?.id || apt.establishmentId,
-                        targetName: isProf
-                          ? (apt.professional?.name || 'Profissional')
-                          : (apt.establishment?.establishmentProfile?.businessName || apt.establishment?.name || 'Estabelecimento'),
-                        appointmentId: apt.id,
-                      });
-                    }}
-                    className="text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 transition-colors cursor-pointer"
-                    title="Denunciar prestador"
-                  >
-                    <Flag size={13} />
-                    <span>Denunciar</span>
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm pt-2 border-t border-neutral-50 dark:border-[#313335]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const isProf = !!apt.professional?.id || !!apt.professionalId;
+                        setReportModalData({
+                          targetType: isProf ? 'PROFESSIONAL' : 'ESTABLISHMENT',
+                          targetId: apt.professional?.id || apt.professionalId || apt.establishment?.id || apt.establishmentId,
+                          targetName: isProf
+                            ? (apt.professional?.name || 'Profissional')
+                            : (apt.establishment?.establishmentProfile?.businessName || apt.establishment?.name || 'Estabelecimento'),
+                          appointmentId: apt.id,
+                        });
+                      }}
+                      className="text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Denunciar prestador"
+                    >
+                      <Flag size={13} />
+                      <span>Denunciar</span>
+                    </button>
+
+                    {/* Review Badge or Action ONLY for COMPLETED appointments */}
+                    {apt.status === 'COMPLETED' && (
+                      apt.review ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 shadow-2xs">
+                          <Star size={11} className="fill-amber-400 text-amber-400" />
+                          <span>{apt.review.rating}</span>
+                          <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80">• Avaliado</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReviewModalAppointment(apt);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 active:scale-95 text-neutral-900 shadow-xs transition-all cursor-pointer"
+                        >
+                          <Star size={12} className="fill-neutral-900" />
+                          <span>Avaliar atendimento</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+
                   <span className="text-orange-500 font-medium inline-flex items-center gap-1">
                     Ver detalhes <ChevronRight size={16} />
                   </span>
@@ -369,7 +431,7 @@ export default function AppointmentsPage() {
       {selectedAppointment && (
         <Modal
           isOpen={!!selectedAppointment}
-          onClose={() => setSelectedAppointment(null)}
+          onClose={handleCloseModal}
           title="Detalhes do Agendamento"
           size="md"
         >
@@ -460,6 +522,51 @@ export default function AppointmentsPage() {
               </span>
             </div>
 
+            {/* Avaliação do Atendimento (Disponível exclusivamente para atendimentos COMPLETED) */}
+            {selectedAppointment.status === 'COMPLETED' && (
+              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200/60 dark:border-amber-900/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    <Star size={14} className="fill-amber-400 text-amber-500" />
+                    Avaliação do Atendimento
+                  </span>
+                  {selectedAppointment.review ? (
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                      {Array.from({ length: selectedAppointment.review.rating }).map((_, idx) => (
+                        <Star key={idx} size={12} className="fill-amber-400 text-amber-400" />
+                      ))}
+                      <span className="ml-1">({selectedAppointment.review.rating}/5)</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = selectedAppointment;
+                        setSelectedAppointment(null);
+                        setReviewModalAppointment(target);
+                      }}
+                      className="px-3 py-1 text-xs font-bold rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-900 transition-colors shadow-xs cursor-pointer"
+                    >
+                      Avaliar atendimento
+                    </button>
+                  )}
+                </div>
+                {selectedAppointment.review?.comment ? (
+                  <p className="text-xs text-neutral-700 dark:text-[#C4C7C5] italic bg-white dark:bg-[#1E1F20] p-2.5 rounded-lg border border-amber-100 dark:border-amber-950/40">
+                    "{selectedAppointment.review.comment}"
+                  </p>
+                ) : !selectedAppointment.review ? (
+                  <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                    Sua avaliação é opcional e ajuda outros tutores a conhecerem a qualidade deste serviço.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Avaliado sem comentário em {new Date(selectedAppointment.review.createdAt).toLocaleDateString('pt-BR')}.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Ações e Denúncia */}
             <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 dark:border-[#313335]">
               <div className="flex items-center gap-2 flex-wrap">
@@ -494,7 +601,7 @@ export default function AppointmentsPage() {
                   </button>
                 )}
               </div>
-              <Button onClick={() => setSelectedAppointment(null)} className="w-full sm:w-auto">
+              <Button onClick={handleCloseModal} className="w-full sm:w-auto">
                 Fechar
               </Button>
             </div>
@@ -524,6 +631,29 @@ export default function AppointmentsPage() {
           targetName={reportModalData.targetName}
           contextType="APPOINTMENT"
           contextId={reportModalData.appointmentId}
+        />
+      )}
+
+      {/* Review Modal for Completed Appointments */}
+      {reviewModalAppointment && (
+        <ReviewModal
+          isOpen={!!reviewModalAppointment}
+          onClose={() => setReviewModalAppointment(null)}
+          onSuccess={() => {
+            loadAppointments();
+            if (selectedAppointment?.id === reviewModalAppointment.id) {
+              setSelectedAppointment(null);
+            }
+          }}
+          targetName={
+            reviewModalAppointment.professional?.name
+              ? `Dr(a). ${reviewModalAppointment.professional.name}`
+              : reviewModalAppointment.establishment?.establishmentProfile?.businessName ||
+                reviewModalAppointment.establishment?.name ||
+                reviewModalAppointment.establishmentName ||
+                'Prestador'
+          }
+          appointmentId={reviewModalAppointment.id}
         />
       )}
     </div>

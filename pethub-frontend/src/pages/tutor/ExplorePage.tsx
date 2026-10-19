@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { api } from '@/services/api';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe, Search, Droplets, Scissors, Stethoscope, Award, Home, Sparkles, Footprints, ShoppingBag, Heart, CheckCircle2, Wrench, Camera, Tag, Flag, ShieldCheck, X, MessageSquareHeart, Upload, Trash2, Check, AlertCircle, Plus, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Star, ChevronRight, Phone, Globe, Search, Droplets, Scissors, Stethoscope, Award, Home, Sparkles, Footprints, Heart, CheckCircle2, Wrench, Camera, Tag, Flag, ShieldCheck, X, MessageSquareHeart, Upload, Trash2, Check, AlertCircle, Plus, Image as ImageIcon } from 'lucide-react';
 import { SearchBar, Badge, Rating, EmptyState, Button } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatAcceptedSpeciesBadges } from '@/utils/species';
 import { ReportModal } from '@/components/shared/ReportModal';
 import { ServiceLogo } from '@/components/shared/ServiceLogo';
+import { getFullImageUrl, getProviderPhoto } from '@/utils/image';
 
 const categoryLabels: Record<string, string> = {
   banho: 'Banho', tosa: 'Tosa', veterinario: 'Veterinário',
@@ -41,7 +42,6 @@ export function ExplorePage() {
     { id: 'hospedagem', label: 'Hospedagem', icon: Home },
     { id: 'creche', label: 'Creche', icon: Sparkles },
     { id: 'passeio', label: 'Passeio', icon: Footprints },
-    { id: 'produtos', label: 'Produtos', icon: ShoppingBag },
   ];
 
   const [realEstablishments, setRealEstablishments] = useState<any[]>([]);
@@ -53,22 +53,26 @@ export function ExplorePage() {
       try {
         const response = await api.get('/establishments');
         // Map backend to frontend format
-        const mapped = response.data.map((e: any) => ({
-          id: e.id,
-          userId: e.id,
-          businessName: e.name || e.businessName || 'Estabelecimento PetHub',
-          category: Array.isArray(e.category) && e.category.length > 0 ? e.category : ['banho', 'tosa', 'veterinario'],
-          logo: e.logo || '/salsicha_borzoi_1788367580508.jpg',
-          cover: e.cover || e.coverPhoto || '/jorginho_derpy_shepherd_1788367498390.jpg',
-          coverPhoto: e.coverPhoto || e.cover || null,
-          address: e.address || 'Ourinhos, SP',
-          rating: typeof e.rating === 'number' ? e.rating : null,
-          reviewCount: typeof e.reviewCount === 'number' ? e.reviewCount : 0,
-          isApproved: true,
-          workingHours: e.workingHours || { saturday: { isOpen: true } },
-          acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
-          isProgramPartner: Boolean(e.isProgramPartner),
-        }));
+        const mapped = response.data.map((e: any) => {
+          const providerPhoto = getProviderPhoto(e);
+          return {
+            id: e.id,
+            userId: e.id,
+            businessName: e.name || e.businessName || 'Estabelecimento PetHub',
+            category: Array.isArray(e.category) && e.category.length > 0 ? e.category : ['banho', 'tosa', 'veterinario'],
+            logo: e.logo || e.avatar || providerPhoto || null,
+            cover: providerPhoto,
+            coverPhoto: providerPhoto,
+            photos: Array.isArray(e.photos) ? e.photos : (providerPhoto ? [providerPhoto] : []),
+            address: e.address || 'Ourinhos, SP',
+            rating: typeof e.rating === 'number' ? e.rating : null,
+            reviewCount: typeof e.reviewCount === 'number' ? e.reviewCount : 0,
+            isApproved: true,
+            workingHours: e.workingHours || { saturday: { isOpen: true } },
+            acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
+            isProgramPartner: Boolean(e.isProgramPartner),
+          };
+        });
         setRealEstablishments(mapped);
       } catch (error) {
         toast.error('Erro ao buscar estabelecimentos reais.');
@@ -79,11 +83,14 @@ export function ExplorePage() {
     fetchEstabs();
   }, []);
 
+  const isKnownCategory = categories.some((c) => c.id === activeCategory);
+  const effectiveCategory = isKnownCategory ? activeCategory : 'all';
+
   const filteredEstablishments = realEstablishments
     .filter((est) => {
       if (!est.isApproved) return false;
       const matchesSearch = search === '' || est.businessName.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = activeCategory === 'all' || est.category.includes(activeCategory);
+      const matchesCategory = effectiveCategory === 'all' || est.category.includes(effectiveCategory);
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
@@ -160,7 +167,7 @@ export function ExplorePage() {
               <div className="relative h-48 overflow-hidden bg-neutral-900">
                 {est.coverPhoto ? (
                   <img
-                    src={est.coverPhoto}
+                    src={getFullImageUrl(est.coverPhoto)}
                     alt={est.businessName}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -360,7 +367,7 @@ export function EstablishmentProfilePage() {
 
   const handleStartBooking = (svc: any) => {
     if (!currentUser) {
-      navigate('/login');
+      navigate('/auth/login');
       return;
     }
     setSelectedServiceForBooking(svc);
@@ -489,7 +496,7 @@ export function EstablishmentProfilePage() {
       {/* Cover + back */}
       <div className="relative h-64 overflow-hidden bg-neutral-900">
         {est.coverPhoto ? (
-          <img src={est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
+          <img src={getFullImageUrl(est.coverPhoto)} alt={est.businessName} className="w-full h-full object-cover" />
         ) : (
           <video src="/user_estabelecimento.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover pointer-events-none" />
         )}
@@ -513,7 +520,7 @@ export function EstablishmentProfilePage() {
         <div className="flex items-end gap-4 -mt-8 mb-4 max-w-4xl mx-auto">
           <div className="w-20 h-20 rounded-2xl border-4 border-white dark:border-[#1E1F20] overflow-hidden shadow-xl shrink-0 bg-neutral-900 relative">
             {est.logo || est.coverPhoto ? (
-              <img src={est.logo || est.coverPhoto} alt={est.businessName} className="w-full h-full object-cover" />
+              <img src={getFullImageUrl(est.logo || est.coverPhoto)} alt={est.businessName} className="w-full h-full object-cover" />
             ) : (
               <video src="/user_estabelecimento.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover pointer-events-none" />
             )}

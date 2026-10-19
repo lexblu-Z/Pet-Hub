@@ -45,6 +45,15 @@ export default function AdminEstablishmentsPage() {
   // Photo preview modal state
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
+  // Address Requests state
+  const [activeTab, setActiveTab] = useState<'establishments' | 'address_requests'>('establishments');
+  const [addressRequests, setAddressRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [addressStatusFilter, setAddressStatusFilter] = useState('ALL');
+  const [rejectAddressModalOpen, setRejectAddressModalOpen] = useState(false);
+  const [selectedAddressReq, setSelectedAddressReq] = useState<any | null>(null);
+  const [addressRejectionReason, setAddressRejectionReason] = useState('');
+
   const toast = useToast();
 
   const fetchEstablishments = async () => {
@@ -60,9 +69,61 @@ export default function AdminEstablishmentsPage() {
     }
   };
 
+  const fetchAddressRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await api.get('/admin/address-requests');
+      setAddressRequests(res.data || []);
+    } catch (err) {
+      console.error('Error loading address requests:', err);
+      toast.error('Erro ao carregar solicitações de endereço.');
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   useEffect(() => {
     fetchEstablishments();
+    fetchAddressRequests();
   }, []);
+
+  const handleApproveAddress = async (reqId: string) => {
+    setIsProcessing(true);
+    try {
+      await api.post(`/admin/address-requests/${reqId}/approve`);
+      toast.success('Solicitação aprovada e endereço oficial do estabelecimento atualizado!');
+      await fetchAddressRequests();
+      await fetchEstablishments();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao aprovar alteração de endereço.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleConfirmRejectAddress = async () => {
+    if (!selectedAddressReq) return;
+    if (!addressRejectionReason.trim()) {
+      toast.error('Informe o motivo da rejeição.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await api.post(`/admin/address-requests/${selectedAddressReq.id}/reject`, {
+        rejectionReason: addressRejectionReason.trim(),
+      });
+      toast.success('Solicitação de alteração de endereço rejeitada.');
+      setRejectAddressModalOpen(false);
+      setSelectedAddressReq(null);
+      setAddressRejectionReason('');
+      await fetchAddressRequests();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao rejeitar alteração de endereço.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleApprove = async (id: string) => {
     setIsProcessing(true);
@@ -269,6 +330,19 @@ export default function AdminEstablishmentsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const pendingAddressCount = addressRequests.filter((r) => r.status === 'PENDING').length;
+
+  const filteredAddressRequests = addressRequests.filter((r) => {
+    if (addressStatusFilter !== 'ALL' && r.status !== addressStatusFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      const bName = (r.establishment?.establishmentProfile?.businessName || r.establishment?.name || '').toLowerCase();
+      const addr = (r.requestedAddress || '').toLowerCase();
+      return bName.includes(q) || addr.includes(q);
+    }
+    return true;
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -307,7 +381,41 @@ export default function AdminEstablishmentsPage() {
         </div>
       </div>
 
-      {/* Filters and Search Bar */}
+      {/* Module Navigation Tabs */}
+      <div className="flex border-b border-neutral-200 dark:border-[#313335] gap-4">
+        <button
+          onClick={() => setActiveTab('establishments')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === 'establishments'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+              : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-[#8E918F] dark:hover:text-[#E3E3E3]'
+          }`}
+        >
+          Estabelecimentos Cadastrados ({establishments.length})
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('address_requests');
+            fetchAddressRequests();
+          }}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'address_requests'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+              : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-[#8E918F] dark:hover:text-[#E3E3E3]'
+          }`}
+        >
+          <span>Solicitações de Alteração de Endereço</span>
+          {pendingAddressCount > 0 && (
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+              {pendingAddressCount} pendente{pendingAddressCount > 1 ? 's' : ''}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'establishments' ? (
+        <>
+          {/* Filters and Search Bar */}
       <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
           <Input
@@ -493,6 +601,194 @@ export default function AdminEstablishmentsPage() {
           </div>
         )}
       </div>
+        </>
+      ) : (
+        /* Address Requests Tab */
+        <div className="space-y-6">
+          {/* Filters & Search */}
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+            <div className="flex-1 max-w-md">
+              <Input
+                placeholder="Buscar por estabelecimento ou endereço..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                leftIcon={<Search size={16} />}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs font-semibold">
+              {[
+                { id: 'ALL', label: 'Todas as Solicitações' },
+                { id: 'PENDING', label: 'Pendentes de Moderação' },
+                { id: 'APPROVED', label: 'Aprovadas' },
+                { id: 'REJECTED', label: 'Rejeitadas' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setAddressStatusFilter(tab.id)}
+                  className={`px-3.5 py-2 rounded-xl transition-all ${
+                    addressStatusFilter === tab.id
+                      ? 'bg-neutral-900 dark:bg-orange-500 text-white shadow-xs'
+                      : 'bg-neutral-100 dark:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-200 dark:hover:bg-[#313335]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* List */}
+          {loadingRequests ? (
+            <div className="p-12 text-center text-neutral-500 dark:text-[#8E918F] bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335]">
+              Carregando solicitações de alteração de endereço...
+            </div>
+          ) : filteredAddressRequests.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335]">
+              <MapPin size={40} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
+              <p className="text-sm font-semibold text-neutral-700 dark:text-[#C4C7C5]">Nenhuma solicitação encontrada</p>
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-1">
+                Quando estabelecimentos solicitarem atualização de endereço oficial, elas aparecerão aqui para moderação.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredAddressRequests.map((req) => {
+                const estab = req.establishment;
+                const profile = estab?.establishmentProfile;
+                const bName = profile?.businessName || estab?.name || 'Estabelecimento';
+
+                return (
+                  <div
+                    key={req.id}
+                    className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4"
+                  >
+                    {/* Header info */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-[#313335]">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={profile?.photos?.[0] || estab?.avatar}
+                          name={bName}
+                          size="md"
+                          isEstablishment={true}
+                          square={true}
+                        />
+                        <div>
+                          <h3 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">{bName}</h3>
+                          <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+                            Responsável: {estab?.name} • {estab?.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                          {new Date(req.createdAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        {req.status === 'PENDING' && (
+                          <Badge variant="warning" className="inline-flex items-center gap-1">
+                            <Clock size={11} /> Aguardando Moderação
+                          </Badge>
+                        )}
+                        {req.status === 'APPROVED' && (
+                          <Badge variant="success" className="inline-flex items-center gap-1">
+                            <CheckCircle2 size={11} /> Aprovado
+                          </Badge>
+                        )}
+                        {req.status === 'REJECTED' && (
+                          <Badge variant="error" className="inline-flex items-center gap-1">
+                            <XCircle size={11} /> Rejeitado
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Diff: Current vs Requested Address */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Current Address */}
+                      <div className="p-3.5 bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-neutral-200 dark:border-[#313335]">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-[#8E918F] mb-1.5">
+                          <MapPin size={13} />
+                          <span>Endereço Homologado Atual</span>
+                        </div>
+                        <p className="text-sm font-medium text-neutral-900 dark:text-[#E3E3E3]">
+                          {req.currentAddress || 'Não cadastrado'}
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                          {req.currentCity ? `${req.currentCity} - ${req.currentState}` : 'Cidade/UF não informado'}
+                          {req.currentZipCode && ` • CEP ${req.currentZipCode}`}
+                        </p>
+                      </div>
+
+                      {/* Requested Address */}
+                      <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 rounded-xl border border-orange-200/70 dark:border-orange-900/40">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400 mb-1.5">
+                          <Edit3 size={13} />
+                          <span>Novo Endereço Solicitado</span>
+                        </div>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                          {req.requestedAddress}
+                        </p>
+                        <p className="text-xs text-orange-600 dark:text-orange-300 font-medium mt-0.5">
+                          {req.requestedCity} - {req.requestedState} • CEP {req.requestedZipCode}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Justification */}
+                    {req.reason && (
+                      <div className="p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-neutral-100 dark:border-[#313335] text-xs">
+                        <span className="font-semibold text-neutral-700 dark:text-[#C4C7C5]">Justificativa do estabelecimento: </span>
+                        <span className="text-neutral-600 dark:text-[#8E918F] italic">"{req.reason}"</span>
+                      </div>
+                    )}
+
+                    {/* Rejection reason if rejected */}
+                    {req.status === 'REJECTED' && req.rejectionReason && (
+                      <div className="p-3 bg-red-50/50 dark:bg-red-950/20 rounded-xl border border-red-200/50 dark:border-red-900/30 text-xs text-red-700 dark:text-red-300">
+                        <span className="font-semibold">Motivo da recusa informado ao estabelecimento: </span>
+                        <span>"{req.rejectionReason}"</span>
+                      </div>
+                    )}
+
+                    {/* Actions if pending */}
+                    {req.status === 'PENDING' && (
+                      <div className="pt-2 flex flex-wrap justify-end gap-2 border-t border-neutral-100 dark:border-[#313335]">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => {
+                            setSelectedAddressReq(req);
+                            setRejectAddressModalOpen(true);
+                          }}
+                          disabled={isProcessing}
+                        >
+                          <XCircle size={14} className="mr-1.5" /> Rejeitar Alteração
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          onClick={() => handleApproveAddress(req.id)}
+                          isLoading={isProcessing}
+                        >
+                          <CheckCircle size={14} className="mr-1.5" /> Aprovar e Atualizar Endereço
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* Details Modal */}
       {selectedEstab && !rejectModalOpen && !suspendModalOpen && (
@@ -883,6 +1179,70 @@ export default function AdminEstablishmentsPage() {
           </div>
         </Modal>
       )}
+
+      {/* Rejection Modal for Address Request */}
+      {rejectAddressModalOpen && selectedAddressReq && (
+        <Modal
+          isOpen={rejectAddressModalOpen}
+          onClose={() => {
+            setRejectAddressModalOpen(false);
+            setSelectedAddressReq(null);
+            setAddressRejectionReason('');
+          }}
+          title="Rejeitar Solicitação de Alteração de Endereço"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div>
+                <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">
+                  Estabelecimento: {selectedAddressReq.establishment?.establishmentProfile?.businessName || selectedAddressReq.establishment?.name}
+                </p>
+                <p className="mt-1">
+                  O endereço oficial atual permanecerá inalterado. Informe o motivo detalhado para orientar o parceiro na adequação cadastral.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-[#C4C7C5] mb-1.5">
+                Motivo da recusa *
+              </label>
+              <textarea
+                value={addressRejectionReason}
+                onChange={(e) => setAddressRejectionReason(e.target.value)}
+                placeholder="Ex: Documento de comprovante de endereço não anexado, divergência de CNPJ ou numeração incorreta..."
+                rows={4}
+                className="w-full border border-neutral-300 dark:border-[#313335] bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3] rounded-xl p-3 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-neutral-100 dark:border-[#313335]">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setRejectAddressModalOpen(false);
+                  setSelectedAddressReq(null);
+                  setAddressRejectionReason('');
+                }}
+                disabled={isProcessing}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmRejectAddress}
+                isLoading={isProcessing}
+                disabled={!addressRejectionReason.trim()}
+              >
+                Confirmar Rejeição
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
+
 }

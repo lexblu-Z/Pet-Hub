@@ -41,6 +41,13 @@ export const establishmentsController = {
           ? Math.round((allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount) * 10) / 10 
           : null;
 
+        const estabPhotos = e.establishmentProfile?.photos || [];
+        const profPhoto = e.professionalProfile?.workplacePhoto;
+        const allPhotos = estabPhotos.length > 0 
+          ? estabPhotos 
+          : (profPhoto ? [profPhoto] : []);
+        const primaryPhoto = (estabPhotos.length > 0 ? estabPhotos[0] : null) || profPhoto || e.avatar || null;
+
         return {
           id: e.id,
           name: e.name,
@@ -50,11 +57,15 @@ export const establishmentsController = {
           avatar: e.avatar,
           businessName: e.establishmentProfile?.businessName || (e.role === Role.PROFESSIONAL ? `Dr(a). ${e.name}` : e.name),
           description: e.establishmentProfile?.description || e.professionalProfile?.bio,
-          address: e.establishmentProfile?.address,
-          city: e.establishmentProfile?.city,
-          state: e.establishmentProfile?.state,
+          address: e.establishmentProfile?.address || e.professionalProfile?.address,
+          city: e.establishmentProfile?.city || e.professionalProfile?.city,
+          state: e.establishmentProfile?.state || e.professionalProfile?.state,
           type: e.establishmentProfile?.type || e.professionalProfile?.specialty || 'Veterinário',
-          photos: e.establishmentProfile?.photos || [],
+          photos: allPhotos,
+          cover: primaryPhoto,
+          coverPhoto: primaryPhoto,
+          workplacePhoto: profPhoto || null,
+          logo: e.avatar || primaryPhoto,
           acceptedSpecies: (e.establishmentProfile?.acceptedSpecies?.length ? e.establishmentProfile.acceptedSpecies : (e.professionalProfile?.acceptedSpecies?.length ? e.professionalProfile.acceptedSpecies : ['dog', 'cat'])),
           isProgramPartner: e.partnerProgramParticipation?.status === 'ACTIVE',
           rating,

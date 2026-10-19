@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Bell, CheckCircle2, Clock } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 import { api } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
+import { resolveNotificationRoute } from '@/utils/notificationNavigation';
 import { EmptyState } from '@/components/ui';
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
+  const { currentUser, currentRole } = useAuthStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,13 +44,18 @@ export default function NotificationsPage() {
     };
   }, []);
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleNotificationClick = async (notif: any) => {
     try {
-      await api.patch(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      if (!notif.read) {
+        await api.patch(`/notifications/${notif.id}/read`);
+        setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)));
+        window.dispatchEvent(new CustomEvent('pethub:notifications_updated'));
+      }
     } catch (err) {
       console.error(err);
     }
+    const target = resolveNotificationRoute(notif, currentRole, currentUser);
+    navigate(target.path, { state: target.state });
   };
 
   const handleMarkAllRead = async () => {
@@ -100,7 +110,7 @@ export default function NotificationsPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+              onClick={() => handleNotificationClick(notif)}
               className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                 !notif.read 
                   ? 'bg-orange-50/70 dark:bg-orange-950/20 border-orange-200/80 dark:border-orange-500/30 shadow-xs' 
@@ -114,11 +124,17 @@ export default function NotificationsPage() {
                 {!notif.read && <span className="w-2 h-2 bg-orange-500 rounded-full shrink-0 mt-1" />}
               </div>
               <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed mb-2">{notif.message}</p>
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500">
-                <Clock size={12} />
-                <span>
-                  {new Date(notif.createdAt || notif.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                </span>
+              <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-[#313335]">
+                <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500">
+                  <Clock size={12} />
+                  <span>
+                    {new Date(notif.createdAt || notif.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                </div>
+                <div className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 flex items-center gap-1">
+                  <span>Ver detalhes</span>
+                  <ArrowRight size={12} />
+                </div>
               </div>
             </motion.div>
           ))}

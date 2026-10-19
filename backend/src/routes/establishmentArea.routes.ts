@@ -20,6 +20,8 @@ export const establishmentAreaRoutes: FastifyPluginAsync = async (fastify: Fasti
   fastify.delete('/photos', establishmentAreaController.removePhoto);
   fastify.get('/hours', establishmentAreaController.getWorkingHours);
   fastify.put('/hours', establishmentAreaController.updateWorkingHours);
+  fastify.get('/species', establishmentAreaController.getAttendedSpecies);
+  fastify.put('/species', establishmentAreaController.updateAttendedSpecies);
 
   // 3. Services
   fastify.get('/services', establishmentAreaController.listServices);
@@ -44,8 +46,15 @@ export const establishmentAreaRoutes: FastifyPluginAsync = async (fastify: Fasti
   fastify.put('/orders/:id/status', establishmentAreaController.updateOrderStatus);
   fastify.post('/orders/:id/cancel', establishmentAreaController.cancelOrder);
 
-  // 7. Appointments
+  // 7. Appointments & Availability
   fastify.get('/appointments', establishmentAreaController.listAppointments);
+  fastify.get('/availability', establishmentAreaController.getAvailability);
   fastify.put('/appointments/:id/status', establishmentAreaController.updateAppointmentStatus);
+  fastify.put('/appointments/:id/payment', establishmentAreaController.registerPayment);
+  fastify.post('/appointments/:id/payment', establishmentAreaController.registerPayment);
   fastify.put('/appointments/:id/assign-employee', establishmentAreaController.assignEmployeeToAppointment);
+
+  // 8. Address Change Requests
+  fastify.get('/address-request', establishmentAreaController.getAddressRequest);
+  fastify.post('/address-request', establishmentAreaController.requestAddressChange);
 };

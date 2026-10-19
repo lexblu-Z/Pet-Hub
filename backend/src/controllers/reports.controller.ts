@@ -57,22 +57,29 @@ function parseDateRange(startDate?: string, endDate?: string) {
   let start: Date;
   let end: Date;
 
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const todayStr = formatter.format(now);
+  const [currYear, currMonth] = todayStr.split('-');
+  const firstDayStr = `${currYear}-${currMonth}-01`;
+  const lastDay = new Date(Number(currYear), Number(currMonth), 0).getDate();
+  const lastDayStr = `${currYear}-${currMonth}-${String(lastDay).padStart(2, '0')}`;
+
   if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-    // Start of the day in America/Sao_Paulo (UTC-3)
     start = new Date(`${startDate}T00:00:00.000-03:00`);
   } else {
-    // Default: 30 days ago
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    d.setHours(0, 0, 0, 0);
-    start = d;
+    start = new Date(`${firstDayStr}T00:00:00.000-03:00`);
   }
 
   if (endDate && /^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-    // End of the day in America/Sao_Paulo (UTC-3)
     end = new Date(`${endDate}T23:59:59.999-03:00`);
   } else {
-    end = new Date();
+    end = new Date(`${lastDayStr}T23:59:59.999-03:00`);
   }
 
   return { start, end };
@@ -171,10 +178,11 @@ export const reportsController = {
     }
 
     if (professionalId) {
-      whereClause.professionalId = professionalId;
-    }
-
-    if (employeeId) {
+      whereClause.OR = [
+        { professionalId: professionalId },
+        { employeeId: professionalId },
+      ];
+    } else if (employeeId) {
       whereClause.employeeId = employeeId;
     }
 
@@ -257,8 +265,32 @@ export const reportsController = {
     const productivity = Array.from(professionalMap.values()).sort((a, b) => b.total - a.total);
     const servicesRanking = Array.from(serviceMap.values()).sort((a, b) => b.count - a.count);
 
-    // Notice: Review model does not exist in Prisma schema
-    const averageRatingNotice = 'Média de avaliações não disponível: o sistema atual não possui modelo de avaliações persistido para agendamentos.';
+    // Real review stats calculated from Review model
+    const reviews = await prisma.review.findMany({
+      where: {
+        OR: [
+          { establishmentId: user.id },
+          { professionalId: user.id },
+        ],
+      },
+      select: { rating: true },
+    });
+    const reviewCount = reviews.length;
+    let averageRating: number | null = null;
+    if (reviewCount > 0) {
+      const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+      averageRating = Math.round((sum / reviewCount) * 10) / 10;
+    }
+    const averageRatingNotice = reviewCount > 0
+      ? null
+      : 'Nenhuma avaliação recebida até o momento.';
+
+    const projectedRevenue = appointments
+      .filter((a) => a.status === AppointmentStatus.PENDING || a.status === AppointmentStatus.CONFIRMED || a.status === AppointmentStatus.IN_PROGRESS)
+      .reduce((sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0), 0);
+    const realizedRevenue = appointments
+      .filter((a) => a.status === AppointmentStatus.COMPLETED)
+      .reduce((sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0), 0);
 
     return reply.send({
       period: {
@@ -272,7 +304,10 @@ export const reportsController = {
         confirmed,
         pending,
         cancelled,
-        averageRating: null,
+        projectedRevenue,
+        realizedRevenue,
+        averageRating,
+        reviewCount,
         averageRatingNotice,
       },
       productivity,
@@ -312,35 +347,121 @@ export const reportsController = {
       startDate?: string;
       endDate?: string;
       paymentMethod?: string;
+      operationType?: 'ALL' | 'SERVICES' | 'PRODUCTS';
     };
   }>, reply: FastifyReply) {
     const user = await ensureEstablishment(request, reply);
     if (!user) return;
 
-    const { startDate, endDate, paymentMethod } = request.query;
+    const { startDate, endDate, paymentMethod, operationType = 'ALL' } = request.query;
     const { start, end } = parseDateRange(startDate, endDate);
 
-    // 1. Completed Appointments Revenue
-    const completedAppointments = await prisma.appointment.findMany({
-      where: {
-        establishmentId: user.id,
-        status: AppointmentStatus.COMPLETED,
-        date: { gte: start, lte: end },
-      },
-      include: {
-        service: true,
-        tutor: { select: { id: true, name: true } },
-        pet: { select: { id: true, name: true } },
-      },
-      orderBy: { date: 'desc' },
-    });
+    const includeServices = operationType === 'ALL' || operationType === 'SERVICES';
+    const includeProducts = operationType === 'ALL' || operationType === 'PRODUCTS';
 
-    let grossRevenueServices = 0;
-    for (const apt of completedAppointments) {
-      grossRevenueServices += apt.service?.price || 0;
+    // 1. Paid Appointments Revenue (ONLY COMPLETED AND PAID appointments are accounted as realized cash)
+    const paidAppointmentsWhere: any = {
+      establishmentId: user.id,
+      status: AppointmentStatus.COMPLETED,
+      paymentStatus: 'PAID',
+      date: { gte: start, lte: end },
+    };
+
+    if (paymentMethod) {
+      paidAppointmentsWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
     }
 
-    // 2. Completed Orders Revenue (from OrderItems of this establishment)
+    const paidAppointments = includeServices
+      ? await prisma.appointment.findMany({
+          where: paidAppointmentsWhere,
+          include: {
+            service: true,
+            tutor: { select: { id: true, name: true } },
+            pet: { select: { id: true, name: true } },
+          },
+          orderBy: { date: 'desc' },
+        })
+      : [];
+
+    let grossRevenueServices = 0;
+    for (const apt of paidAppointments) {
+      grossRevenueServices += apt.finalAmount ?? apt.service?.price ?? 0;
+    }
+
+    // 2. Completed Services with Pending Payment (Contas a Receber / Pendências de Pagamento)
+    const pendingPaymentAppointmentsWhere: any = {
+      establishmentId: user.id,
+      status: AppointmentStatus.COMPLETED,
+      paymentStatus: 'PENDING',
+      date: { gte: start, lte: end },
+    };
+    if (paymentMethod) {
+      pendingPaymentAppointmentsWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+    }
+
+    const pendingPaymentAppointments = includeServices
+      ? await prisma.appointment.findMany({
+          where: pendingPaymentAppointmentsWhere,
+          include: {
+            service: true,
+            tutor: { select: { id: true, name: true } },
+            pet: { select: { id: true, name: true } },
+          },
+          orderBy: { date: 'desc' },
+        })
+      : [];
+
+    const pendingPaymentsServices = pendingPaymentAppointments.reduce(
+      (sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0),
+      0
+    );
+    const pendingPaymentsCount = pendingPaymentAppointments.length;
+
+    // 3. Pending / In-progress appointments (tracked strictly as projection / pending forecast, NOT realized revenue)
+    const pendingAppointmentsWhere: any = {
+      establishmentId: user.id,
+      status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
+      date: { gte: start, lte: end },
+    };
+    if (paymentMethod) {
+      pendingAppointmentsWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+    }
+    const pendingAppointments = includeServices
+      ? await prisma.appointment.findMany({
+          where: pendingAppointmentsWhere,
+          include: { service: true },
+        })
+      : [];
+    const projectedServicesRevenue = pendingAppointments.reduce(
+      (sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0),
+      0
+    );
+
+    // 4. Refunded / Estornados Services (Appointments cancelled that were already paid)
+    const refundedAppointmentsWhere: any = {
+      establishmentId: user.id,
+      paymentStatus: 'REFUNDED',
+      date: { gte: start, lte: end },
+    };
+    if (paymentMethod) {
+      refundedAppointmentsWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+    }
+    const refundedAppointments = includeServices
+      ? await prisma.appointment.findMany({
+          where: refundedAppointmentsWhere,
+          include: {
+            service: true,
+            tutor: { select: { id: true, name: true } },
+          },
+          orderBy: { date: 'desc' },
+        })
+      : [];
+    let refundedRevenueServices = 0;
+    for (const apt of refundedAppointments) {
+      refundedRevenueServices += apt.finalAmount ?? apt.service?.price ?? 0;
+    }
+
+    // 5. Completed Orders Revenue (from OrderItems of this establishment)
     const orderItemsWhere: any = {
       establishmentId: user.id,
       order: {
@@ -356,18 +477,20 @@ export const reportsController = {
       };
     }
 
-    const orderItems = await prisma.orderItem.findMany({
-      where: orderItemsWhere,
-      include: {
-        product: true,
-        order: {
+    const orderItems = includeProducts
+      ? await prisma.orderItem.findMany({
+          where: orderItemsWhere,
           include: {
-            tutor: { select: { id: true, name: true } },
+            product: true,
+            order: {
+              include: {
+                tutor: { select: { id: true, name: true } },
+              },
+            },
           },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
 
     let grossRevenueProducts = 0;
     const paymentMethodBreakdown: Record<string, number> = {
@@ -390,7 +513,18 @@ export const reportsController = {
       else paymentMethodBreakdown.OTHER += itemTotal;
     }
 
-    // 3. Cancelled / Refunded Orders
+    // ONLY realized/paid service payments enter the payment breakdown
+    for (const apt of paidAppointments) {
+      const aptVal = apt.finalAmount ?? apt.service?.price ?? 0;
+      const rawMethod = (apt.paymentMethod || '').toUpperCase();
+      if (rawMethod.includes('PIX')) paymentMethodBreakdown.PIX += aptVal;
+      else if (rawMethod.includes('CRÉDITO') || rawMethod.includes('CREDIT')) paymentMethodBreakdown.CREDIT_CARD += aptVal;
+      else if (rawMethod.includes('DÉBITO') || rawMethod.includes('DEBIT')) paymentMethodBreakdown.DEBIT_CARD += aptVal;
+      else if (rawMethod.includes('DINHEIRO') || rawMethod.includes('CASH')) paymentMethodBreakdown.CASH += aptVal;
+      else paymentMethodBreakdown.OTHER += aptVal;
+    }
+
+    // 6. Cancelled / Refunded Orders
     const cancelledOrderItemsWhere: any = {
       establishmentId: user.id,
       order: {
@@ -406,39 +540,42 @@ export const reportsController = {
       };
     }
 
-    const cancelledOrderItems = await prisma.orderItem.findMany({
-      where: cancelledOrderItemsWhere,
-      include: {
-        product: true,
-        order: {
+    const cancelledOrderItems = includeProducts
+      ? await prisma.orderItem.findMany({
+          where: cancelledOrderItemsWhere,
           include: {
-            tutor: { select: { id: true, name: true } },
+            product: true,
+            order: {
+              include: {
+                tutor: { select: { id: true, name: true } },
+              },
+            },
           },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
 
     let refundedRevenueProducts = 0;
     for (const item of cancelledOrderItems) {
       refundedRevenueProducts += item.quantity * item.priceAtTime;
     }
 
-    const totalGrossRevenue = grossRevenueServices + grossRevenueProducts + refundedRevenueProducts;
-    const refunds = refundedRevenueProducts;
+    const totalGrossRevenue = grossRevenueServices + grossRevenueProducts + refundedRevenueProducts + refundedRevenueServices;
+    const refunds = refundedRevenueProducts + refundedRevenueServices;
     const discounts = 0; // No real global discount engine stored; reported honestly as 0.00
     const netRevenue = totalGrossRevenue - refunds - discounts;
+    const netRevenueProducts = (grossRevenueProducts + refundedRevenueProducts) - refunds - discounts;
 
-    // Daily cash flow aggregation
+    // Daily cash flow aggregation (strictly for PAID and received cash)
     const cashFlowMap = new Map<string, { date: string; servicesRevenue: number; productsRevenue: number; total: number; count: number }>();
 
-    for (const apt of completedAppointments) {
+    for (const apt of paidAppointments) {
       const dStr = formatDateTimeBr(apt.date).split(' ')[0] || apt.date.toISOString().slice(0, 10);
       if (!cashFlowMap.has(dStr)) {
         cashFlowMap.set(dStr, { date: dStr, servicesRevenue: 0, productsRevenue: 0, total: 0, count: 0 });
       }
       const entry = cashFlowMap.get(dStr)!;
-      const val = apt.service?.price || 0;
+      const val = apt.finalAmount ?? apt.service?.price ?? 0;
       entry.servicesRevenue += val;
       entry.total += val;
       entry.count++;
@@ -468,10 +605,18 @@ export const reportsController = {
         grossRevenueServices,
         grossRevenueProducts: grossRevenueProducts + refundedRevenueProducts,
         refunds,
+        refundsServices: refundedRevenueServices,
+        refundsProducts: refundedRevenueProducts,
         totalRefundedAmount: refunds,
         discounts,
+        netRevenueProducts,
         netRevenue,
-        completedServicesCount: completedAppointments.length,
+        completedServicesCount: paidAppointments.length + pendingPaymentAppointments.length,
+        paidServicesCount: paidAppointments.length,
+        pendingPaymentsCount,
+        pendingPaymentsServices,
+        pendingServicesCount: pendingAppointments.length,
+        projectedServicesRevenue,
         soldProductsCount: orderItems.reduce((acc, i) => acc + i.quantity, 0),
         cancelledProductsCount: cancelledOrderItems.reduce((acc, i) => acc + i.quantity, 0),
         ordersCount: new Set(orderItems.map((i) => i.orderId)).size,
@@ -480,21 +625,49 @@ export const reportsController = {
       paymentMethodBreakdown,
       cashFlow,
       transactions: [
-        ...completedAppointments.map((apt) => ({
+        ...paidAppointments.map((apt) => ({
           id: apt.id,
           date: apt.date,
           formattedDate: formatDateTimeBr(apt.date),
           type: 'SERVICO',
-          description: apt.service?.name || 'Serviço Concluído',
+          status: apt.status,
+          paymentStatus: 'PAID',
+          description: `${apt.service?.name || 'Serviço'} (Pago)`,
           clientName: apt.tutor?.name || 'Cliente',
-          paymentMethod: 'Presencial / Concluído',
-          amount: apt.service?.price || 0,
+          paymentMethod: apt.paymentMethod || 'Presencial',
+          amount: apt.finalAmount ?? apt.service?.price ?? 0,
+        })),
+        ...pendingPaymentAppointments.map((apt) => ({
+          id: apt.id,
+          date: apt.date,
+          formattedDate: formatDateTimeBr(apt.date),
+          type: 'SERVICO_PENDENTE',
+          status: apt.status,
+          paymentStatus: 'PENDING',
+          description: `${apt.service?.name || 'Serviço'} (Pagamento Pendente)`,
+          clientName: apt.tutor?.name || 'Cliente',
+          paymentMethod: apt.paymentMethod || 'Presencial',
+          amount: apt.finalAmount ?? apt.service?.price ?? 0,
+        })),
+        ...refundedAppointments.map((apt) => ({
+          id: `refund-apt-${apt.id}`,
+          date: apt.date,
+          formattedDate: formatDateTimeBr(apt.date),
+          type: 'ESTORNO',
+          status: 'CANCELLED',
+          paymentStatus: 'REFUNDED',
+          description: `Estorno: ${apt.service?.name || 'Serviço Cancelado'}`,
+          clientName: apt.tutor?.name || 'Cliente',
+          paymentMethod: apt.paymentMethod || 'Estorno',
+          amount: -(apt.finalAmount ?? apt.service?.price ?? 0),
         })),
         ...orderItems.map((item) => ({
           id: item.id,
           date: item.createdAt,
           formattedDate: formatDateTimeBr(item.createdAt),
           type: 'PRODUTO',
+          status: 'COMPLETED',
+          paymentStatus: 'PAID',
           description: `${item.product?.name} (${item.quantity}x)`,
           clientName: item.order?.tutor?.name || 'Comprador',
           paymentMethod: item.order?.paymentMethod || 'Não informado',
@@ -505,6 +678,8 @@ export const reportsController = {
           date: item.order?.refundedAt || item.createdAt,
           formattedDate: formatDateTimeBr(item.order?.refundedAt || item.createdAt),
           type: 'REEMBOLSO',
+          status: 'CANCELLED',
+          paymentStatus: 'REFUNDED',
           description: `Cancelamento: ${item.product?.name} (${item.quantity}x)`,
           clientName: item.order?.tutor?.name || 'Comprador',
           paymentMethod: item.order?.paymentMethod ? `${item.order.paymentMethod} (Simulado)` : 'Estorno Simulado',
@@ -923,14 +1098,33 @@ export const reportsController = {
     const { startDate, endDate } = request.query;
     const { start, end } = parseDateRange(startDate, endDate);
 
-    // STRICT ISOLATION: ONLY completed appointments attended by this professional
-    const completedAppointments = await prisma.appointment.findMany({
+    // STRICT ISOLATION: ONLY completed and paid appointments attended by this professional count as gross cash revenue
+    const paidAppointments = await prisma.appointment.findMany({
       where: {
         OR: [
           { professionalId: user.id },
           { service: { professionalId: user.id } },
         ],
         status: AppointmentStatus.COMPLETED,
+        paymentStatus: 'PAID',
+        date: { gte: start, lte: end },
+      },
+      include: {
+        service: true,
+        tutor: { select: { id: true, name: true } },
+        pet: { select: { id: true, name: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const pendingPaymentAppointments = await prisma.appointment.findMany({
+      where: {
+        OR: [
+          { professionalId: user.id },
+          { service: { professionalId: user.id } },
+        ],
+        status: AppointmentStatus.COMPLETED,
+        paymentStatus: 'PENDING',
         date: { gte: start, lte: end },
       },
       include: {
@@ -942,15 +1136,21 @@ export const reportsController = {
     });
 
     let grossRevenue = 0;
-    for (const apt of completedAppointments) {
-      grossRevenue += apt.service?.price || 0;
+    for (const apt of paidAppointments) {
+      grossRevenue += apt.finalAmount ?? apt.service?.price ?? 0;
     }
 
-    const count = completedAppointments.length;
-    const averageTicket = count > 0 ? grossRevenue / count : 0;
+    let pendingRevenue = 0;
+    for (const apt of pendingPaymentAppointments) {
+      pendingRevenue += apt.finalAmount ?? apt.service?.price ?? 0;
+    }
+
+    const paidCount = paidAppointments.length;
+    const completedCount = paidCount + pendingPaymentAppointments.length;
+    const averageTicket = paidCount > 0 ? grossRevenue / paidCount : 0;
 
     const commissionNotice =
-      'No modelo de dados atual do PetHub, a porcentagem de comissão e repasse contratual não está configurada no cadastro do profissional. O valor informado representa o faturamento bruto dos serviços concluídos diretamente por você.';
+      'No modelo de dados atual do PetHub, a porcentagem de comissão e repasse contratual não está configurada no cadastro do profissional. O valor informado representa o faturamento bruto dos serviços concluídos diretamente por você com recebimento confirmado.';
 
     return reply.send({
       period: {
@@ -959,19 +1159,35 @@ export const reportsController = {
       },
       summary: {
         grossRevenue,
-        completedServicesCount: count,
+        pendingRevenue,
+        completedServicesCount: completedCount,
+        paidServicesCount: paidCount,
+        pendingServicesCount: pendingPaymentAppointments.length,
         averageTicket,
         commissionNotice,
       },
-      transactions: completedAppointments.map((apt) => ({
-        id: apt.id,
-        date: apt.date,
-        formattedDate: formatDateTimeBr(apt.date),
-        serviceName: apt.service?.name || 'Serviço',
-        clientName: apt.tutor?.name || 'Cliente',
-        petName: apt.pet?.name || 'Pet',
-        amount: apt.service?.price || 0,
-      })),
+      transactions: [
+        ...paidAppointments.map((apt) => ({
+          id: apt.id,
+          date: apt.date,
+          formattedDate: formatDateTimeBr(apt.date),
+          serviceName: apt.service?.name || 'Serviço',
+          clientName: apt.tutor?.name || 'Cliente',
+          petName: apt.pet?.name || 'Pet',
+          amount: apt.finalAmount ?? apt.service?.price ?? 0,
+          paymentStatus: 'PAID',
+        })),
+        ...pendingPaymentAppointments.map((apt) => ({
+          id: apt.id,
+          date: apt.date,
+          formattedDate: formatDateTimeBr(apt.date),
+          serviceName: `${apt.service?.name || 'Serviço'} (Pagamento Pendente)`,
+          clientName: apt.tutor?.name || 'Cliente',
+          petName: apt.pet?.name || 'Pet',
+          amount: apt.finalAmount ?? apt.service?.price ?? 0,
+          paymentStatus: 'PENDING',
+        })),
+      ],
     });
   },
 

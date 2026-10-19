@@ -1,7 +1,17 @@
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
 import { FastifyReply } from 'fastify';
+import {
+  PDF_PAGE_X,
+  PDF_PAGE_WIDTH,
+  PDF_BOTTOM_LIMIT,
+  PDF_CELL_PADDING_X,
+  PDF_CELL_PADDING_TOP,
+  PDF_FOOTER_Y,
+  renderOfficialPdfLogo,
+  renderCompactPdfLogo,
+  calculateRowHeight,
+  formatPdfDateTimeBr,
+} from '../utils/pdfCommon';
 
 export interface ReportPdfMetadata {
   reportType: 'services' | 'financial' | 'customers' | 'inventory';
@@ -13,32 +23,6 @@ export interface ReportPdfMetadata {
   summaryCards: Array<{ label: string; value: string }>;
   tableHeaders: Array<{ label: string; width: number; align?: 'left' | 'center' | 'right' }>;
   tableRows: Array<Array<{ text: string; align?: 'left' | 'center' | 'right'; color?: string; bold?: boolean }>>;
-}
-
-function getOfficialLogoPath(): string | null {
-  const candidates = [
-    path.resolve(process.cwd(), 'src/assets/logo_transparent.png'),
-    path.resolve(process.cwd(), 'backend/src/assets/logo_transparent.png'),
-    path.resolve(process.cwd(), '../backend/src/assets/logo_transparent.png'),
-    path.resolve(process.cwd(), 'logo_transparent.png'),
-    'C:/Users/leona/OneDrive/Documentos/Projetos/Pet-Hub-main/Pet-Hub-main/backend/src/assets/logo_transparent.png',
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  return null;
-}
-
-function formatNowBr(): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(new Date());
 }
 
 export const reportsPdfService = {
@@ -54,12 +38,11 @@ export const reportsPdfService = {
     const chunks: Buffer[] = [];
     doc.on('data', (chunk) => chunks.push(chunk));
 
-    const PAGE_X = 45;
-    const PAGE_WIDTH = 505;
-    const BOTTOM_LIMIT = 730;
+    const PAGE_X = PDF_PAGE_X;
+    const PAGE_WIDTH = PDF_PAGE_WIDTH;
+    const BOTTOM_LIMIT = PDF_BOTTOM_LIMIT;
 
-    const logoPath = getOfficialLogoPath();
-    const generatedAtStr = formatNowBr();
+    const generatedAtStr = formatPdfDateTimeBr(new Date());
     const periodStr = `${metadata.startDateStr} a ${metadata.endDateStr}`;
 
     const titleMap: Record<string, string> = {
@@ -74,23 +57,15 @@ export const reportsPdfService = {
     const drawMainHeader = () => {
       doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 68, 6).fill('#0f172a');
 
-      // Transparent Logo
-      if (logoPath) {
-        try {
-          doc.image(logoPath, PAGE_X + 8, 55, { fit: [102, 36] });
-        } catch {
-          doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
-        }
-      } else {
-        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text('PetHub', PAGE_X + 12, 58);
-      }
+      // Official Logo with protective badge container
+      renderOfficialPdfLogo(doc, PAGE_X + 8, 51);
 
       // Center title and subtag
       const scopeLabel = metadata.scope === 'ESTABELECIMENTO' ? 'PAINEL DO ESTABELECIMENTO' : 'PAINEL DO PROFISSIONAL';
       doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#f97316').text(scopeLabel, PAGE_X + 122, 56);
-      doc.fontSize(10.5).font('Helvetica-Bold').fillColor('#ffffff').text(reportTitle, PAGE_X + 122, 68, { width: 225, lineBreak: false, ellipsis: true });
+      doc.fontSize(10.5).font('Helvetica-Bold').fillColor('#ffffff').text(reportTitle, PAGE_X + 122, 68, { width: 220, lineBreak: false, ellipsis: true });
       const entityStr = `Titular: ${metadata.entityName}${metadata.documentNumber ? ` • ${metadata.documentNumber}` : ''}`;
-      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(entityStr, PAGE_X + 122, 82, { width: 225, lineBreak: false, ellipsis: true });
+      doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(entityStr, PAGE_X + 122, 82, { width: 220, lineBreak: false, ellipsis: true });
 
       // Right-aligned metadata
       doc.fontSize(8).font('Helvetica').fillColor('#cbd5e1').text(`Período: ${periodStr}`, PAGE_X + 345, 57, { align: 'right', width: 150 });
@@ -101,8 +76,8 @@ export const reportsPdfService = {
     // 2. Helper: Subsequent page compact header
     const drawSubsequentHeader = () => {
       doc.roundedRect(PAGE_X, 45, PAGE_WIDTH, 26, 4).fill('#0f172a');
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#f97316').text('PetHub', PAGE_X + 10, 53);
-      doc.fontSize(8).font('Helvetica').fillColor('#ffffff').text(`|  ${reportTitle} (${periodStr})`, PAGE_X + 45, 53);
+      renderCompactPdfLogo(doc, PAGE_X + 6, 49);
+      doc.fontSize(8).font('Helvetica').fillColor('#ffffff').text(`|  ${reportTitle} (${periodStr})`, PAGE_X + 48, 53, { width: 290, ellipsis: true });
       doc.fontSize(7.5).font('Helvetica').fillColor('#94a3b8').text(`Gerado: ${generatedAtStr}`, PAGE_X + 340, 53, { align: 'right', width: 155 });
     };
 
@@ -165,8 +140,8 @@ export const reportsPdfService = {
 
       for (const col of normalizedHeaders) {
         const align = col.align || 'left';
-        const textX = align === 'right' ? currentX : currentX + 6;
-        const textW = align === 'right' ? col.width - 6 : col.width - 12;
+        const textX = currentX + PDF_CELL_PADDING_X;
+        const textW = col.width - (PDF_CELL_PADDING_X * 2);
 
         doc.text(col.label.toUpperCase(), textX, currentY + 7, {
           width: textW,
@@ -208,17 +183,12 @@ export const reportsPdfService = {
       for (let r = 0; r < rows.length; r++) {
         const row = rows[r];
 
-        // 1. Calculate row height dynamically based on longest cell text
-        let maxTextHeight = 10;
-        for (let c = 0; c < row.length; c++) {
-          const col = normalizedHeaders[c];
-          if (!col) continue;
-          const text = row[c]?.text || '-';
-          doc.fontSize(7.5).font('Helvetica');
-          const h = doc.heightOfString(text, { width: col.width - 10 });
-          if (h > maxTextHeight) maxTextHeight = h;
-        }
-        const rowHeight = Math.max(20, Math.ceil(maxTextHeight + 7));
+        // 1. Calculate row height dynamically based on longest cell text across ALL columns
+        const rowCells = normalizedHeaders.map((col, idx) => ({
+          text: row[idx]?.text || '-',
+          bold: row[idx]?.bold || false,
+        }));
+        const rowHeight = calculateRowHeight(doc, normalizedHeaders, rowCells, 7.5);
 
         // 2. Check if page break is required
         if (currentY + rowHeight > BOTTOM_LIMIT) {
@@ -227,7 +197,7 @@ export const reportsPdfService = {
           currentY = drawTableHead(80);
         }
 
-        // 3. Row background (zebra striping) & borders
+        // 3. Row background (zebra striping) & borders (drawn first to guarantee text remains on top)
         const isEven = r % 2 === 0;
         doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).fill(isEven ? '#ffffff' : '#f8fafc');
         doc.rect(PAGE_X, currentY, PAGE_WIDTH, rowHeight).stroke('#e2e8f0');
@@ -236,9 +206,9 @@ export const reportsPdfService = {
           doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).stroke('#e2e8f0');
         });
 
-        // 4. Draw columns text
+        // 4. Draw columns text on top with safe vertical padding
         let cellX = PAGE_X;
-        const textY = currentY + 5.5;
+        const textY = currentY + PDF_CELL_PADDING_TOP;
 
         for (let c = 0; c < row.length; c++) {
           const colDef = normalizedHeaders[c];
@@ -253,8 +223,8 @@ export const reportsPdfService = {
             .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
             .fillColor(textColor);
 
-          const textX = align === 'right' ? cellX : cellX + 6;
-          const textW = align === 'right' ? colDef.width - 6 : colDef.width - 12;
+          const textX = cellX + PDF_CELL_PADDING_X;
+          const textW = colDef.width - (PDF_CELL_PADDING_X * 2);
 
           doc.text(cellData.text, textX, textY, {
             width: textW,
@@ -284,7 +254,7 @@ export const reportsPdfService = {
       doc.text(
         `${footerLabel} — Página ${i + 1} de ${totalPages} — Emitido em ${generatedAtStr}`,
         PAGE_X,
-        785,
+        PDF_FOOTER_Y,
         { align: 'center', width: PAGE_WIDTH, lineBreak: false }
       );
     }

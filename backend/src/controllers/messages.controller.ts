@@ -290,6 +290,62 @@ export const messagesController = {
     }
   },
 
+  // POST /api/messages/conversations - Create or get a conversation thread without sending an automatic message
+  async createConversation(request: FastifyRequest, reply: FastifyReply) {
+    const user = request.user as { sub: string };
+    if (!user?.sub) {
+      return reply.status(401).send({ error: 'Não autenticado.' });
+    }
+
+    const schema = z.object({
+      recipientId: z.string().min(1, 'Destinatário é obrigatório.'),
+    });
+
+    const parsed = schema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.issues[0].message });
+    }
+
+    const { recipientId } = parsed.data;
+    if (recipientId === user.sub) {
+      return reply.status(400).send({ error: 'Você não pode iniciar conversa consigo mesmo.' });
+    }
+
+    const recipientExists = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { id: true },
+    });
+
+    if (!recipientExists) {
+      return reply.status(404).send({ error: 'Destinatário não encontrado.' });
+    }
+
+    const [p1, p2] = user.sub < recipientId ? [user.sub, recipientId] : [recipientId, user.sub];
+
+    let conversation = await prisma.conversation.findUnique({
+      where: {
+        participant1Id_participant2Id: {
+          participant1Id: p1,
+          participant2Id: p2,
+        },
+      },
+    });
+
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: {
+          participant1Id: p1,
+          participant2Id: p2,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      id: conversation.id,
+      conversationId: conversation.id,
+    });
+  },
+
   // POST /api/messages - Send a message (creates conversation if recipientId is supplied)
   async sendMessage(request: FastifyRequest, reply: FastifyReply) {
     const user = request.user as { sub: string };

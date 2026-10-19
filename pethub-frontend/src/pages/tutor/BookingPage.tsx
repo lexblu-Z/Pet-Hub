@@ -18,6 +18,8 @@ import {
 import { ServiceLogo } from '@/components/shared/ServiceLogo';
 import { PaymentLogo } from '@/components/shared/PaymentLogo';
 import { PaymentMethodSelector } from '@/components/shared/PaymentMethodSelector';
+import { EstablishmentImage } from '@/components/shared/EstablishmentImage';
+import { getProviderPhoto } from '@/utils/image';
 
 const steps = [
   { id: 1, label: 'Pet' },
@@ -35,7 +37,7 @@ export default function BookingPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Payment & Cashback state
-  const [paymentMethod, setPaymentMethod] = useState<string>('Cartão de Débito');
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [needsChange, setNeedsChange] = useState<boolean>(false);
   const [changeFor, setChangeFor] = useState<string>('');
   const [appliedCashbackCode, setAppliedCashbackCode] = useState<string | null>(null);
@@ -84,13 +86,18 @@ export default function BookingPage() {
         }
 
         const res = await api.get('/appointments/available-slots', { params });
+        const slots: string[] = res.data.availableSlots || res.data.slots || [];
         if (res.data.isClosed) {
           setAvailableSlots([]);
           setSlotsMessage(res.data.message || 'Fechado neste dia.');
+          store.setSelectedTime('');
         } else {
-          setAvailableSlots(res.data.availableSlots || []);
-          if ((res.data.availableSlots || []).length === 0) {
-            setSlotsMessage('Nenhum horário disponível para esta data.');
+          setAvailableSlots(slots);
+          if (slots.length === 0) {
+            setSlotsMessage(res.data.message || 'Nenhum horário disponível para esta data.');
+            store.setSelectedTime('');
+          } else if (store.selectedTime && !slots.includes(store.selectedTime)) {
+            store.setSelectedTime('');
           }
         }
       } catch (err) {
@@ -115,28 +122,47 @@ export default function BookingPage() {
         
         setMyPets(petsRes.data);
         
-        const mappedEsts = estsRes.data.map((e: any) => ({
-          id: e.id,
-          userId: e.id,
-          businessName: e.businessName || e.name,
-          role: e.role,
-          type: e.type,
-          category: ['banho', 'tosa'],
-          logo: e.logo || e.avatar || '/salsicha_borzoi_1788367580508.jpg',
-          cover: e.cover || '/jorginho_derpy_shepherd_1788367498390.jpg',
-          address: e.address || { neighborhood: 'Endereço não informado' },
-          rating: e.rating || 4.5,
-          reviewCount: e.reviewCount || 10,
-          isApproved: true,
-          acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
-        }));
+        const mappedEsts = estsRes.data.map((e: any) => {
+          const providerPhoto = getProviderPhoto(e);
+
+          let addressObj = { neighborhood: 'Endereço não informado' };
+          if (typeof e.address === 'string' && e.address.trim()) {
+            addressObj = { neighborhood: e.address };
+          } else if (e.address && typeof e.address === 'object') {
+            addressObj = {
+              neighborhood: e.address.neighborhood || e.address.street || (e.city ? `${e.city} - ${e.state || 'SP'}` : 'Endereço não informado')
+            };
+          } else if (e.city) {
+            addressObj = { neighborhood: `${e.city} - ${e.state || 'SP'}` };
+          }
+
+          return {
+            id: e.id,
+            userId: e.id,
+            businessName: e.businessName || e.name,
+            role: e.role,
+            type: e.type,
+            category: ['banho', 'tosa'],
+            logo: e.logo || e.avatar || providerPhoto || null,
+            cover: providerPhoto,
+            coverPhoto: providerPhoto,
+            photos: Array.isArray(e.photos) ? e.photos : (providerPhoto ? [providerPhoto] : []),
+            address: addressObj,
+            rating: e.rating || 4.5,
+            reviewCount: e.reviewCount || 10,
+            isApproved: true,
+            acceptedSpecies: e.acceptedSpecies || (e.establishmentProfile?.acceptedSpecies) || [],
+          };
+        });
         setAvailableEsts(mappedEsts);
         
         setAllServices(srvsRes.data);
 
         // Check if prefill was passed
         if (location.state?.prefillEstablishment) {
-          store.setSelectedEstablishment(location.state.prefillEstablishment);
+          const prefill = location.state.prefillEstablishment;
+          const matched = mappedEsts.find((item: any) => item.id === prefill.id || item.userId === prefill.id);
+          store.setSelectedEstablishment(matched || prefill);
         }
         if (location.state?.prefillService) {
           store.setSelectedService(location.state.prefillService);
@@ -189,6 +215,11 @@ export default function BookingPage() {
 
     if (!isPetCompatibleWithService(store.selectedPet.species, (store.selectedService as any).animalType)) {
       toast.error(`Incompatibilidade: este serviço é exclusivo para ${getAnimalTypeLabel((store.selectedService as any).animalType)}.`);
+      return;
+    }
+
+    if (!paymentMethod || !paymentMethod.trim()) {
+      toast.error('Por favor, selecione uma forma de pagamento para prosseguir com o agendamento.');
       return;
     }
 
@@ -373,7 +404,12 @@ export default function BookingPage() {
                             : 'border-neutral-100 dark:border-[#313335] bg-white dark:bg-[#1E1F20] hover:border-orange-200 dark:hover:border-orange-500/50 cursor-pointer text-left'
                       }`}
                     >
-                      <img src={est.cover} alt={est.businessName} className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                      <EstablishmentImage
+                        src={est.cover || (est.photos && est.photos[0]) || est.logo}
+                        alt={est.businessName}
+                        role={est.role}
+                        className="w-14 h-14 rounded-xl object-cover shrink-0"
+                      />
                       <div className="flex-1 text-left min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">{est.businessName}</p>
@@ -536,7 +572,8 @@ export default function BookingPage() {
           {currentStep === 5 && (() => {
             const isEstCompat = !store.selectedPet || !store.selectedEstablishment || isPetCompatibleWithProvider(store.selectedPet.species, (store.selectedEstablishment as any).acceptedSpecies);
             const isSvcCompat = !store.selectedPet || !store.selectedService || isPetCompatibleWithService(store.selectedPet.species, (store.selectedService as any).animalType);
-            const canConfirm = isEstCompat && isSvcCompat && !isLoading;
+            const isPaymentSelected = Boolean(paymentMethod && paymentMethod.trim());
+            const canConfirm = isEstCompat && isSvcCompat && isPaymentSelected && !isLoading;
 
             return (
               <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -583,7 +620,21 @@ export default function BookingPage() {
                       </div>
                       <p className="font-bold text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</p>
                     </div>
-                    <p className="text-sm text-neutral-500 dark:text-[#8E918F] mb-4">{store.selectedEstablishment?.businessName}</p>
+                    <div className="flex items-center gap-2.5 mb-4 mt-2">
+                      <EstablishmentImage
+                        src={
+                          (store.selectedEstablishment as any)?.cover ||
+                          (store.selectedEstablishment as any)?.coverPhoto ||
+                          ((store.selectedEstablishment as any)?.photos && (store.selectedEstablishment as any)?.photos[0]) ||
+                          store.selectedEstablishment?.logo
+                        }
+                        alt={store.selectedEstablishment?.businessName || ''}
+                        role={(store.selectedEstablishment as any)?.role}
+                        className="w-7 h-7 rounded-lg object-cover shrink-0"
+                        showLabel={false}
+                      />
+                      <p className="text-sm font-medium text-neutral-600 dark:text-[#C4C7C5]">{store.selectedEstablishment?.businessName}</p>
+                    </div>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-neutral-50 dark:bg-[#282A2C] border border-transparent dark:border-[#313335] p-3 rounded-xl flex items-center gap-2">
@@ -599,12 +650,18 @@ export default function BookingPage() {
                     </div>
                   </div>
                   <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border-t border-transparent dark:border-orange-900/40">
-                    <div className="flex items-center justify-between font-bold text-neutral-900 dark:text-[#E3E3E3]">
-                      <span className="flex items-center gap-2">
-                        <PaymentLogo method={paymentMethod} size="xs" />
-                        <span>Valor do Serviço</span>
-                      </span>
+                    <div className="flex items-center justify-between font-bold text-neutral-900 dark:text-[#E3E3E3] mb-1">
+                      <span>Valor do Serviço</span>
                       <span className="text-lg text-orange-600 dark:text-orange-400">R${store.selectedService?.price.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-[#C4C7C5] pt-1 border-t border-orange-200/40 dark:border-orange-900/30">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {paymentMethod ? <PaymentLogo method={paymentMethod} size="xs" /> : null}
+                        <span>Forma de Pagamento:</span>
+                      </span>
+                      <span className={paymentMethod ? 'font-bold text-neutral-900 dark:text-[#E3E3E3]' : 'font-bold text-amber-600 dark:text-amber-400'}>
+                        {paymentMethod || 'A selecionar abaixo *'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -663,6 +720,15 @@ export default function BookingPage() {
 
                 {/* Unified Payment Method & Cashback Selector */}
                 <div className="mb-6">
+                  {!paymentMethod && (
+                    <div className="mb-3 p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                      <AlertTriangle size={18} className="shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <strong className="block font-bold">Seleção obrigatória da forma de pagamento:</strong>
+                        <span>Escolha abaixo como você deseja realizar o pagamento no local/balcão para poder confirmar o agendamento.</span>
+                      </div>
+                    </div>
+                  )}
                   <PaymentMethodSelector
                     type="SERVICE"
                     subtotal={store.selectedService?.price || 0}
@@ -683,7 +749,11 @@ export default function BookingPage() {
                 </div>
 
                 <Button fullWidth size="lg" isLoading={isLoading} disabled={!canConfirm} onClick={handleConfirm}>
-                  {isLoading ? 'Confirmando Agendamento...' : 'Confirmar Agendamento'}
+                  {isLoading
+                    ? 'Confirmando Agendamento...'
+                    : !isPaymentSelected
+                    ? 'Selecione a Forma de Pagamento'
+                    : 'Confirmar Agendamento'}
                 </Button>
               </motion.div>
             );

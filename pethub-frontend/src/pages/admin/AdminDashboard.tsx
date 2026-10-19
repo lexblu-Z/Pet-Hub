@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
   Users,
   Building2,
@@ -40,6 +41,7 @@ interface AlertItem {
 
 export default function AdminDashboard() {
   const { theme } = useThemeStore();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -59,8 +61,12 @@ export default function AdminDashboard() {
         setStats(dashRes.data);
         setAlerts(alertsRes.data || []);
         setChartData(chartRes.data || []);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load operational dashboard data', err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          useAuthStore.getState().logout();
+          navigate('/auth/login', { replace: true });
+        }
       } finally {
         setIsLoading(false);
       }

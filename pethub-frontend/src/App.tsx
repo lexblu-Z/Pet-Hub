@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 
@@ -74,18 +74,47 @@ import AdminNotificationsPage from '@/pages/admin/AdminNotificationsPage';
 import AdminAuditLogPage from '@/pages/admin/AdminAuditLogPage';
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
-  const { isAuthenticated, currentRole } = useAuthStore();
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+  const { isAuthenticated, currentRole, token, isAuthReady } = useAuthStore();
   
-  if (!isAuthenticated) {
+  // Se há token armazenado e a validação com o backend ainda está em andamento, aguardar
+  if (token && !isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-neutral-400 font-medium">Verificando sessão...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Não autenticado ou sem token: redirecionamento estrito para login
+  if (!isAuthenticated || !token) {
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (allowedRoles && currentRole && !allowedRoles.includes(currentRole)) {
-    return <Navigate to={`/${currentRole}`} replace />;
+  // Se a rota exige papéis específicos, o papel DEVE estar presente e DEVE estar na lista permitida
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!currentRole || !allowedRoles.includes(currentRole)) {
+      return <Navigate to={currentRole ? `/${currentRole}` : '/auth/login'} replace />;
+    }
   }
 
   return <>{children}</>;
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.querySelectorAll('main, [data-scrollable="true"], .overflow-y-auto').forEach((el) => {
+      el.scrollTop = 0;
+    });
+  }, [pathname]);
+
+  return null;
 }
 
 export default function App() {
@@ -99,6 +128,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <LoginNotificationModal />
       <Routes>
         {/* Public Routes */}
@@ -144,6 +174,9 @@ export default function App() {
           <Route path="favorites" element={<FavoritesPage />} />
           <Route path="favoritos" element={<FavoritesPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="perfil" element={<Navigate to="/tutor/profile" replace />} />
+          <Route path="enderecos" element={<ProfilePage initialTab="addresses" />} />
+          <Route path="addresses" element={<ProfilePage initialTab="addresses" />} />
           <Route path="plans" element={<PlansPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="compras" element={<MyPurchasesPage />} />

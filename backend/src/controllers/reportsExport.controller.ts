@@ -53,21 +53,31 @@ function parseDateRange(startDate?: string, endDate?: string) {
   let start: Date;
   let end: Date;
 
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const todayStr = formatter.format(now);
+  const [currYear, currMonth] = todayStr.split('-');
+  const firstDayStr = `${currYear}-${currMonth}-01`;
+  const lastDay = new Date(Number(currYear), Number(currMonth), 0).getDate();
+  const lastDayStr = `${currYear}-${currMonth}-${String(lastDay).padStart(2, '0')}`;
+
   if (startDate) {
     start = new Date(`${startDate}T00:00:00-03:00`);
     if (isNaN(start.getTime())) start = new Date(`${startDate}T00:00:00`);
   } else {
-    start = new Date();
-    start.setDate(start.getDate() - 30);
-    start.setHours(0, 0, 0, 0);
+    start = new Date(`${firstDayStr}T00:00:00-03:00`);
   }
 
   if (endDate) {
     end = new Date(`${endDate}T23:59:59.999-03:00`);
     if (isNaN(end.getTime())) end = new Date(`${endDate}T23:59:59.999`);
   } else {
-    end = new Date();
-    end.setHours(23, 59, 59, 999);
+    end = new Date(`${lastDayStr}T23:59:59.999-03:00`);
   }
 
   return { start, end };
@@ -138,12 +148,28 @@ export const reportsExportController = {
       paymentMethod?: string;
       category?: string;
       species?: string;
+      professionalId?: string;
+      employeeId?: string;
+      operationType?: 'ALL' | 'SERVICES' | 'PRODUCTS';
     };
   }>, reply: FastifyReply) {
     const user = await ensureEstablishment(request, reply);
     if (!user) return;
 
-    const { type, format = 'csv', startDate, endDate, serviceType, status, paymentMethod, category, species } = request.query;
+    const {
+      type,
+      format = 'csv',
+      startDate,
+      endDate,
+      serviceType,
+      status,
+      paymentMethod,
+      category,
+      species,
+      professionalId,
+      employeeId,
+      operationType = 'ALL',
+    } = request.query;
     const { start, end } = parseDateRange(startDate, endDate);
     const startDateStr = formatDateBr(start);
     const endDateStr = formatDateBr(end);
@@ -161,6 +187,14 @@ export const reportsExportController = {
         }
         if (serviceType) {
           whereClause.service = { category: { equals: serviceType, mode: 'insensitive' } };
+        }
+        if (professionalId) {
+          whereClause.OR = [
+            { professionalId },
+            { employeeId: professionalId },
+          ];
+        } else if (employeeId) {
+          whereClause.employeeId = employeeId;
         }
 
         const list = await prisma.appointment.findMany({
@@ -218,43 +252,94 @@ export const reportsExportController = {
           tableRows,
         }, reply);
       } else if (type === 'financial') {
-        const appointments = await prisma.appointment.findMany({
-          where: {
-            establishmentId: user.id,
-            status: AppointmentStatus.COMPLETED,
-            date: { gte: start, lte: end },
-          },
-          include: { service: true, tutor: true },
-          orderBy: { date: 'desc' },
-        });
+        const includeServices = operationType === 'ALL' || operationType === 'SERVICES';
+        const includeProducts = operationType === 'ALL' || operationType === 'PRODUCTS';
 
-        const orderItems = await prisma.orderItem.findMany({
-          where: {
-            establishmentId: user.id,
-            order: {
-              status: { in: APPROVED_ORDER_STATUSES },
-              createdAt: { gte: start, lte: end },
-            },
-          },
-          include: { product: true, order: { include: { tutor: true } } },
-          orderBy: { createdAt: 'desc' },
-        });
+        const appointmentWhere: any = {
+          establishmentId: user.id,
+          status: AppointmentStatus.COMPLETED,
+          paymentStatus: 'PAID',
+          date: { gte: start, lte: end },
+        };
+        if (paymentMethod) {
+          appointmentWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+        }
 
-        const cancelledOrderItems = await prisma.orderItem.findMany({
-          where: {
-            establishmentId: user.id,
-            order: {
-              status: OrderStatus.CANCELLED,
-              createdAt: { gte: start, lte: end },
-            },
-          },
-          include: { product: true, order: { include: { tutor: true } } },
-          orderBy: { createdAt: 'desc' },
-        });
+        const appointments = includeServices
+          ? await prisma.appointment.findMany({
+              where: appointmentWhere,
+              include: { service: true, tutor: true },
+              orderBy: { date: 'desc' },
+            })
+          : [];
 
-        const servRev = appointments.reduce((s, a) => s + (a.service?.price || 0), 0);
+        const refundedAppointmentWhere: any = {
+          establishmentId: user.id,
+          paymentStatus: 'REFUNDED',
+          date: { gte: start, lte: end },
+        };
+        if (paymentMethod) {
+          refundedAppointmentWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+        }
+        const refundedAppointments = includeServices
+          ? await prisma.appointment.findMany({
+              where: refundedAppointmentWhere,
+              include: { service: true, tutor: true },
+              orderBy: { date: 'desc' },
+            })
+          : [];
+
+        const orderItemsWhere: any = {
+          establishmentId: user.id,
+          order: {
+            status: { in: APPROVED_ORDER_STATUSES },
+            createdAt: { gte: start, lte: end },
+          },
+        };
+
+        if (paymentMethod) {
+          orderItemsWhere.order = {
+            ...orderItemsWhere.order,
+            paymentMethod: { equals: paymentMethod, mode: 'insensitive' },
+          };
+        }
+
+        const orderItems = includeProducts
+          ? await prisma.orderItem.findMany({
+              where: orderItemsWhere,
+              include: { product: true, order: { include: { tutor: true } } },
+              orderBy: { createdAt: 'desc' },
+            })
+          : [];
+
+        const cancelledOrderItemsWhere: any = {
+          establishmentId: user.id,
+          order: {
+            status: OrderStatus.CANCELLED,
+            createdAt: { gte: start, lte: end },
+          },
+        };
+
+        if (paymentMethod) {
+          cancelledOrderItemsWhere.order = {
+            ...cancelledOrderItemsWhere.order,
+            paymentMethod: { equals: paymentMethod, mode: 'insensitive' },
+          };
+        }
+
+        const cancelledOrderItems = includeProducts
+          ? await prisma.orderItem.findMany({
+              where: cancelledOrderItemsWhere,
+              include: { product: true, order: { include: { tutor: true } } },
+              orderBy: { createdAt: 'desc' },
+            })
+          : [];
+
+        const servRev = appointments.reduce((s, a) => s + (a.finalAmount ?? a.service?.price ?? 0), 0);
         const prodRev = orderItems.reduce((s, i) => s + (i.priceAtTime * i.quantity), 0);
-        const refundedRev = cancelledOrderItems.reduce((s, i) => s + (i.priceAtTime * i.quantity), 0);
+        const refundedProdRev = cancelledOrderItems.reduce((s, i) => s + (i.priceAtTime * i.quantity), 0);
+        const refundedServRev = refundedAppointments.reduce((s, a) => s + (a.finalAmount ?? a.service?.price ?? 0), 0);
+        const refundedRev = refundedProdRev + refundedServRev;
         const grossTotalRev = servRev + prodRev + refundedRev;
         const netTotalRev = grossTotalRev - refundedRev;
 
@@ -281,8 +366,16 @@ export const reportsExportController = {
             date: new Date(a.date),
             desc: a.service?.name || 'Serviço',
             client: a.tutor?.name || '-',
-            method: 'Presencial',
-            amount: a.service?.price || 0,
+            method: a.paymentMethod || 'Presencial',
+            amount: a.finalAmount ?? a.service?.price ?? 0,
+          })),
+          ...refundedAppointments.map(a => ({
+            type: 'ESTORNO' as const,
+            date: new Date(a.date),
+            desc: `Estorno: ${a.service?.name || 'Serviço Cancelado'}`,
+            client: a.tutor?.name || '-',
+            method: a.paymentMethod || 'Estorno',
+            amount: -(a.finalAmount ?? a.service?.price ?? 0),
           })),
           ...orderItems.map(i => ({
             type: 'PRODUTO' as const,
@@ -476,6 +569,14 @@ export const reportsExportController = {
       if (serviceType) {
         whereClause.service = { category: { equals: serviceType, mode: 'insensitive' } };
       }
+      if (professionalId) {
+        whereClause.OR = [
+          { professionalId },
+          { employeeId: professionalId },
+        ];
+      } else if (employeeId) {
+        whereClause.employeeId = employeeId;
+      }
 
       const list = await prisma.appointment.findMany({
         where: whereClause,
@@ -502,41 +603,90 @@ export const reportsExportController = {
         csvContent += row.join(';') + '\r\n';
       }
     } else if (type === 'financial') {
-      const appointments = await prisma.appointment.findMany({
-        where: {
-          establishmentId: user.id,
-          status: AppointmentStatus.COMPLETED,
-          date: { gte: start, lte: end },
-        },
-        include: { service: true, tutor: true },
-        orderBy: { date: 'desc' },
-      });
+      const includeServices = operationType === 'ALL' || operationType === 'SERVICES';
+      const includeProducts = operationType === 'ALL' || operationType === 'PRODUCTS';
 
-      const orderItems = await prisma.orderItem.findMany({
-        where: {
-          establishmentId: user.id,
-          order: {
-            status: { in: APPROVED_ORDER_STATUSES },
-            createdAt: { gte: start, lte: end },
-          },
-        },
-        include: { product: true, order: { include: { tutor: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
+      const appointmentWhere: any = {
+        establishmentId: user.id,
+        status: AppointmentStatus.COMPLETED,
+        paymentStatus: 'PAID',
+        date: { gte: start, lte: end },
+      };
+      if (paymentMethod) {
+        appointmentWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+      }
 
-      const cancelledOrderItems = await prisma.orderItem.findMany({
-        where: {
-          establishmentId: user.id,
-          order: {
-            status: OrderStatus.CANCELLED,
-            createdAt: { gte: start, lte: end },
-          },
-        },
-        include: { product: true, order: { include: { tutor: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
+      const appointments = includeServices
+        ? await prisma.appointment.findMany({
+            where: appointmentWhere,
+            include: { service: true, tutor: true },
+            orderBy: { date: 'desc' },
+          })
+        : [];
 
-      const headers = ['Tipo', 'Data', 'Descrição / Item', 'Cliente', 'Forma de Pagamento', 'Valor (R$)'];
+      const refundedAppointmentWhere: any = {
+        establishmentId: user.id,
+        paymentStatus: 'REFUNDED',
+        date: { gte: start, lte: end },
+      };
+      if (paymentMethod) {
+        refundedAppointmentWhere.paymentMethod = { equals: paymentMethod, mode: 'insensitive' };
+      }
+      const refundedAppointments = includeServices
+        ? await prisma.appointment.findMany({
+            where: refundedAppointmentWhere,
+            include: { service: true, tutor: true },
+            orderBy: { date: 'desc' },
+          })
+        : [];
+
+      const orderItemsWhere: any = {
+        establishmentId: user.id,
+        order: {
+          status: { in: APPROVED_ORDER_STATUSES },
+          createdAt: { gte: start, lte: end },
+        },
+      };
+
+      if (paymentMethod) {
+        orderItemsWhere.order = {
+          ...orderItemsWhere.order,
+          paymentMethod: { equals: paymentMethod, mode: 'insensitive' },
+        };
+      }
+
+      const orderItems = includeProducts
+        ? await prisma.orderItem.findMany({
+            where: orderItemsWhere,
+            include: { product: true, order: { include: { tutor: true } } },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
+
+      const cancelledOrderItemsWhere: any = {
+        establishmentId: user.id,
+        order: {
+          status: OrderStatus.CANCELLED,
+          createdAt: { gte: start, lte: end },
+        },
+      };
+
+      if (paymentMethod) {
+        cancelledOrderItemsWhere.order = {
+          ...cancelledOrderItemsWhere.order,
+          paymentMethod: { equals: paymentMethod, mode: 'insensitive' },
+        };
+      }
+
+      const cancelledOrderItems = includeProducts
+        ? await prisma.orderItem.findMany({
+            where: cancelledOrderItemsWhere,
+            include: { product: true, order: { include: { tutor: true } } },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
+
+      const headers = ['Tipo', 'Data', 'Descrição / Item', 'Cliente', 'Forma de Pagamento', 'Valor Bruto (R$)'];
       csvContent += headers.join(';') + '\r\n';
 
       for (const apt of appointments) {
@@ -545,8 +695,20 @@ export const reportsExportController = {
           escapeCsv(formatDateTimeBr(apt.date)),
           escapeCsv(apt.service?.name || 'Serviço'),
           escapeCsv(apt.tutor?.name || '-'),
-          escapeCsv('Presencial'),
-          escapeCsv(formatCurrency(apt.service?.price || 0)),
+          escapeCsv(apt.paymentMethod || 'Presencial'),
+          escapeCsv(formatCurrency(apt.finalAmount ?? apt.service?.price ?? 0)),
+        ];
+        csvContent += row.join(';') + '\r\n';
+      }
+
+      for (const apt of refundedAppointments) {
+        const row = [
+          escapeCsv('ESTORNO'),
+          escapeCsv(formatDateTimeBr(apt.date)),
+          escapeCsv(`Estorno: ${apt.service?.name || 'Serviço Cancelado'}`),
+          escapeCsv(apt.tutor?.name || '-'),
+          escapeCsv(apt.paymentMethod || 'Estorno'),
+          escapeCsv(`-${formatCurrency(apt.finalAmount ?? apt.service?.price ?? 0)}`),
         ];
         csvContent += row.join(';') + '\r\n';
       }

@@ -8,8 +8,8 @@ const createReviewSchema = z
   .object({
     appointmentId: z.string().uuid({ message: 'ID do agendamento inválido.' }).optional().nullable(),
     orderId: z.string().uuid({ message: 'ID do pedido inválido.' }).optional().nullable(),
-    rating: z.number().int().min(1).max(5, { message: 'A nota deve ser entre 1 e 5 estrelas.' }),
-    comment: z.string().trim().min(3, { message: 'O comentário deve ter no mínimo 3 caracteres.' }).max(1000, { message: 'O comentário deve ter no máximo 1000 caracteres.' }),
+    rating: z.number().int().min(1, { message: 'A nota deve ser entre 1 e 5 estrelas.' }).max(5, { message: 'A nota deve ser entre 1 e 5 estrelas.' }),
+    comment: z.string().trim().max(1000, { message: 'O comentário deve ter no máximo 1000 caracteres.' }).optional().nullable().default(''),
     petPhotoUrl: z.string().trim().optional().nullable(),
   })
   .refine((data) => data.appointmentId || data.orderId, {
@@ -119,7 +119,7 @@ export const reviewsController = {
         return reply.status(400).send({ error: 'Parâmetro establishmentId ou professionalId é obrigatório.' });
       }
 
-      // 1. Check eligible appointments
+      // 1. Check eligible appointments (ONLY COMPLETED appointments are eligible for review)
       const appointments = await prisma.appointment.findMany({
         where: {
           tutorId: user.sub,
@@ -127,15 +127,7 @@ export const reviewsController = {
             { establishmentId: targetId },
             { professionalId: targetId },
           ],
-          AND: [
-            {
-              OR: [
-                { status: AppointmentStatus.COMPLETED },
-                { paymentStatus: 'PAID' },
-                { confirmedByTutor: true },
-              ],
-            },
-          ],
+          status: AppointmentStatus.COMPLETED,
         },
         include: {
           service: { select: { id: true, name: true } },
@@ -255,7 +247,7 @@ export const reviewsController = {
             tutorId: user.sub,
             establishmentId: establishmentId,
             rating: body.rating,
-            comment: body.comment,
+            comment: body.comment || '',
             petPhotoUrl: sanitizedPhoto,
           },
           include: {
@@ -275,6 +267,7 @@ export const reviewsController = {
           title: 'Nova avaliação de compra',
           message: `Sua loja recebeu uma avaliação de ${body.rating} estrelas sobre uma compra.`,
           type: 'ORDER',
+          metadata: { orderId: order.id },
         }).catch((notifErr) => {
           request.log.warn({ err: notifErr }, 'Falha ao emitir notificação de review de compra');
         });
@@ -290,9 +283,9 @@ export const reviewsController = {
             orderId: order.id,
             serviceName: 'Compra na Loja',
             tutor: {
-              id: review.tutor.id,
-              name: review.tutor.name,
-              avatar: review.tutor.avatar || review.tutor.defaultAvatar || null,
+              id: (review as any).tutor?.id,
+              name: (review as any).tutor?.name,
+              avatar: (review as any).tutor?.avatar || (review as any).tutor?.defaultAvatar || null,
             },
           },
         });
@@ -320,10 +313,10 @@ export const reviewsController = {
         return reply.status(409).send({ error: 'Este agendamento já foi avaliado anteriormente.' });
       }
 
-      const isCompleted = appointment.status === AppointmentStatus.COMPLETED || appointment.paymentStatus === 'PAID' || appointment.confirmedByTutor;
-      if (!isCompleted) {
+      // Only appointments with status COMPLETED can be reviewed (blocked for PENDING, CONFIRMED, IN_PROGRESS, CANCELLED)
+      if (appointment.status !== AppointmentStatus.COMPLETED) {
         return reply.status(400).send({
-          error: 'Apenas atendimentos concluídos ou confirmados podem ser avaliados.',
+          error: 'Apenas atendimentos com status Concluído (COMPLETED) podem ser avaliados.',
         });
       }
 
@@ -335,7 +328,7 @@ export const reviewsController = {
           professionalId: appointment.professionalId || null,
           serviceId: appointment.serviceId,
           rating: body.rating,
-          comment: body.comment,
+          comment: body.comment || '',
           petPhotoUrl: sanitizedPhoto,
         },
         include: {
@@ -364,6 +357,7 @@ export const reviewsController = {
           title: 'Nova avaliação recebida',
           message: `Seu serviço recebeu uma avaliação de ${body.rating} estrelas.`,
           type: 'APPOINTMENT',
+          appointmentId: appointment.id,
         }).catch((notifErr) => {
           request.log.warn({ err: notifErr }, 'Falha ao emitir notificação de review');
         });

@@ -4,6 +4,8 @@ import { Role, AppointmentStatus, OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { googleCalendarService } from '../services/googleCalendar.service';
 import { createAndEmitNotification } from '../utils/notificationEvents';
+import { calculateDayAvailability } from '../services/availability.service';
+import { appointmentsController } from './appointments.controller';
 
 // Helper to check establishment access
 async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply) {
@@ -23,23 +25,35 @@ async function ensureEstablishment(request: FastifyRequest, reply: FastifyReply)
   return user;
 }
 
-export const ALLOWED_EMPLOYEE_ROLES = [
-  'Funcionário',
+export const PREDEFINED_EMPLOYEE_ROLES = [
+  'Gerente',
+  'Subgerente',
+  'Supervisor',
+  'Recepcionista',
+  'Atendente',
+  'Veterinário',
   'Banhista',
   'Tosador',
-  'Atendente',
-  'Gerente',
-  'Veterinário',
+  'Auxiliar',
+  'Funcionário',
   'Adestrador',
   'Outro',
 ] as const;
 
+export const ALLOWED_EMPLOYEE_ROLES = PREDEFINED_EMPLOYEE_ROLES;
+
 export function findAllowedRole(val: string): string | null {
   const trimmed = val.trim();
-  const found = ALLOWED_EMPLOYEE_ROLES.find(
+  if (!trimmed) return null;
+  const found = PREDEFINED_EMPLOYEE_ROLES.find(
     (r) => r.toLowerCase() === trimmed.toLowerCase()
   );
-  return found || null;
+  if (found) return found;
+  // If custom role (from "Outro" or typed custom name), accept any non-empty string up to 80 chars
+  if (trimmed.length >= 2 && trimmed.length <= 80) {
+    return trimmed;
+  }
+  return null;
 }
 
 export const establishmentAreaController = {
@@ -66,17 +80,37 @@ export const establishmentAreaController = {
       startDate = new Date(0);
     }
 
-    // 1. Completed appointments for revenue
-    const completedAppointments = await prisma.appointment.findMany({
+    // 1. Paid completed appointments for realized cash revenue
+    const paidAppointments = await prisma.appointment.findMany({
       where: {
         establishmentId: user.id,
         status: AppointmentStatus.COMPLETED,
+        paymentStatus: 'PAID',
         date: { gte: startDate },
       },
       include: { service: true },
     });
 
-    const appointmentRevenue = completedAppointments.reduce((sum, a) => sum + (a.service?.price || 0), 0);
+    const appointmentRevenue = paidAppointments.reduce(
+      (sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0),
+      0
+    );
+
+    // Completed appointments with pending payment (Contas a Receber)
+    const pendingPaymentAppointments = await prisma.appointment.findMany({
+      where: {
+        establishmentId: user.id,
+        status: AppointmentStatus.COMPLETED,
+        paymentStatus: 'PENDING',
+        date: { gte: startDate },
+      },
+      include: { service: true },
+    });
+
+    const pendingAppointmentRevenue = pendingPaymentAppointments.reduce(
+      (sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0),
+      0
+    );
 
     // 2. Orders revenue from items of this establishment
     // Include all approved statuses: everything except PENDING and CANCELLED counts as confirmed revenue
@@ -246,9 +280,68 @@ export const establishmentAreaController = {
 
     const topProducts = Object.values(productSalesMap)
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
+      .slice(0, 3);
 
-    // 8. Revenue chart data points (grouped by day/month based on period, America/Sao_Paulo)
+    // 8. Top booked services (excluding CANCELLED appointments, within selected period)
+    const activeAppointments = await prisma.appointment.findMany({
+      where: {
+        establishmentId: user.id,
+        status: { not: AppointmentStatus.CANCELLED },
+        date: { gte: startDate },
+      },
+      include: {
+        service: true,
+      },
+    });
+
+    const serviceBookingsMap: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        count: number;
+        completedCount: number;
+        revenue: number;
+        pendingRevenue: number;
+        category?: string | null;
+      }
+    > = {};
+
+    for (const apt of activeAppointments) {
+      const sId = apt.serviceId || 'unknown';
+      const sName = apt.service?.name || 'Serviço';
+      const aptFinalAmount = Number(apt.finalAmount ?? apt.service?.price ?? 0);
+      const sCat = apt.service?.category || null;
+
+      if (!serviceBookingsMap[sId]) {
+        serviceBookingsMap[sId] = {
+          id: sId,
+          name: sName,
+          count: 0,
+          completedCount: 0,
+          revenue: 0,
+          pendingRevenue: 0,
+          category: sCat,
+        };
+      }
+
+      serviceBookingsMap[sId].count += 1;
+
+      // Realized revenue ONLY from COMPLETED & PAID appointments
+      if (apt.status === AppointmentStatus.COMPLETED && apt.paymentStatus === 'PAID') {
+        serviceBookingsMap[sId].revenue += aptFinalAmount;
+        serviceBookingsMap[sId].completedCount += 1;
+      } else {
+        // Pending / scheduled / unpaid revenue tracked separately as projected/pending
+        serviceBookingsMap[sId].pendingRevenue += aptFinalAmount;
+      }
+    }
+
+    const topServices = Object.values(serviceBookingsMap)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    // 9. Revenue chart data points (grouped by day/month based on period, America/Sao_Paulo)
     const toBrDateStr = (dt: Date | string) => {
       try {
         return new Intl.DateTimeFormat('en-CA', {
@@ -271,9 +364,9 @@ export const establishmentAreaController = {
       const dayTargetStr = toBrDateStr(d);
       const label = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'short' }).replace(' de ', ' ').replace('.', '');
 
-      const appRev = completedAppointments
+      const appRev = paidAppointments
         .filter(a => toBrDateStr(a.date) === dayTargetStr)
-        .reduce((sum, a) => sum + (a.service?.price || 0), 0);
+        .reduce((sum, a) => sum + (a.finalAmount ?? a.service?.price ?? 0), 0);
 
       const ordRev = orderItems
         .filter(it => toBrDateStr(it.createdAt) === dayTargetStr)
@@ -293,6 +386,7 @@ export const establishmentAreaController = {
       totalCancelledAmount,
       cancelledOrdersCount: cancelledOrdersList.length,
       appointmentRevenue,
+      pendingAppointmentRevenue,
       productRevenue,
       cancellations: {
         ordersCount: cancelledOrdersList.length,
@@ -304,6 +398,7 @@ export const establishmentAreaController = {
         refundedAmount: totalRefundedAmount,
         netRevenue,
         appointmentRevenue,
+        pendingAppointmentRevenue,
         productRevenue,
       },
       appointments: {
@@ -320,6 +415,7 @@ export const establishmentAreaController = {
       clientsCount: uniqueClientIds.size,
       petsCount: uniquePets.length,
       topProducts,
+      topServices,
       revenueChart: revenuePoints,
       averageRating: 5.0,
     });
@@ -368,13 +464,15 @@ export const establishmentAreaController = {
       return reply.status(400).send({ error: 'Apenas estabelecimentos em Ourinhos - SP são permitidos.' });
     }
 
+    const { address, city, state, zipCode, ...profileData } = data;
+
     const updatedProfile = await prisma.establishmentProfile.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
         ...data,
       },
-      update: data,
+      update: profileData,
     });
 
     return reply.send(updatedProfile);
@@ -443,6 +541,80 @@ export const establishmentAreaController = {
     });
 
     return reply.send(updated.workingHours);
+  },
+
+  async getAttendedSpecies(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    const profile = user.establishmentProfile;
+    const profileSpecies: string[] = Array.isArray(profile?.acceptedSpecies) ? profile.acceptedSpecies : [];
+
+    // Distinct animal types from existing services of this establishment
+    const services = await prisma.service.findMany({
+      where: { establishmentId: user.id },
+      select: { animalType: true },
+    });
+
+    const serviceSpecies = services
+      .map(s => s.animalType?.trim())
+      .filter((t): t is string => !!t && !['all', 'todos', 'ambos', 'qualquer', 'todas'].includes(t.toLowerCase()));
+
+    // Normalized union preserving canonical casing
+    const speciesMap = new Map<string, string>();
+    for (const sp of profileSpecies) {
+      if (sp && sp.trim()) {
+        speciesMap.set(sp.trim().toLowerCase(), sp.trim());
+      }
+    }
+    for (const sp of serviceSpecies) {
+      if (sp && sp.trim()) {
+        const key = sp.trim().toLowerCase();
+        if (!speciesMap.has(key)) {
+          speciesMap.set(key, sp.trim());
+        }
+      }
+    }
+
+    const attendedSpecies = Array.from(speciesMap.values());
+
+    return reply.send({
+      acceptedSpecies: profileSpecies,
+      serviceSpecies: Array.from(new Set(serviceSpecies)),
+      attendedSpecies,
+    });
+  },
+
+  async updateAttendedSpecies(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    const schema = z.object({
+      acceptedSpecies: z.array(z.string().min(1)),
+    });
+
+    const parsed = schema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Lista de espécies inválida.' });
+    }
+
+    const { acceptedSpecies } = parsed.data;
+
+    const updatedProfile = await prisma.establishmentProfile.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        acceptedSpecies,
+      },
+      update: {
+        acceptedSpecies,
+      },
+    });
+
+    return reply.send({
+      message: 'Espécies atendidas atualizadas com sucesso.',
+      acceptedSpecies: updatedProfile.acceptedSpecies,
+    });
   },
 
   // =========================================================================
@@ -689,12 +861,13 @@ export const establishmentAreaController = {
         (val) => findAllowedRole(val) !== null,
         {
           message:
-            'Cargo ou função inválida. Opções permitidas: Funcionário, Banhista, Tosador, Atendente, Gerente, Veterinário, Adestrador ou Outro.',
+            'Cargo ou função inválida. Escolha uma das opções predefinidas ou informe um cargo personalizado válido.',
         }
       ),
-      phone: z.string().optional(),
-      description: z.string().optional(),
-      avatar: z.string().optional(),
+      email: z.string().email('E-mail do colaborador inválido').optional().nullable().or(z.literal('')),
+      phone: z.string().optional().nullable(),
+      description: z.string().optional().nullable(),
+      avatar: z.string().optional().nullable(),
       active: z.boolean().default(true),
       workingDays: z.any().optional(),
       serviceIds: z.array(z.string()).optional(),
@@ -709,6 +882,7 @@ export const establishmentAreaController = {
           establishmentId: user.id,
           name: data.name.trim(),
           role: canonicalRole,
+          email: data.email?.trim() || null,
           phone: data.phone?.trim() || null,
           description: data.description?.trim() || null,
           avatar: data.avatar || null,
@@ -750,12 +924,13 @@ export const establishmentAreaController = {
         (val) => findAllowedRole(val) !== null,
         {
           message:
-            'Cargo ou função inválida. Opções permitidas: Funcionário, Banhista, Tosador, Atendente, Gerente, Veterinário, Adestrador ou Outro.',
+            'Cargo ou função inválida. Escolha uma das opções predefinidas ou informe um cargo personalizado válido.',
         }
       ).optional(),
-      phone: z.string().optional(),
-      description: z.string().optional(),
-      avatar: z.string().optional(),
+      email: z.string().email('E-mail do colaborador inválido').optional().nullable().or(z.literal('')),
+      phone: z.string().optional().nullable(),
+      description: z.string().optional().nullable(),
+      avatar: z.string().optional().nullable(),
       active: z.boolean().optional(),
       workingDays: z.any().optional(),
       serviceIds: z.array(z.string()).optional(),
@@ -775,6 +950,7 @@ export const establishmentAreaController = {
         data: {
           name: data.name !== undefined ? data.name.trim() : undefined,
           role: canonicalRole,
+          email: data.email !== undefined ? (data.email?.trim() || null) : undefined,
           phone: data.phone !== undefined ? (data.phone?.trim() || null) : undefined,
           description: data.description !== undefined ? (data.description?.trim() || null) : undefined,
           avatar: data.avatar !== undefined ? data.avatar : undefined,
@@ -979,6 +1155,7 @@ export const establishmentAreaController = {
         title: 'Pedido atualizado',
         message: 'Seu pedido recebeu uma nova atualização de status.',
         type: 'ORDER',
+        metadata: { orderId: updated.id },
       });
     } catch (notifErr) {
       request.log.error(notifErr, 'Erro ao criar notificação de atualização de status do pedido');
@@ -1097,6 +1274,7 @@ export const establishmentAreaController = {
           title: 'Pedido cancelado',
           message: 'Um pedido de produtos foi cancelado.',
           type: 'ORDER',
+          metadata: { orderId: order.id },
         });
 
         return updated;
@@ -1114,17 +1292,21 @@ export const establishmentAreaController = {
   // 7. APPOINTMENTS
   // =========================================================================
   async listAppointments(
-    request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string } }>,
+    request: FastifyRequest<{ Querystring: { date?: string; startDate?: string; endDate?: string; status?: string; id?: string } }>,
     reply: FastifyReply
   ) {
     const user = await ensureEstablishment(request, reply);
     if (!user) return;
 
-    const { date, startDate, endDate, status } = request.query;
+    const { date, startDate, endDate, status, id } = request.query;
 
     const where: any = {
       establishmentId: user.id,
     };
+
+    if (id) {
+      where.id = id;
+    }
 
     if (status && status !== 'ALL') {
       where.status = status as AppointmentStatus;
@@ -1190,6 +1372,9 @@ export const establishmentAreaController = {
         price: Number(a.service?.price ?? 0),
         duration: a.service?.duration || 60,
         status: a.status,
+        paymentStatus: a.paymentStatus || 'PENDING',
+        paymentMethod: a.paymentMethod || null,
+        finalAmount: a.finalAmount ?? a.service?.price ?? 0,
         petTransport: (a as any).petTransport || 'PICKUP_BY_TUTOR',
         employeeId: a.employeeId || null,
         employee: a.employee ? {
@@ -1203,6 +1388,28 @@ export const establishmentAreaController = {
     });
 
     return reply.send(formatted);
+  },
+
+  async getAvailability(
+    request: FastifyRequest<{ Querystring: { date?: string; serviceId?: string; employeeId?: string } }>,
+    reply: FastifyReply
+  ) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    const { date, serviceId, employeeId } = request.query;
+    if (!date) {
+      return reply.status(400).send({ error: 'Data é obrigatória (formato YYYY-MM-DD).' });
+    }
+
+    const availability = await calculateDayAvailability({
+      date,
+      establishmentId: user.id,
+      serviceId,
+      employeeId,
+    });
+
+    return reply.send(availability);
   },
 
   async updateAppointmentStatus(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
@@ -1224,9 +1431,22 @@ export const establishmentAreaController = {
       return reply.status(404).send({ error: 'Agendamento não encontrado.' });
     }
 
+    if (existing.status === AppointmentStatus.CANCELLED && status !== AppointmentStatus.CANCELLED) {
+      return reply.status(400).send({ error: 'Não é permitido reativar um agendamento cancelado.' });
+    }
+
+    if (existing.status === AppointmentStatus.COMPLETED && status !== AppointmentStatus.COMPLETED) {
+      return reply.status(400).send({ error: 'Não é permitido alterar o status de um agendamento já concluído.' });
+    }
+
     const updated = await prisma.appointment.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        ...(status === AppointmentStatus.CANCELLED ? {
+          paymentStatus: existing.paymentStatus === 'PAID' ? 'REFUNDED' : 'CANCELLED',
+        } : {}),
+      },
       include: {
         pet: true,
         service: true,
@@ -1255,6 +1475,7 @@ export const establishmentAreaController = {
         title: notifTitle,
         message: notifMsg,
         type: 'APPOINTMENT',
+        appointmentId: updated.id,
       });
     } catch (notifErr) {
       request.log.warn({ err: notifErr }, 'Could not create notification for tutor on status change');
@@ -1275,20 +1496,187 @@ export const establishmentAreaController = {
 
     const existing = await prisma.appointment.findFirst({
       where: { id, establishmentId: user.id },
+      include: { service: true },
     });
     if (!existing) return reply.status(404).send({ error: 'Agendamento não encontrado ou acesso negado.' });
 
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: { employeeId },
-      include: {
-        pet: true,
-        tutor: true,
-        service: true,
-        employee: true,
+    if (existing.status === AppointmentStatus.CANCELLED) {
+      return reply.status(400).send({ error: 'Não é possível atribuir funcionários a agendamentos cancelados.' });
+    }
+
+    if (!employeeId) {
+      const updated = await prisma.appointment.update({
+        where: { id },
+        data: { employeeId: null },
+        include: {
+          pet: true,
+          tutor: true,
+          service: true,
+          employee: true,
+        },
+      });
+      return reply.send(updated);
+    }
+
+    // Verify employee belongs to establishment and is active
+    const employee = await prisma.employee.findFirst({
+      where: { id: employeeId, establishmentId: user.id },
+    });
+    if (!employee) {
+      return reply.status(404).send({ error: 'Funcionário não encontrado no seu estabelecimento.' });
+    }
+    if (!employee.active) {
+      return reply.status(400).send({ error: 'Funcionário inativo não pode receber agendamentos.' });
+    }
+
+    const aptDate = new Date(existing.date);
+    const aptDateStr = existing.date.toISOString().split('T')[0];
+    const startMinutes = aptDate.getUTCHours() * 60 + aptDate.getUTCMinutes();
+    const serviceDuration = existing.service?.duration || 60;
+    const endMinutes = startMinutes + serviceDuration;
+
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        // Deterministic transaction advisory lock for this employee on this date
+        const lockKey = `emp_${employeeId}_${aptDateStr}`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(('x' || substr(md5(${lockKey}), 1, 16))::bit(64)::bigint)`;
+
+        const dayStart = new Date(`${aptDateStr}T00:00:00.000Z`);
+        const dayEnd = new Date(`${aptDateStr}T23:59:59.999Z`);
+
+        // Check for conflicting appointments assigned to this employee
+        const conflictingAppts = await tx.appointment.findMany({
+          where: {
+            employeeId,
+            id: { not: existing.id },
+            date: { gte: dayStart, lte: dayEnd },
+            status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
+          },
+          include: { service: true },
+        });
+
+        for (const apt of conflictingAppts) {
+          const d = new Date(apt.date);
+          const otherStart = d.getUTCHours() * 60 + d.getUTCMinutes();
+          const otherDuration = apt.service?.duration || 60;
+          const otherEnd = otherStart + otherDuration;
+
+          if (startMinutes < otherEnd && endMinutes > otherStart) {
+            throw new Error('CONFLICT: O funcionário selecionado já possui um agendamento conflitante neste horário.');
+          }
+        }
+
+        return tx.appointment.update({
+          where: { id },
+          data: { employeeId },
+          include: {
+            pet: true,
+            tutor: true,
+            service: true,
+            employee: true,
+          },
+        });
+      });
+
+      return reply.send(updated);
+    } catch (error: any) {
+      if (error?.message?.startsWith('CONFLICT:')) {
+        return reply.status(409).send({ error: error.message.replace('CONFLICT:', '').trim() });
       }
+      request.log.error(error);
+      return reply.status(500).send({ error: error?.message || 'Erro ao atribuir funcionário.' });
+    }
+  },
+
+  // 8. Address Requests (Approval Workflow)
+  async getAddressRequest(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    const latestRequest = await prisma.establishmentAddressRequest.findFirst({
+      where: { establishmentId: user.id },
+      orderBy: { createdAt: 'desc' },
     });
 
-    return reply.send(updated);
+    return reply.send({ request: latestRequest });
   },
+
+  async requestAddressChange(request: FastifyRequest, reply: FastifyReply) {
+    const user = await ensureEstablishment(request, reply);
+    if (!user) return;
+
+    // Check if there is already a PENDING request
+    const pending = await prisma.establishmentAddressRequest.findFirst({
+      where: {
+        establishmentId: user.id,
+        status: 'PENDING',
+      },
+    });
+
+    if (pending) {
+      return reply.status(400).send({
+        error: 'Já existe uma solicitação de alteração de endereço pendente de aprovação pelo Administrador.',
+      });
+    }
+
+    const schema = z.object({
+      requestedAddress: z.string().min(5, 'Endereço deve conter pelo menos 5 caracteres.'),
+      requestedZipCode: z.string().optional().nullable(),
+      requestedCity: z.string().min(2, 'Cidade inválida.'),
+      requestedState: z.string().min(2, 'Estado inválido.'),
+      reason: z.string().optional().nullable(),
+    });
+
+    const parsed = schema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.issues[0].message });
+    }
+
+    const { requestedAddress, requestedZipCode, requestedCity, requestedState, reason } = parsed.data;
+
+    const profile = user.establishmentProfile;
+    const currentAddress = profile?.address || 'Não informado';
+    const currentZipCode = profile?.zipCode || null;
+    const currentCity = profile?.city || 'Ourinhos';
+    const currentState = profile?.state || 'SP';
+
+    const newRequest = await prisma.establishmentAddressRequest.create({
+      data: {
+        establishmentId: user.id,
+        currentAddress,
+        currentZipCode,
+        currentCity,
+        currentState,
+        requestedAddress,
+        requestedZipCode: requestedZipCode || null,
+        requestedCity,
+        requestedState,
+        reason: reason || null,
+        status: 'PENDING',
+      },
+    });
+
+    // Notify admins about this request
+    const admins = await prisma.user.findMany({
+      where: { role: Role.ADMIN },
+      select: { id: true },
+    });
+
+    for (const adm of admins) {
+      await prisma.notification.create({
+        data: {
+          userId: adm.id,
+          title: 'Solicitação de Alteração de Endereço',
+          message: `${profile?.businessName || user.name} solicitou alteração de endereço para: ${requestedAddress}, ${requestedCity} - ${requestedState}.`,
+          type: 'SYSTEM',
+        },
+      }).catch(() => {});
+    }
+
+    return reply.status(201).send({
+      message: 'Solicitação de alteração de endereço enviada com sucesso! Ela será analisada pelo Administrador.',
+      request: newRequest,
+    });
+  },
+  registerPayment: appointmentsController.registerPayment,
 };

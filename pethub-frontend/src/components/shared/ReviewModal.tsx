@@ -24,7 +24,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   appointmentId,
 }) => {
   const { addToast } = useToastStore();
-  const [rating, setRating] = useState<number>(5);
+  const [rating, setRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -39,16 +39,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       addToast({
         type: 'error',
         title: 'Selecione uma nota',
-        message: 'Por favor, selecione de 1 a 5 estrelas.',
-      });
-      return;
-    }
-
-    if (comment.trim().length < 3) {
-      addToast({
-        type: 'error',
-        title: 'Comentário muito curto',
-        message: 'Por favor, escreva pelo menos 3 caracteres no comentário.',
+        message: 'Por favor, selecione de 1 a 5 estrelas para avaliar.',
       });
       return;
     }
@@ -76,7 +67,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       setTimeout(() => {
         setIsSuccess(false);
         setComment('');
-        setRating(5);
+        setRating(0);
         onClose();
       }, 1500);
     } catch (error: any) {
@@ -171,18 +162,22 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5 flex items-center gap-1.5">
                   <MessageSquare size={14} />
-                  Seu comentário
+                  Seu comentário <span className="text-neutral-400 font-normal lowercase">(opcional)</span>
                 </label>
                 <textarea
                   rows={4}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Conte como foi sua experiência, o que achou dos produtos e do atendimento..."
+                  placeholder={
+                    appointmentId
+                      ? "Conte como foi o atendimento, a pontualidade e o cuidado com o pet (opcional)..."
+                      : "Conte como foi sua experiência, o que achou dos produtos e do atendimento (opcional)..."
+                  }
                   className="w-full px-3 py-2.5 rounded-xl text-sm border border-neutral-200 dark:border-[#313335] bg-white dark:bg-[#131314] text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 resize-none"
                   maxLength={1000}
                 />
                 <div className="flex justify-between items-center text-[11px] text-neutral-400 mt-1">
-                  <span>Mínimo de 3 caracteres</span>
+                  <span>Comentário opcional</span>
                   <span>{comment.length}/1000</span>
                 </div>
               </div>
@@ -193,16 +188,16 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   type="button"
                   onClick={onClose}
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-xl transition-all"
+                  className="px-4 py-2 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-xl transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2 text-sm font-semibold text-neutral-900 bg-amber-400 hover:bg-amber-300 active:scale-95 disabled:opacity-50 rounded-xl shadow-xs transition-all flex items-center gap-2"
+                  disabled={isSubmitting || rating === 0}
+                  className="px-5 py-2 text-sm font-semibold text-neutral-900 bg-amber-400 hover:bg-amber-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  {isSubmitting ? 'Enviando...' : 'Publicar Avaliação'}
+                  {isSubmitting ? 'Enviando...' : rating === 0 ? 'Selecione uma nota' : 'Publicar Avaliação'}
                 </button>
               </div>
             </form>

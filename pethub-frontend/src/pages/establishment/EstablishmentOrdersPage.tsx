@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
 import { 
@@ -84,6 +85,8 @@ const CANCELLATION_REASONS = [
 ];
 
 export default function EstablishmentOrdersPage() {
+  const [searchParams] = useSearchParams();
+  const targetOrderId = searchParams.get('orderId');
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -119,6 +122,12 @@ export default function EstablishmentOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (targetOrderId && orders.some(o => o.id === targetOrderId)) {
+      setExpandedOrderIds(prev => new Set([...prev, targetOrderId]));
+    }
+  }, [targetOrderId, orders]);
 
   const toggleExpand = (orderId: string) => {
     setExpandedOrderIds((prev) => {

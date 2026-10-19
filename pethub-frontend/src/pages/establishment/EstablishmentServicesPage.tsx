@@ -1,9 +1,34 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
-import { Wrench, Plus, Edit2, Trash2, Clock, DollarSign, Users, Check, Upload, Scissors, PawPrint } from 'lucide-react';
-import { Input, Button, Modal } from '@/components/ui';
+import {
+  Wrench,
+  Plus,
+  Edit2,
+  Trash2,
+  Clock,
+  DollarSign,
+  Users,
+  Check,
+  Upload,
+  Scissors,
+  PawPrint,
+  Settings2,
+  AlertCircle,
+  Filter,
+  X,
+  Sparkles,
+} from 'lucide-react';
+import { Input, Button, Modal, Badge } from '@/components/ui';
 import { ServiceLogo } from '@/components/shared/ServiceLogo';
+import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import {
+  SPECIES_OPTIONS,
+  getSpeciesInfo,
+  normalizeSpecies,
+  getSpeciesCategory,
+  isPetCompatibleWithService,
+} from '@/utils/species';
 
 interface ServiceItem {
   id: string;
@@ -14,7 +39,7 @@ interface ServiceItem {
   image: string | null;
   category: string | null;
   animalType: string | null;
-  employees?: { employee: { id: string; name: string } }[];
+  employees?: { employee: { id: string; name: string; role?: string } }[];
 }
 
 const getFullImageUrl = (url?: string | null) => {
@@ -22,6 +47,44 @@ const getFullImageUrl = (url?: string | null) => {
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const SPECIES_CATEGORIES = [
+  { id: 'dog_cat', label: 'Cães & Gatos', ids: ['dog', 'cat'] },
+  { id: 'birds', label: 'Aves', ids: ['cockatiel', 'parrot', 'parakeet', 'canary', 'lovebird'] },
+  { id: 'small_mammals', label: 'Coelhos & Roedores', ids: ['rabbit', 'hamster', 'guinea_pig', 'ferret', 'rat', 'hedgehog'] },
+  { id: 'reptiles', label: 'Répteis & Anfíbios', ids: ['turtle', 'iguana', 'gecko', 'snake'] },
+  { id: 'others', label: 'Peixes & Outros', ids: ['fish', 'other'] },
+];
+
+const getCategoryLabel = (category?: string) => {
+  switch (category) {
+    case 'dog': return 'Canino';
+    case 'cat': return 'Felino';
+    case 'bird': return 'Ave';
+    case 'rabbit': return 'Coelho';
+    case 'rodent': return 'Roedor';
+    case 'reptile': return 'Réptil';
+    case 'fish': return 'Peixe';
+    default: return 'Outros';
+  }
+};
+
+const getDisplaySpeciesInfo = (spKey: string) => {
+  const norm = normalizeSpecies(spKey);
+  const info = getSpeciesInfo(spKey);
+  if (norm === 'other' && spKey.trim().toLowerCase() !== 'other') {
+    return {
+      id: spKey,
+      label: spKey,
+      emoji: '🐾',
+      category: 'other',
+    };
+  }
+  return {
+    ...info,
+    category: getSpeciesCategory(spKey),
+  };
 };
 
 export default function EstablishmentServicesPage() {
@@ -32,7 +95,18 @@ export default function EstablishmentServicesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Form
+  // Attended Species State
+  const [attendedSpecies, setAttendedSpecies] = useState<string[]>([]);
+  const [acceptedSpeciesProfile, setAcceptedSpeciesProfile] = useState<string[]>([]);
+  const [selectedSpeciesFilter, setSelectedSpeciesFilter] = useState<string>('all');
+
+  // Manage Species Modal
+  const [manageSpeciesModalOpen, setManageSpeciesModalOpen] = useState(false);
+  const [selectedModalSpecies, setSelectedModalSpecies] = useState<string[]>([]);
+  const [customSpeciesInput, setCustomSpeciesInput] = useState('');
+  const [savingSpecies, setSavingSpecies] = useState(false);
+
+  // Form State
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -40,6 +114,8 @@ export default function EstablishmentServicesPage() {
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Banho e tosa');
   const [animalType, setAnimalType] = useState('all');
+  const [isCustomAnimalType, setIsCustomAnimalType] = useState(false);
+  const [customAnimalTypeVal, setCustomAnimalTypeVal] = useState('');
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
   // File Upload State
@@ -73,13 +149,24 @@ export default function EstablishmentServicesPage() {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/establishment/services');
-      setServices(res.data);
-      const empRes = await api.get('/establishment/employees');
-      setEmployees(empRes.data);
+      const [servicesRes, empRes, speciesRes] = await Promise.all([
+        api.get('/establishment/services'),
+        api.get('/establishment/employees'),
+        api.get('/establishment/species'),
+      ]);
+
+      setServices(servicesRes.data || []);
+      setEmployees(empRes.data || []);
+
+      const spData = speciesRes.data || {};
+      const profileList: string[] = Array.isArray(spData.acceptedSpecies) ? spData.acceptedSpecies : [];
+      const fullList: string[] = Array.isArray(spData.attendedSpecies) ? spData.attendedSpecies : profileList;
+
+      setAcceptedSpeciesProfile(profileList);
+      setAttendedSpecies(fullList);
     } catch (err) {
-      console.error('Error fetching services:', err);
-      toast.error('Erro ao carregar serviços.');
+      console.error('Error fetching services and species:', err);
+      toast.error('Erro ao carregar dados de serviços e espécies.');
     } finally {
       setLoading(false);
     }
@@ -98,6 +185,8 @@ export default function EstablishmentServicesPage() {
     setImage('');
     setCategory('Banho e tosa');
     setAnimalType('all');
+    setIsCustomAnimalType(false);
+    setCustomAnimalTypeVal('');
     setSelectedEmployeeIds([]);
     setModalOpen(true);
   };
@@ -110,7 +199,19 @@ export default function EstablishmentServicesPage() {
     setDuration(String(s.duration));
     setImage(s.image || '');
     setCategory(s.category || 'Banho e tosa');
-    setAnimalType(s.animalType || 'all');
+
+    const existingType = s.animalType || 'all';
+    const isStandardOption = existingType === 'all' || SPECIES_OPTIONS.some(o => o.id === existingType);
+    if (!isStandardOption && existingType.trim()) {
+      setIsCustomAnimalType(true);
+      setCustomAnimalTypeVal(existingType);
+      setAnimalType(existingType);
+    } else {
+      setIsCustomAnimalType(false);
+      setCustomAnimalTypeVal('');
+      setAnimalType(existingType);
+    }
+
     setSelectedEmployeeIds(s.employees?.map(e => e.employee.id) || []);
     setModalOpen(true);
   };
@@ -131,6 +232,10 @@ export default function EstablishmentServicesPage() {
       return;
     }
 
+    const finalAnimalType = isCustomAnimalType
+      ? customAnimalTypeVal.trim() || 'all'
+      : animalType;
+
     setSaving(true);
     try {
       const payload = {
@@ -140,7 +245,7 @@ export default function EstablishmentServicesPage() {
         duration: numDuration,
         image: image || undefined,
         category,
-        animalType,
+        animalType: finalAnimalType,
         employeeIds: selectedEmployeeIds,
       };
 
@@ -179,9 +284,62 @@ export default function EstablishmentServicesPage() {
     );
   };
 
+  const handleToggleModalSpecies = (speciesId: string) => {
+    setSelectedModalSpecies(prev => {
+      if (prev.includes(speciesId)) {
+        return prev.filter(s => s !== speciesId);
+      } else {
+        return [...prev, speciesId];
+      }
+    });
+  };
+
+  const handleAddCustomSpecies = () => {
+    const trimmed = customSpeciesInput.trim();
+    if (!trimmed) return;
+    if (selectedModalSpecies.map(s => s.toLowerCase()).includes(trimmed.toLowerCase())) {
+      toast.error('Este tipo de animal já está na lista.');
+      return;
+    }
+    setSelectedModalSpecies(prev => [...prev, trimmed]);
+    setCustomSpeciesInput('');
+  };
+
+  const handleRemoveCustomSpecies = (nameToRemove: string) => {
+    setSelectedModalSpecies(prev => prev.filter(s => s !== nameToRemove));
+  };
+
+  const handleSaveSpecies = async () => {
+    if (selectedModalSpecies.length === 0) {
+      toast.error('Selecione pelo menos um tipo de animal atendido.');
+      return;
+    }
+
+    setSavingSpecies(true);
+    try {
+      await api.put('/establishment/species', {
+        acceptedSpecies: selectedModalSpecies,
+      });
+      toast.success('Tipos de animais atendidos atualizados com sucesso!');
+      setManageSpeciesModalOpen(false);
+      await fetchServices();
+    } catch (err: any) {
+      console.error('Error saving species:', err);
+      toast.error(err.response?.data?.error || 'Erro ao salvar tipos de animais.');
+    } finally {
+      setSavingSpecies(false);
+    }
+  };
+
+  // Filtered services
+  const filteredServices = services.filter((s) => {
+    if (selectedSpeciesFilter === 'all') return true;
+    return isPetCompatibleWithService(selectedSpeciesFilter, s.animalType);
+  });
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Serviços Oferecidos</h1>
@@ -189,16 +347,144 @@ export default function EstablishmentServicesPage() {
             Cadastre e gerencie os serviços disponíveis para agendamento pelos tutores
           </p>
         </div>
-        <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs whitespace-nowrap">
+        <Button
+          onClick={openCreateModal}
+          leftIcon={<Plus size={16} />}
+          className="bg-orange-500 hover:bg-orange-600 text-white shadow-xs whitespace-nowrap cursor-pointer"
+        >
           Cadastrar serviço
         </Button>
       </div>
 
-      {/* Services Grid */}
+      {/* 1. SEÇÃO DE TIPOS DE ANIMAIS ATENDIDOS */}
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-[#313335]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-orange-100/70 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+              <PawPrint size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-neutral-900 dark:text-[#E3E3E3]">Tipos de Animais Atendidos</h2>
+                {attendedSpecies.length > 0 && (
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/30">
+                    {attendedSpecies.length} {attendedSpecies.length === 1 ? 'tipo atendido' : 'tipos atendidos'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-[#8E918F] mt-0.5">
+                Espécies que seu estabelecimento tem capacidade técnica e estrutura homologada para receber
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            leftIcon={<Settings2 size={14} />}
+            onClick={() => {
+              setSelectedModalSpecies([...acceptedSpeciesProfile]);
+              setCustomSpeciesInput('');
+              setManageSpeciesModalOpen(true);
+            }}
+            className="text-xs shrink-0 cursor-pointer"
+          >
+            Gerenciar animais atendidos
+          </Button>
+        </div>
+
+        {attendedSpecies.length === 0 ? (
+          <div className="p-6 bg-amber-50/60 dark:bg-amber-950/20 border border-dashed border-amber-200 dark:border-amber-900/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">Nenhum tipo de animal configurado</h4>
+                <p className="text-xs text-neutral-600 dark:text-[#8E918F] mt-0.5">
+                  Seu estabelecimento ainda não cadastrou quais espécies atende. Configure para que os tutores encontrem seus serviços na busca e agendem apenas para pets compatíveis.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedModalSpecies([]);
+                setCustomSpeciesInput('');
+                setManageSpeciesModalOpen(true);
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white shrink-0 text-xs cursor-pointer"
+            >
+              Configurar espécies agora
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+              {attendedSpecies.map((spKey) => {
+                const info = getDisplaySpeciesInfo(spKey);
+                const isSelected = selectedSpeciesFilter === spKey;
+                const serviceCount = services.filter(s => isPetCompatibleWithService(spKey, s.animalType)).length;
+
+                return (
+                  <button
+                    key={spKey}
+                    type="button"
+                    onClick={() => setSelectedSpeciesFilter(prev => prev === spKey ? 'all' : spKey)}
+                    className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                      isSelected
+                        ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 shadow-xs ring-1 ring-orange-500'
+                        : 'bg-neutral-50/60 dark:bg-[#282A2C]/60 hover:bg-neutral-100/80 dark:hover:bg-[#282A2C] border-neutral-200/80 dark:border-[#313335]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SpeciesIcon
+                          speciesId={spKey}
+                          size="sm"
+                          className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-700 dark:text-[#C4C7C5]'}
+                        />
+                        <span className="text-xs font-bold text-neutral-900 dark:text-[#E3E3E3] truncate">
+                          {info.label || spKey}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-neutral-500 dark:text-[#8E918F]">
+                      <span className="uppercase font-semibold tracking-wider text-[9px] px-1.5 py-0.5 rounded bg-neutral-200/60 dark:bg-[#313335]">
+                        {getCategoryLabel(info.category)}
+                      </span>
+                      <span className="font-medium text-neutral-600 dark:text-[#C4C7C5]">
+                        {serviceCount} {serviceCount === 1 ? 'serviço' : 'serviços'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Filter Info Bar */}
+            {selectedSpeciesFilter !== 'all' && (
+              <div className="flex items-center justify-between text-xs px-3.5 py-2.5 bg-orange-50/70 dark:bg-orange-950/20 rounded-xl border border-orange-200/60 dark:border-orange-900/30">
+                <span className="text-orange-800 dark:text-orange-300 font-medium">
+                  Exibindo serviços compatíveis com: <strong className="font-bold">{getDisplaySpeciesInfo(selectedSpeciesFilter).label || selectedSpeciesFilter}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSpeciesFilter('all')}
+                  className="text-orange-600 dark:text-orange-400 font-bold hover:underline cursor-pointer"
+                >
+                  Limpar filtro (Ver todos)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 2. SERVICES LIST */}
       {loading ? (
         <div className="p-12 text-center text-neutral-400 dark:text-[#8E918F]">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm">Carregando serviços...</p>
+          <p className="text-sm">Carregando serviços e animais atendidos...</p>
         </div>
       ) : services.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-dashed border-neutral-200 dark:border-[#313335]">
@@ -207,95 +493,135 @@ export default function EstablishmentServicesPage() {
           <p className="text-xs text-neutral-400 dark:text-[#8E918F] max-w-md mx-auto mb-4">
             Cadastre banhos, tosas, consultas e outros serviços para que os tutores possam agendar online.
           </p>
-          <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap">
+          <Button onClick={openCreateModal} leftIcon={<Plus size={16} />} className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap cursor-pointer">
             Cadastrar serviço
           </Button>
         </div>
+      ) : filteredServices.length === 0 ? (
+        <div className="p-8 text-center bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335]">
+          <PawPrint size={32} className="mx-auto text-neutral-300 dark:text-neutral-600 mb-2" />
+          <h4 className="font-bold text-neutral-800 dark:text-[#E3E3E3] text-sm mb-1">
+            Nenhum serviço específico para {getDisplaySpeciesInfo(selectedSpeciesFilter).label}
+          </h4>
+          <p className="text-xs text-neutral-500 dark:text-[#8E918F] max-w-sm mx-auto mb-4">
+            Não foram encontrados serviços dedicados a esta espécie. Você pode cadastrar um serviço novo ou desativar o filtro.
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setSelectedSpeciesFilter('all')}>
+              Ver todos os serviços
+            </Button>
+            <Button size="sm" onClick={openCreateModal} className="bg-orange-500 hover:bg-orange-600 text-white">
+              Cadastrar serviço para esta espécie
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {services.map((s) => (
-            <div key={s.id} className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all">
-              {/* Service Image */}
-              <div className="h-44 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden flex items-center justify-center">
-                {s.image ? (
-                  <img
-                    src={getFullImageUrl(s.image)}
-                    alt={s.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 gap-2">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-100/70 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                      <Scissors size={24} />
+          {filteredServices.map((s) => {
+            const isAllSpecies = !s.animalType || ['all', 'todos', 'ambos', 'qualquer', 'todas'].includes(s.animalType.toLowerCase());
+            const spInfo = getDisplaySpeciesInfo(s.animalType || 'all');
+
+            return (
+              <div
+                key={s.id}
+                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] overflow-hidden shadow-xs flex flex-col group hover:shadow-sm transition-all"
+              >
+                {/* Service Image */}
+                <div className="h-44 bg-neutral-100 dark:bg-[#282A2C] relative overflow-hidden flex items-center justify-center">
+                  {s.image ? (
+                    <img
+                      src={getFullImageUrl(s.image)}
+                      alt={s.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-100/70 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                        <Scissors size={24} />
+                      </div>
+                      <span className="text-[11px] font-semibold tracking-wide">Sem foto</span>
                     </div>
-                    <span className="text-[11px] font-semibold tracking-wide">Sem foto</span>
+                  )}
+                  <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+                    <span className="bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                      {s.duration} min
+                    </span>
+                    <span className="bg-orange-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs">
+                      R$ {s.price.toFixed(2).replace('.', ',')}
+                    </span>
                   </div>
-                )}
-                <div className="absolute top-2.5 right-2.5 flex gap-1.5">
-                  <span className="bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                    {s.duration} min
-                  </span>
-                  <span className="bg-orange-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs">
-                    R$ {s.price.toFixed(2).replace('.', ',')}
-                  </span>
+                </div>
+
+                {/* Service Details */}
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded truncate">
+                        {s.category || 'Geral'}
+                      </span>
+
+                      {/* Dynamic Animal Species Badge */}
+                      <span className="text-[11px] text-neutral-500 dark:text-[#8E918F] font-medium inline-flex items-center gap-1.5 shrink-0">
+                        {isAllSpecies ? (
+                          <>
+                            <PawPrint size={12} className="text-orange-500" />
+                            <span>Todas as espécies</span>
+                          </>
+                        ) : (
+                          <>
+                            <SpeciesIcon speciesId={s.animalType} size="xs" />
+                            <span className="text-neutral-800 dark:text-[#C4C7C5] font-semibold">
+                              {spInfo.label || s.animalType}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <ServiceLogo category={s.category} name={s.name} size="sm" showBadge={true} />
+                      <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{s.name}</h3>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-[#8E918F] line-clamp-2 leading-relaxed">
+                      {s.description || 'Sem descrição cadastrada.'}
+                    </p>
+                  </div>
+
+                  {/* Assigned employees */}
+                  {s.employees && s.employees.length > 0 && (
+                    <div className="pt-2 border-t border-neutral-100 dark:border-[#313335] flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-[#8E918F]">
+                      <Users size={12} className="text-neutral-400 dark:text-[#8E918F]" />
+                      <span className="truncate">
+                        Profissionais: {s.employees.map(e => e.employee.name).join(', ')}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
+                    <button
+                      onClick={() => openEditModal(s)}
+                      className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] rounded-lg transition-colors cursor-pointer"
+                      title="Editar serviço"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg transition-colors cursor-pointer"
+                      title="Excluir serviço"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {/* Service Details */}
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded">
-                      {s.category || 'Geral'}
-                    </span>
-                    <span className="text-[11px] text-neutral-400 dark:text-[#8E918F] font-medium inline-flex items-center gap-1">
-                      <PawPrint size={11} className="text-neutral-400" />
-                      {s.animalType === 'dog' ? 'Cães' : s.animalType === 'cat' ? 'Gatos' : 'Cães & Gatos'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ServiceLogo category={s.category} name={s.name} size="sm" showBadge={true} />
-                    <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">{s.name}</h3>
-                  </div>
-                  <p className="text-xs text-neutral-500 dark:text-[#8E918F] line-clamp-2 leading-relaxed">
-                    {s.description || 'Sem descrição cadastrada.'}
-                  </p>
-                </div>
-
-                {/* Assigned employees */}
-                {s.employees && s.employees.length > 0 && (
-                  <div className="pt-2 border-t border-neutral-100 dark:border-[#313335] flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-[#8E918F]">
-                    <Users size={12} className="text-neutral-400 dark:text-[#8E918F]" />
-                    <span className="truncate">
-                      Profissionais: {s.employees.map(e => e.employee.name).join(', ')}
-                    </span>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex gap-2 justify-end">
-                  <button
-                    onClick={() => openEditModal(s)}
-                    className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-600 dark:text-[#C4C7C5] rounded-lg transition-colors cursor-pointer"
-                    title="Editar serviço"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(s.id)}
-                    className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg transition-colors cursor-pointer"
-                    title="Excluir serviço"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* 3. MODAL DE CADASTRO / EDIÇÃO DE SERVIÇO */}
       {modalOpen && (
         <Modal
           isOpen={modalOpen}
@@ -334,7 +660,9 @@ export default function EstablishmentServicesPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Categoria</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">
+                  Categoria
+                </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -349,21 +677,65 @@ export default function EstablishmentServicesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Tipo de Animal</label>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">
+                  Espécie / Tipo de Animal Atendido *
+                </label>
                 <select
-                  value={animalType}
-                  onChange={(e) => setAnimalType(e.target.value)}
+                  value={isCustomAnimalType ? 'custom' : animalType}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'custom') {
+                      setIsCustomAnimalType(true);
+                      setCustomAnimalTypeVal('');
+                    } else {
+                      setIsCustomAnimalType(false);
+                      setAnimalType(val);
+                    }
+                  }}
                   className="w-full border border-neutral-200 dark:border-[#313335] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#282A2C] text-neutral-900 dark:text-[#E3E3E3]"
                 >
-                  <option value="all">Todos (Cães e Gatos)</option>
-                  <option value="dog">Apenas Cães</option>
-                  <option value="cat">Apenas Gatos</option>
+                  <option value="all">🐾 Todas as espécies atendidas pelo estabelecimento</option>
+
+                  {attendedSpecies.length > 0 && (
+                    <optgroup label="Espécies atendidas pelo seu estabelecimento">
+                      {attendedSpecies.map((sp) => {
+                        const spInfo = getDisplaySpeciesInfo(sp);
+                        return (
+                          <option key={sp} value={sp}>
+                            Apenas {spInfo.label || sp}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+
+                  <optgroup label="Outras opções do PetHub">
+                    {SPECIES_OPTIONS.filter(opt => !attendedSpecies.includes(opt.id)).map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        Apenas {opt.label}
+                      </option>
+                    ))}
+                    <option value="custom">Outro tipo de animal (personalizado)...</option>
+                  </optgroup>
                 </select>
+
+                {isCustomAnimalType && (
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Digite o animal (ex: Furão, Mini pig, Chinchila...)"
+                      value={customAnimalTypeVal}
+                      onChange={(e) => setCustomAnimalTypeVal(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">Descrição</label>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase mb-1">
+                Descrição
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -373,27 +745,22 @@ export default function EstablishmentServicesPage() {
               />
             </div>
 
-            {/* Real Service Photo Upload */}
+            {/* Service Photo Upload */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-neutral-700 dark:text-[#C4C7C5] uppercase">
                 Foto do Serviço
               </label>
               <input
-                type="file"
                 ref={serviceFileRef}
-                accept="image/*"
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
                 className="hidden"
                 onChange={handleServiceFile}
               />
-              
               {image ? (
-                <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335] h-36 bg-neutral-50 dark:bg-[#282A2C] group">
-                  <img
-                    src={getFullImageUrl(image)}
-                    alt="Preview do serviço"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-neutral-200 dark:border-[#313335]">
+                  <img src={getFullImageUrl(image)} alt="Preview do serviço" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => serviceFileRef.current?.click()}
@@ -466,9 +833,182 @@ export default function EstablishmentServicesPage() {
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} isLoading={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <Button onClick={handleSave} isLoading={saving} className="bg-orange-500 hover:bg-orange-600 text-white cursor-pointer">
                 {editingId ? 'Salvar Alterações' : 'Cadastrar Serviço'}
               </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 4. MODAL PARA GERENCIAR TIPOS DE ANIMAIS ATENDIDOS */}
+      {manageSpeciesModalOpen && (
+        <Modal
+          isOpen={manageSpeciesModalOpen}
+          onClose={() => setManageSpeciesModalOpen(false)}
+          title="Gerenciar Tipos de Animais Atendidos"
+          size="lg"
+        >
+          <div className="space-y-5 text-xs max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-xl border border-neutral-200/80 dark:border-[#313335] text-neutral-600 dark:text-[#8E918F] space-y-1">
+              <p className="font-semibold text-neutral-900 dark:text-[#E3E3E3]">
+                Defina todas as espécies que seu estabelecimento está apto a receber.
+              </p>
+              <p>
+                Os animais selecionados aqui determinam os filtros de busca para os tutores, a compatibilidade de agendamento e as opções de animais ao cadastrar serviços.
+              </p>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <span className="font-bold text-neutral-800 dark:text-[#E3E3E3]">
+                {selectedModalSpecies.length} {selectedModalSpecies.length === 1 ? 'espécie selecionada' : 'espécies selecionadas'}
+              </span>
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedModalSpecies(SPECIES_OPTIONS.map(o => o.id))}
+                  className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-700 dark:text-[#C4C7C5] font-medium transition-colors cursor-pointer"
+                >
+                  Selecionar Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedModalSpecies(['dog', 'cat'])}
+                  className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-700 dark:text-[#C4C7C5] font-medium transition-colors cursor-pointer"
+                >
+                  Apenas Cães e Gatos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedModalSpecies([])}
+                  className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[#282A2C] hover:bg-neutral-200 dark:hover:bg-[#313335] text-neutral-700 dark:text-[#C4C7C5] font-medium transition-colors cursor-pointer"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+
+            {/* Species Categorized Groups */}
+            <div className="space-y-4">
+              {SPECIES_CATEGORIES.map((cat) => {
+                const catOptions = SPECIES_OPTIONS.filter(o => cat.ids.includes(o.id));
+                return (
+                  <div key={cat.id} className="space-y-2">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-[#8E918F]">
+                      {cat.label}
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {catOptions.map((opt) => {
+                        const isSelected = selectedModalSpecies.includes(opt.id);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => handleToggleModalSpecies(opt.id)}
+                            className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                              isSelected
+                                ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-500 font-bold text-orange-600 dark:text-orange-400 shadow-xs'
+                                : 'bg-white dark:bg-[#282A2C] border-neutral-200 dark:border-[#313335] text-neutral-700 dark:text-[#C4C7C5] hover:border-neutral-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <SpeciesIcon speciesId={opt.id} size="sm" className={isSelected ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-500'} />
+                              <span className="truncate">{opt.label}</span>
+                            </div>
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors shrink-0 ${
+                              isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'border-neutral-300 dark:border-neutral-600'
+                            }`}>
+                              {isSelected && <Check size={12} strokeWidth={3} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Custom Species Section */}
+            <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-neutral-800 dark:text-[#E3E3E3] mb-1">
+                  Adicionar Outro Tipo de Animal Personalizado
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: Furão, Mini pig, Chinchila, etc..."
+                    value={customSpeciesInput}
+                    onChange={(e) => setCustomSpeciesInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomSpecies();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddCustomSpecies}
+                    disabled={!customSpeciesInput.trim()}
+                    className="shrink-0 cursor-pointer"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+
+              {/* Custom Tags */}
+              {selectedModalSpecies.filter(s => !SPECIES_OPTIONS.some(o => o.id === s)).length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-neutral-500 dark:text-[#8E918F]">
+                    Espécies personalizadas adicionadas:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedModalSpecies
+                      .filter(s => !SPECIES_OPTIONS.some(o => o.id === s))
+                      .map((customName) => (
+                        <span
+                          key={customName}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100/80 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 font-semibold text-xs border border-orange-200 dark:border-orange-900/40"
+                        >
+                          <SpeciesIcon speciesId={customName} size={14} className="shrink-0 text-orange-600 dark:text-orange-400" />
+                          <span>{customName}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomSpecies(customName)}
+                            className="hover:text-red-500 cursor-pointer"
+                            title="Remover"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-neutral-100 dark:border-[#313335] flex items-center justify-between gap-3">
+              <span className="text-xs text-neutral-400 dark:text-[#8E918F]">
+                * As alterações são salvas diretamente no perfil do estabelecimento.
+              </span>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setManageSpeciesModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveSpecies}
+                  isLoading={savingSpecies}
+                  disabled={selectedModalSpecies.length === 0}
+                  className="bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
+                >
+                  Salvar Espécies
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

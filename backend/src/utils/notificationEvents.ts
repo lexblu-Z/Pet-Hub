@@ -14,6 +14,8 @@ export interface NotificationPayload {
   message: string;
   type: string;
   read: boolean;
+  appointmentId?: string | null;
+  metadata?: any;
   createdAt: string;
 }
 
@@ -22,6 +24,8 @@ export async function createAndEmitNotification(data: {
   title: string;
   message: string;
   type: string;
+  appointmentId?: string | null;
+  metadata?: any;
 }) {
   try {
     const notif = await prisma.notification.create({
@@ -30,6 +34,8 @@ export async function createAndEmitNotification(data: {
         title: data.title,
         message: data.message,
         type: data.type,
+        appointmentId: data.appointmentId || null,
+        metadata: data.metadata || null,
       },
     });
     notificationEvents.emit('notification', {
@@ -39,6 +45,8 @@ export async function createAndEmitNotification(data: {
       message: notif.message,
       type: notif.type,
       read: notif.read,
+      appointmentId: notif.appointmentId,
+      metadata: notif.metadata,
       createdAt: notif.createdAt.toISOString(),
     });
     return notif;

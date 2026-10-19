@@ -215,19 +215,19 @@ export default function ChatPage() {
     }
 
     try {
-      const res = await api.post('/messages', {
+      const res = await api.post('/messages/conversations', {
         recipientId: contact.id,
-        content: 'Olá! Gostaria de tirar algumas dúvidas.',
       });
 
-      if (res.data?.conversationId) {
+      if (res.data?.conversationId || res.data?.id) {
+        const convId = res.data.conversationId || res.data.id;
         await fetchConversations();
-        setActiveConversationId(res.data.conversationId);
+        setActiveConversationId(convId);
+        setMsgText('');
         setNewChatModalOpen(false);
-        toast.success(`Conversa com ${contact.businessName} iniciada!`);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao iniciar conversa.');
+      toast.error(error.response?.data?.error || 'Erro ao abrir conversa.');
     }
   };
 

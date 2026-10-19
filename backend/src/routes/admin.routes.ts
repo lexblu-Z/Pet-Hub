@@ -85,4 +85,9 @@ export const adminRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
 
   // Admin Management
   fastify.post('/admins', adminController.createAdmin);
+
+  // Address Change Requests Management
+  fastify.get('/address-requests', adminController.listAddressRequests);
+  fastify.post('/address-requests/:id/approve', adminController.approveAddressRequest);
+  fastify.post('/address-requests/:id/reject', adminController.rejectAddressRequest);
 };

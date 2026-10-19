@@ -13,6 +13,8 @@ export async function professionalRoutes(fastify: FastifyInstance) {
   fastify.get('/dashboard', professionalController.getDashboard);
   fastify.get('/appointments', professionalController.getAppointments);
   fastify.put('/appointments/:id/status', professionalController.updateAppointmentStatus);
+  fastify.put('/appointments/:id/payment', professionalController.registerPayment);
+  fastify.post('/appointments/:id/payment', professionalController.registerPayment);
   fastify.get('/work-orders', professionalController.getWorkOrders);
   fastify.get('/reviews', professionalController.getReviews);
 

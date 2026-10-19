@@ -216,19 +216,19 @@ export default function EstablishmentMessagesPage() {
     }
 
     try {
-      const res = await api.post('/messages', {
+      const res = await api.post('/messages/conversations', {
         recipientId: contact.id,
-        content: 'Olá! Como posso ajudar você e seu pet?',
       });
 
-      if (res.data?.conversationId) {
+      if (res.data?.conversationId || res.data?.id) {
+        const convId = res.data.conversationId || res.data.id;
         await fetchConversations();
-        setActiveConversationId(res.data.conversationId);
+        setActiveConversationId(convId);
+        setMsgText('');
         setNewChatModalOpen(false);
-        toast.success(`Conversa iniciada com ${contact.name}!`);
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao iniciar conversa.');
+      toast.error(err.response?.data?.error || 'Erro ao abrir conversa.');
     }
   };
 

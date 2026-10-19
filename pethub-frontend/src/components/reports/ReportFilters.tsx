@@ -6,39 +6,57 @@ export interface FilterPreset {
   getDates: () => { start: string; end: string };
 }
 
+function formatLocalYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export const DATE_PRESETS: FilterPreset[] = [
   {
     label: 'Hoje',
     getDates: () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = formatLocalYmd(new Date());
       return { start: today, end: today };
     },
   },
   {
     label: 'Últimos 7 dias',
     getDates: () => {
-      const end = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const end = formatLocalYmd(now);
       const d = new Date();
       d.setDate(d.getDate() - 7);
-      return { start: d.toISOString().slice(0, 10), end };
+      return { start: formatLocalYmd(d), end };
     },
   },
   {
     label: 'Este Mês',
     getDates: () => {
       const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-      const end = now.toISOString().slice(0, 10);
+      const start = formatLocalYmd(new Date(now.getFullYear(), now.getMonth(), 1));
+      const end = formatLocalYmd(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+      return { start, end };
+    },
+  },
+  {
+    label: 'Mês anterior',
+    getDates: () => {
+      const now = new Date();
+      const start = formatLocalYmd(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      const end = formatLocalYmd(new Date(now.getFullYear(), now.getMonth(), 0));
       return { start, end };
     },
   },
   {
     label: 'Últimos 30 dias',
     getDates: () => {
-      const end = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const end = formatLocalYmd(now);
       const d = new Date();
       d.setDate(d.getDate() - 30);
-      return { start: d.toISOString().slice(0, 10), end };
+      return { start: formatLocalYmd(d), end };
     },
   },
 ];
@@ -47,6 +65,10 @@ interface ReportFiltersProps {
   startDate: string;
   endDate: string;
   onDateChange: (start: string, end: string) => void;
+
+  // Operation Type Filter (Todos, Serviços, Vendas)
+  operationType?: string;
+  onOperationTypeChange?: (op: string) => void;
 
   // Status Filter
   status?: string;
@@ -82,6 +104,8 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
   startDate,
   endDate,
   onDateChange,
+  operationType,
+  onOperationTypeChange,
   status,
   onStatusChange,
   statusOptions,
@@ -154,6 +178,24 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
             className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-800 focus:border-orange-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
           />
         </div>
+
+        {/* Operation Type Filter */}
+        {onOperationTypeChange && (
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-1">
+              Tipo de Operação
+            </label>
+            <select
+              value={operationType || 'ALL'}
+              onChange={(e) => onOperationTypeChange(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs text-neutral-800 focus:border-orange-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+            >
+              <option value="ALL">Todos os relatórios (Serviços e Vendas)</option>
+              <option value="SERVICES">Apenas serviços</option>
+              <option value="PRODUCTS">Apenas vendas de produtos</option>
+            </select>
+          </div>
+        )}
 
         {/* Status Filter */}
         {statusOptions && onStatusChange && (

@@ -79,6 +79,8 @@ const phoneSchema = z
     { message: 'Digite um número de telefone válido.' }
   );
 
+const publicRoleSchema = z.enum([Role.TUTOR, Role.ESTABLISHMENT, Role.PROFESSIONAL]);
+
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z
@@ -89,7 +91,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   code: z.string().optional(),
   phone: phoneSchema,
-  role: z.nativeEnum(Role).default(Role.TUTOR),
+  role: publicRoleSchema.default(Role.TUTOR),
   description: z.string().optional(),
   address: z.string().optional(),
   specialty: z.string().optional(),
@@ -161,7 +163,7 @@ const verifyOtpSchema = z.object({
 
 const completeGoogleSchema = z.object({
   regToken: z.string().min(1, 'Token de registro obrigatório'),
-  role: z.nativeEnum(Role),
+  role: publicRoleSchema,
   phone: phoneSchema,
   name: z.string().optional(),
   // Establishment / Tutor specific fields
@@ -184,7 +186,7 @@ const completeGoogleSchema = z.object({
 
 const completeOtpSchema = z.object({
   regToken: z.string().min(1, 'Token de registro obrigatório'),
-  role: z.nativeEnum(Role),
+  role: publicRoleSchema,
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   phone: phoneSchema,
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional(),
@@ -209,6 +211,12 @@ const completeOtpSchema = z.object({
 export const authController = {
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {
+      // Defense in depth: strictly block any attempt to register as ADMIN or inject isAdmin
+      const rawBody = (request.body || {}) as any;
+      if (rawBody.role === 'ADMIN' || rawBody.role === Role.ADMIN || rawBody.isAdmin) {
+        return reply.status(403).send({ error: 'Cadastro administrativo não permitido por esta rota.' });
+      }
+
       const data = registerSchema.parse(request.body);
 
       if (data.password === '12345678') {
@@ -649,6 +657,9 @@ export const authController = {
   async me(request: FastifyRequest, reply: FastifyReply) {
     try {
       const token = request.user as any;
+      if (!token || !token.sub) {
+        return reply.status(401).send({ error: 'Não autenticado.' });
+      }
       let user = await prisma.user.findUnique({
         where: { id: token.sub },
         select: {

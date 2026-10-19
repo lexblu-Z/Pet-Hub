@@ -18,6 +18,22 @@ export interface Address {
   lng?: number;
 }
 
+export interface UserAddress {
+  id: string;
+  userId: string;
+  label: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -221,9 +237,11 @@ export interface Product {
   price: number;
   stock: number;
   photos: string[];
+  photo?: string | null;
   brand?: string;
   weight?: number;
   isActive: boolean;
+  establishment?: any;
 }
 
 export interface CartItem {

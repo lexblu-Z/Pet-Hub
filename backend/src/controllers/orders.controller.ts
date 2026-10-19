@@ -313,6 +313,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
           title: 'Nova venda de produto',
           message: 'Uma nova venda de produto foi realizada.',
           type: 'ORDER',
+          metadata: { orderId: order.id },
         });
       }
 
@@ -322,6 +323,7 @@ export async function createOrder(request: FastifyRequest, reply: FastifyReply) 
         title: 'Pedido realizado',
         message: 'Seu pedido de produtos foi realizado com sucesso.',
         type: 'ORDER',
+        metadata: { orderId: order.id },
       });
     } catch (notifErr) {
       request.log.error(notifErr, 'Erro ao criar notificações do pedido');
@@ -441,6 +443,7 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
         title: 'Pedido concluído',
         message: 'O pedido de produtos foi concluído com sucesso.',
         type: 'ORDER',
+        metadata: { orderId: updated.id },
       });
     }
 
@@ -451,6 +454,7 @@ export async function confirmReceipt(request: FastifyRequest<{ Params: { id: str
         title: 'Cashback creditado',
         message: 'Você recebeu cashback pela compra de produtos.',
         type: 'ORDER',
+        metadata: { orderId: updated.id },
       });
     }
 
@@ -579,6 +583,7 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
           title: 'Pedido cancelado pelo cliente',
           message: `O pedido #${orderShortId} foi cancelado pelo tutor com estorno financeiro de ${refundFormatted}.`,
           type: 'ORDER',
+          metadata: { orderId: order.id },
         });
       }
 
@@ -588,6 +593,7 @@ export async function cancelTutorOrder(request: FastifyRequest<{ Params: { id: s
         title: 'Cancelamento e Reembolso Confirmados',
         message: `Seu pedido #${orderShortId} foi cancelado com sucesso. Reembolso demonstrativo de ${refundFormatted} processado.`,
         type: 'ORDER',
+        metadata: { orderId: order.id },
       });
 
       return updated;

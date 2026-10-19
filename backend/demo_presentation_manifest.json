@@ -1,0 +1,582 @@
+{
+  "establishment": {
+    "id": "61ca8178-1313-4921-9607-07ec25a74072",
+    "name": "Leonardo Englerth",
+    "email": "pethub@gmail.com"
+  },
+  "generatedAt": "2026-10-18T18:50:21.899Z",
+  "demoTag": "DEMO — APRESENTAÇÃO PETHUB",
+  "appointments": [
+    {
+      "id": "9d901636-1679-4fbf-8190-4bd928bf12cc",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-16T12:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Thiago S.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "c93a99c7-6dbc-449d-ad85-6fb8ba769e45",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-15T13:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Wanderson M.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "988fd409-c670-4d98-8cb9-7a5c72592614",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-14T14:30:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Alex C.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "54fff153-13a7-4de3-8675-25b9d368e68d",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-13T15:45:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "fa40efd8-34bc-4651-9d19-1789e8e08b4c",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-12T16:00:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Davi",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "b47d9acc-172d-4fc4-9842-7defaf3f2451",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-11T17:15:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Thiago S.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "7d503792-127a-46b3-9b6f-374cc7d9a5fd",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-10T18:30:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "72fb3d5a-1e62-4878-87fb-dc0fa1a006c7",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-09T19:45:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "4fb92b98-a729-4862-925d-0bf93c65bb4c",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-08T12:00:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "65a2ab99-ec9a-4529-92fb-9f86c827c423",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-07T13:15:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Davi",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "bc6ff8c1-674c-4727-8429-528c3fe6610f",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-06T14:30:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Thiago S.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "8da89720-444f-434e-b350-1cc83e689df4",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-05T15:45:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "3d9debca-c281-4a15-9723-7cd51f0a82c0",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-04T16:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "192639ce-d7b1-4100-82d9-2a924aa3c588",
+      "service": "Tosa",
+      "price": 79.9,
+      "date": "2026-10-17T17:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Leonardo E",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "ea1133e7-70bf-43d3-9748-afe0718935c0",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-16T12:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Thiago S.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "b9e4d34d-ad76-4f07-80f6-da32ff7b40f9",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-15T13:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Wanderson M.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "fb673e3d-26c2-4411-aeda-8712390ac115",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-14T14:30:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Alex C.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "88056369-8ae5-4639-ace3-e0e57359b66e",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-13T15:45:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "0cc822e6-69b0-40be-83e1-68569c4a9c74",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-12T16:00:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Davi",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "a8bf7376-52b7-4c1f-ab29-66076e90290a",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-11T17:15:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Thiago S.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "c1ef78e0-6486-45aa-99b4-af2876433818",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-10T18:30:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "085bd166-b831-46c1-a0d6-744d68d03ac0",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-09T19:45:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "b51762b2-e905-4aef-a086-a71f34b9aa99",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-08T12:00:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "ea7daa16-3104-4e16-b8f6-731f9d1cd46a",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-07T13:15:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Davi",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "7413dbfb-1309-4cda-95cc-c75b1a4029cf",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-06T14:30:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Thiago S.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "2512993c-b03a-46bf-b62a-2d6bf2eefccf",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-05T15:45:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "e65c495e-5a21-4f94-8438-2cd609f18c83",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-04T16:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "241a8771-605d-4e9d-aa42-2f8c11c7b998",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-17T17:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Leonardo E",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "5644debe-8639-448c-8aed-9050927415d8",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-16T18:30:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Davi",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "1414f78e-8fdc-44eb-a941-75ee071e0a1c",
+      "service": "Banho Canino",
+      "price": 59.9,
+      "date": "2026-10-15T19:45:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Thiago S.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "a0ce6e5c-5240-4f65-847b-4b9dd09f8ac1",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-14T12:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Thiago S.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "78327ec7-4cba-4fe8-92b6-d695196ed2e8",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-13T13:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Wanderson M.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "7a1f3ea5-0e0d-4275-a002-541e38136c2d",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-12T14:30:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Alex C.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "a71425e2-ec6a-4d35-9999-492e7663fb8b",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-11T15:45:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "0db912a1-67e8-462d-97fb-b12b125ef636",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-10T16:00:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Davi",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "476717d4-582f-49f9-bd24-5a459ef569d7",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-09T17:15:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Thiago S.",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "8c9703e9-c0db-45f2-9ab5-b58c8f277320",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-08T18:30:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "392078d8-81a2-426f-bf54-7e7696db0ff3",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-07T19:45:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "a0c109a6-b0bf-432c-a6eb-badb1c41911a",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-06T12:00:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Leonardo E",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "20952812-dfbd-4b93-8599-6a91ebffe910",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-05T13:15:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Davi",
+      "paymentMethod": "PIX"
+    },
+    {
+      "id": "b4229f67-413c-4c2e-a3c5-d36439165914",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-04T14:30:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Thiago S.",
+      "paymentMethod": "Dinheiro"
+    },
+    {
+      "id": "d4f73ff4-fca3-4e7e-bb5b-22486c3300e9",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-17T15:45:00.000Z",
+      "tutor": "Tutor Teste Notif",
+      "pet": "Rex Teste",
+      "employee": "Wanderson M.",
+      "paymentMethod": "Cartão de Crédito"
+    },
+    {
+      "id": "8cf60dba-36e6-45b4-83b8-ea007fe162ab",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-16T16:00:00.000Z",
+      "tutor": "Thiago S",
+      "pet": "Pluma",
+      "employee": "Alex C.",
+      "paymentMethod": "Cartão de Débito"
+    },
+    {
+      "id": "016eedfc-e6c6-44bf-a3b2-d5315bc760a0",
+      "service": "Banho Felino",
+      "price": 69.9,
+      "date": "2026-10-15T17:15:00.000Z",
+      "tutor": "User 1",
+      "pet": "Carvão",
+      "employee": "Leonardo E",
+      "paymentMethod": "PIX"
+    }
+  ],
+  "orders": [
+    {
+      "id": "bc1ece74-a64f-4450-9399-991e9ca84819",
+      "totalAmount": 299.7,
+      "createdAt": "2026-10-17T13:30:00.000Z",
+      "tutor": "Thiago S",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 1,
+          "price": 189.9
+        },
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 2,
+          "price": 54.9
+        }
+      ]
+    },
+    {
+      "id": "a2625671-3aa8-4570-b328-ff9d75d7cf41",
+      "totalAmount": 379.8,
+      "createdAt": "2026-10-16T14:30:00.000Z",
+      "tutor": "User 1",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 2,
+          "price": 189.9
+        }
+      ]
+    },
+    {
+      "id": "37b390d1-63ae-4154-af75-8a5fb1d01f00",
+      "totalAmount": 164.7,
+      "createdAt": "2026-10-14T15:30:00.000Z",
+      "tutor": "Thiago S",
+      "items": [
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 3,
+          "price": 54.9
+        }
+      ]
+    },
+    {
+      "id": "bdd86334-b720-402a-869b-d6d537a517d4",
+      "totalAmount": 244.8,
+      "createdAt": "2026-10-13T16:30:00.000Z",
+      "tutor": "User 1",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 1,
+          "price": 189.9
+        },
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 1,
+          "price": 54.9
+        }
+      ]
+    },
+    {
+      "id": "bfd5c5cd-edce-4c67-a119-c6aaf4de0289",
+      "totalAmount": 379.8,
+      "createdAt": "2026-10-11T17:30:00.000Z",
+      "tutor": "Thiago S",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 2,
+          "price": 189.9
+        }
+      ]
+    },
+    {
+      "id": "34197ca3-d396-4be2-9c20-9eb80f88f86b",
+      "totalAmount": 219.6,
+      "createdAt": "2026-10-09T18:30:00.000Z",
+      "tutor": "User 1",
+      "items": [
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 4,
+          "price": 54.9
+        }
+      ]
+    },
+    {
+      "id": "d9111df0-5b60-455c-90e0-0ebce6226f27",
+      "totalAmount": 299.7,
+      "createdAt": "2026-10-07T19:30:00.000Z",
+      "tutor": "Thiago S",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 1,
+          "price": 189.9
+        },
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 2,
+          "price": 54.9
+        }
+      ]
+    },
+    {
+      "id": "3f2f2e82-84a5-4062-a5b3-a9c920081341",
+      "totalAmount": 544.5,
+      "createdAt": "2026-10-05T20:30:00.000Z",
+      "tutor": "User 1",
+      "items": [
+        {
+          "name": "Ração Premium Pet Hub Canina",
+          "qty": 2,
+          "price": 189.9
+        },
+        {
+          "name": "PETHUB Cat Premium 1,5 kg",
+          "qty": 3,
+          "price": 54.9
+        }
+      ]
+    }
+  ],
+  "financials": {
+    "servicesRevenue": 3055.6000000000026,
+    "productsRevenue": 2532.6,
+    "totalAccumulatedRevenue": 5588.200000000003
+  }
+}

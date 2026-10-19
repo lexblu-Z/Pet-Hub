@@ -4,6 +4,7 @@ import { Bell, X, Calendar, ShoppingBag, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import { resolveNotificationRoute } from '@/utils/notificationNavigation';
 
 const SEEN_IDS_KEY = 'pethub_seen_notification_ids';
 const MAX_SEEN_HISTORY = 100;
@@ -29,7 +30,7 @@ function markNotificationIdsAsSeen(ids: string[]) {
 }
 
 export const LoginNotificationModal: React.FC = () => {
-  const { isAuthenticated, currentUser, token } = useAuthStore();
+  const { isAuthenticated, currentUser, currentRole, token } = useAuthStore();
   const [newNotifications, setNewNotifications] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -135,14 +136,22 @@ export const LoginNotificationModal: React.FC = () => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
   };
 
-  const handleViewAll = () => {
+  const handleViewAll = async () => {
+    const currentNotif = newNotifications[0];
+    if (currentNotif) {
+      try {
+        if (!currentNotif.read) {
+          await api.patch(`/notifications/${currentNotif.id}/read`);
+          window.dispatchEvent(new CustomEvent('pethub:notifications_updated'));
+        }
+      } catch (err) {
+        console.error('Failed to mark notification as read', err);
+      }
+    }
     handleClose();
-    if (currentUser?.role === 'tutor') {
-      navigate('/tutor/notifications');
-    } else if (currentUser?.role === 'estabelecimento') {
-      navigate('/estabelecimento/agendamentos');
-    } else if (currentUser?.role === 'profissional') {
-      navigate('/profissional/agenda');
+    if (currentNotif) {
+      const target = resolveNotificationRoute(currentNotif, currentRole, currentUser);
+      navigate(target.path, { state: target.state });
     }
   };
 

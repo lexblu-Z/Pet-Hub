@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { formatMessageTimestamp } from '@/utils/date';
+import { useAuthStore } from '@/store/authStore';
+import { resolveNotificationRoute } from '@/utils/notificationNavigation';
 
 export interface NotificationItem {
   id: string;
@@ -21,6 +23,8 @@ export interface NotificationItem {
   type: 'APPOINTMENT' | 'ORDER' | 'MESSAGE' | 'SYSTEM' | string;
   read: boolean;
   createdAt: string;
+  appointmentId?: string | null;
+  metadata?: any;
 }
 
 export interface NotificationPopoverProps {
@@ -32,6 +36,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
   isEstablishment = false,
   isMobile = false,
 }) => {
+  const { currentUser, currentRole } = useAuthStore();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -113,6 +118,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
     try {
       await api.patch('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      window.dispatchEvent(new CustomEvent('pethub:notifications_updated'));
     } catch (err) {
       console.error('Erro ao marcar todas as notificações como lidas:', err);
     }
@@ -123,6 +129,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
       if (!notif.read) {
         await api.patch(`/notifications/${notif.id}/read`);
         setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+        window.dispatchEvent(new CustomEvent('pethub:notifications_updated'));
       }
     } catch (err) {
       console.error('Erro ao marcar notificação como lida:', err);
@@ -130,26 +137,9 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
 
     setIsOpen(false);
 
-    if (isEstablishment) {
-      if (notif.type === 'APPOINTMENT') {
-        navigate('/estabelecimento/agendamentos');
-      } else if (notif.type === 'ORDER') {
-        navigate('/estabelecimento/pedidos');
-      } else if (notif.type === 'MESSAGE') {
-        navigate('/estabelecimento/mensagens');
-      } else {
-        navigate('/estabelecimento');
-      }
-    } else {
-      // Professional role
-      if (notif.type === 'APPOINTMENT') {
-        navigate('/profissional/agenda');
-      } else if (notif.type === 'MESSAGE') {
-        navigate('/profissional/agenda');
-      } else {
-        navigate('/profissional');
-      }
-    }
+    const effectiveRole = currentRole || (isEstablishment ? 'estabelecimento' : null);
+    const target = resolveNotificationRoute(notif, effectiveRole, currentUser);
+    navigate(target.path, { state: target.state });
   };
 
   const getNotificationIcon = (type: string) => {

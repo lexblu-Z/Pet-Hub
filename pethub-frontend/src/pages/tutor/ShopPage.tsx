@@ -7,14 +7,17 @@ import { Button, SearchBar, Badge } from '@/components/ui';
 import { api } from '@/services/api';
 import { CheckoutModal } from '@/components/shared/CheckoutModal';
 import { ItemLogo } from '@/components/shared/ServiceLogo';
+import { ProductImage } from '@/components/shared/ProductImage';
+import { getFullImageUrl } from '@/utils/image';
 
 interface RealProduct {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   price: number;
   stock: number;
-  photo?: string;
+  photo?: string | null;
+  photos?: string[];
   establishmentId: string;
   isProgramPartner?: boolean;
   establishment?: {
@@ -78,10 +81,11 @@ export default function ShopPage() {
     });
 
   const getEstablishmentPhoto = (product: RealProduct) => {
-    return product.establishment?.establishmentProfile?.photos?.[0] ||
+    const raw = product.establishment?.establishmentProfile?.photos?.[0] ||
       product.establishment?.avatar ||
       product.establishment?.defaultAvatar ||
       null;
+    return raw ? getFullImageUrl(raw) : null;
   };
 
   const handleOpenProduct = (product: RealProduct) => {
@@ -99,14 +103,16 @@ export default function ShopPage() {
       return;
     }
 
+    const productPhoto = product.photo || (Array.isArray(product.photos) && product.photos[0]) || null;
+
     addItem({
       id: product.id,
       name: product.name,
       description: product.description || '',
       price: product.price,
       stock: product.stock,
-      photos: [product.photo || '/romeu_e_julieta_1788367558045.jpg'],
-      photo: product.photo,
+      photo: productPhoto,
+      photos: productPhoto ? [productPhoto] : (Array.isArray(product.photos) ? product.photos : []),
       category: 'outros',
       isActive: true,
       establishmentId: product.establishmentId,
@@ -130,6 +136,9 @@ export default function ShopPage() {
       toast.error(`A quantidade não pode exceder o estoque disponível (${product.stock} un.).`);
       return;
     }
+
+    const productPhoto = product.photo || (Array.isArray(product.photos) && product.photos[0]) || null;
+
     setDirectCheckoutItem({
       product: {
         id: product.id,
@@ -137,8 +146,8 @@ export default function ShopPage() {
         description: product.description || '',
         price: product.price,
         stock: product.stock,
-        photos: [product.photo || '/romeu_e_julieta_1788367558045.jpg'],
-        photo: product.photo,
+        photo: productPhoto,
+        photos: productPhoto ? [productPhoto] : (Array.isArray(product.photos) ? product.photos : []),
         category: 'outros',
         isActive: true,
         establishmentId: product.establishmentId,
@@ -226,10 +235,12 @@ export default function ShopPage() {
                     onClick={() => handleOpenProduct(product)}
                     className="relative aspect-square bg-neutral-50 dark:bg-[#282A2C] overflow-hidden cursor-pointer"
                   >
-                    <img
-                      src={product.photo || '/romeu_e_julieta_1788367558045.jpg'}
+                    <ProductImage
+                      product={product}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      iconSize={36}
+                      containerClassName="w-full h-full"
                     />
                     <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
                       {product.isProgramPartner && (
@@ -350,10 +361,12 @@ export default function ShopPage() {
 
               {/* Product Photo Showcase: object-contain without cutting */}
               <div className="relative h-64 sm:h-72 bg-neutral-50 dark:bg-[#282A2C] border-b border-neutral-100 dark:border-[#313335] flex items-center justify-center p-4 overflow-hidden shrink-0">
-                <img
-                  src={selectedProduct.photo || '/romeu_e_julieta_1788367558045.jpg'}
+                <ProductImage
+                  product={selectedProduct}
                   alt={selectedProduct.name}
                   className="max-h-full max-w-full object-contain drop-shadow-xs transition-transform duration-300 hover:scale-102"
+                  iconSize={48}
+                  containerClassName="w-full h-full"
                 />
               </div>
 
@@ -500,7 +513,15 @@ export default function ShopPage() {
                 ) : (
                   items.map(item => (
                     <div key={item.product.id} className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-[#282A2C] rounded-2xl">
-                      <img src={item.product.photos?.[0] || '/romeu_e_julieta_1788367558045.jpg'} alt="" className="w-14 h-14 rounded-xl object-cover bg-white dark:bg-[#1E1F20]" />
+                      <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-white dark:bg-[#1E1F20] border border-neutral-200/50 dark:border-[#313335] flex items-center justify-center">
+                        <ProductImage
+                          product={item.product}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                          iconSize={22}
+                          containerClassName="w-full h-full"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <ItemLogo size="xs" />

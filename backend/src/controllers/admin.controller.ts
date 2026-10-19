@@ -204,36 +204,10 @@ export const adminController = {
   async getPerformanceChart(request: FastifyRequest, reply: FastifyReply) {
     const { period = '30d' } = request.query as any;
     const now = new Date();
-    let days = 30;
-    if (period === '7d') days = 7;
-    else if (period === '30d') days = 30;
-    else if (period === '3m') days = 90;
-    else if (period === '6m') days = 180;
-    else if (period === '1y') days = 365;
 
     const endOfToday = new Date(now);
     endOfToday.setHours(23, 59, 59, 999);
 
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
-
-    const [users, appointments, orders] = await Promise.all([
-      prisma.user.findMany({
-        where: { createdAt: { gte: startDate } },
-        select: { createdAt: true },
-      }),
-      prisma.appointment.findMany({
-        where: { date: { gte: startDate } },
-        select: { date: true, status: true, service: { select: { price: true } } },
-      }),
-      prisma.order.findMany({
-        where: { createdAt: { gte: startDate }, status: { in: ['COMPLETED', 'DELIVERED'] } },
-        select: { createdAt: true, totalAmount: true },
-      }),
-    ]);
-
-    const stepDays = days <= 30 ? 1 : days <= 90 ? 3 : days <= 180 ? 7 : 14;
     interface Bucket {
       startMs: number;
       endMs: number;
@@ -244,33 +218,103 @@ export const adminController = {
     }
 
     const buckets: Bucket[] = [];
-    let currentStart = new Date(startDate);
+    let queryStartDate: Date;
 
-    while (currentStart < endOfToday) {
-      const currentEnd = new Date(currentStart);
-      currentEnd.setDate(currentStart.getDate() + stepDays);
-
-      const label = currentStart.toLocaleDateString('pt-BR', {
+    if (period === '1y') {
+      const spDateStr = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
-        day: '2-digit',
+        year: 'numeric',
         month: '2-digit',
-      });
+        day: '2-digit',
+      }).format(now);
+      const [curYear, curMonth] = spDateStr.split('-').map(Number);
+      const curMonthIdx = curMonth - 1; // 0-indexed month (0 = Jan, ..., 11 = Dec)
 
-      buckets.push({
-        startMs: currentStart.getTime(),
-        endMs: currentEnd.getTime(),
-        date: label,
-        users: 0,
-        appointments: 0,
-        revenue: 0,
-      });
+      const MONTH_NAMES_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-      currentStart = currentEnd;
+      // Generate exactly 12 monthly buckets: from 11 months ago to current month
+      for (let i = 11; i >= 0; i--) {
+        const rawMonth = curMonthIdx - i;
+        const year = curYear + Math.floor(rawMonth / 12);
+        const month = ((rawMonth % 12) + 12) % 12;
+
+        const nextRawMonth = rawMonth + 1;
+        const nextYear = curYear + Math.floor(nextRawMonth / 12);
+        const nextMonth = ((nextRawMonth % 12) + 12) % 12;
+
+        const startIso = `${year}-${String(month + 1).padStart(2, '0')}-01T00:00:00.000-03:00`;
+        const endIso = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-01T00:00:00.000-03:00`;
+
+        const startMs = new Date(startIso).getTime();
+        const endMs = new Date(endIso).getTime();
+        const label = `${MONTH_NAMES_PT[month]}/${String(year).slice(-2)}`;
+
+        buckets.push({
+          startMs,
+          endMs,
+          date: label,
+          users: 0,
+          appointments: 0,
+          revenue: 0,
+        });
+      }
+
+      queryStartDate = new Date(buckets[0].startMs);
+    } else {
+      let days = 30;
+      if (period === '7d') days = 7;
+      else if (period === '30d') days = 30;
+      else if (period === '3m') days = 90;
+      else if (period === '6m') days = 180;
+
+      queryStartDate = new Date(now);
+      queryStartDate.setDate(now.getDate() - days);
+      queryStartDate.setHours(0, 0, 0, 0);
+
+      const stepDays = days <= 30 ? 1 : days <= 90 ? 3 : 7;
+      let currentStart = new Date(queryStartDate);
+
+      while (currentStart < endOfToday) {
+        const currentEnd = new Date(currentStart);
+        currentEnd.setDate(currentStart.getDate() + stepDays);
+
+        const label = currentStart.toLocaleDateString('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          day: '2-digit',
+          month: '2-digit',
+        });
+
+        buckets.push({
+          startMs: currentStart.getTime(),
+          endMs: currentEnd.getTime(),
+          date: label,
+          users: 0,
+          appointments: 0,
+          revenue: 0,
+        });
+
+        currentStart = currentEnd;
+      }
     }
+
+    const [users, appointments, orders] = await Promise.all([
+      prisma.user.findMany({
+        where: { createdAt: { gte: queryStartDate } },
+        select: { createdAt: true },
+      }),
+      prisma.appointment.findMany({
+        where: { date: { gte: queryStartDate } },
+        select: { date: true, status: true, finalAmount: true, service: { select: { price: true } } },
+      }),
+      prisma.order.findMany({
+        where: { createdAt: { gte: queryStartDate }, status: { in: ['COMPLETED', 'DELIVERED'] } },
+        select: { createdAt: true, totalAmount: true },
+      }),
+    ]);
 
     const findBucket = (d: Date): Bucket | undefined => {
       const t = d.getTime();
-      if (t < startDate.getTime()) return undefined;
+      if (t < queryStartDate.getTime()) return undefined;
       for (let i = 0; i < buckets.length; i++) {
         const b = buckets[i];
         if (t >= b.startMs && (t < b.endMs || i === buckets.length - 1)) {
@@ -290,7 +334,8 @@ export const adminController = {
       if (bucket) {
         bucket.appointments += 1;
         if (a.status === AppointmentStatus.COMPLETED) {
-          bucket.revenue += a.service?.price || 0;
+          const rev = a.finalAmount ?? a.service?.price ?? 0;
+          bucket.revenue += rev;
         }
       }
     });
@@ -671,5 +716,151 @@ export const adminController = {
         error: 'Erro interno ao excluir usuário. Tente novamente.',
       });
     }
+  },
+
+  // Address Change Requests (Approval / Rejection)
+  async listAddressRequests(request: FastifyRequest<{
+    Querystring: { status?: string };
+  }>, reply: FastifyReply) {
+    const { status } = request.query;
+    const where: any = {};
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+
+    const requests = await prisma.establishmentAddressRequest.findMany({
+      where,
+      include: {
+        establishment: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            establishmentProfile: {
+              select: {
+                businessName: true,
+                phone: true,
+                address: true,
+                city: true,
+                state: true,
+                zipCode: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return reply.send(requests);
+  },
+
+  async approveAddressRequest(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const { id } = request.params;
+    const adminUser = request.user as any;
+
+    const addressReq = await prisma.establishmentAddressRequest.findUnique({
+      where: { id },
+      include: {
+        establishment: {
+          include: { establishmentProfile: true },
+        },
+      },
+    });
+
+    if (!addressReq) {
+      return reply.status(404).send({ error: 'Solicitação de endereço não encontrada.' });
+    }
+
+    if (addressReq.status !== 'PENDING') {
+      return reply.status(400).send({ error: `Esta solicitação já foi ${addressReq.status === 'APPROVED' ? 'aprovada' : 'rejeitada'}.` });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedProfile = await tx.establishmentProfile.update({
+        where: { userId: addressReq.establishmentId },
+        data: {
+          address: addressReq.requestedAddress,
+          city: addressReq.requestedCity,
+          state: addressReq.requestedState,
+          zipCode: addressReq.requestedZipCode || addressReq.currentZipCode,
+        },
+      });
+
+      const updatedReq = await tx.establishmentAddressRequest.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          reviewedAt: new Date(),
+          reviewedByAdminId: adminUser?.sub || adminUser?.id || null,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: addressReq.establishmentId,
+          title: 'Endereço Atualizado e Aprovado',
+          message: `Sua solicitação de alteração de endereço foi aprovada com sucesso! Seu novo endereço oficial é: ${addressReq.requestedAddress}, ${addressReq.requestedCity} - ${addressReq.requestedState}.`,
+          type: 'SYSTEM',
+        },
+      });
+
+      return { profile: updatedProfile, request: updatedReq };
+    });
+
+    return reply.send({
+      message: 'Solicitação de alteração de endereço aprovada com sucesso!',
+      ...result,
+    });
+  },
+
+  async rejectAddressRequest(request: FastifyRequest<{
+    Params: { id: string };
+    Body: { rejectionReason?: string };
+  }>, reply: FastifyReply) {
+    const { id } = request.params;
+    const adminUser = request.user as any;
+    const { rejectionReason } = (request.body || {}) as { rejectionReason?: string };
+
+    const addressReq = await prisma.establishmentAddressRequest.findUnique({
+      where: { id },
+    });
+
+    if (!addressReq) {
+      return reply.status(404).send({ error: 'Solicitação de endereço não encontrada.' });
+    }
+
+    if (addressReq.status !== 'PENDING') {
+      return reply.status(400).send({ error: `Esta solicitação já foi ${addressReq.status === 'APPROVED' ? 'aprovada' : 'rejeitada'}.` });
+    }
+
+    const updatedReq = await prisma.$transaction(async (tx) => {
+      const rejected = await tx.establishmentAddressRequest.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          rejectionReason: rejectionReason?.trim() || 'Solicitação reprovada pela moderação.',
+          reviewedAt: new Date(),
+          reviewedByAdminId: adminUser?.sub || adminUser?.id || null,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: addressReq.establishmentId,
+          title: 'Solicitação de Alteração de Endereço Recusada',
+          message: `Sua solicitação para alterar o endereço foi recusada. Motivo: ${rejectionReason?.trim() || 'Dados inconsistentes ou fora dos padrões do PetHub.'}`,
+          type: 'SYSTEM',
+        },
+      });
+
+      return rejected;
+    });
+
+    return reply.send({
+      message: 'Solicitação de alteração de endereço rejeitada.',
+      request: updatedReq,
+    });
   },
 };

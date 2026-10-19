@@ -7,6 +7,20 @@ import { normalizeSpecies, SPECIES_LABELS, isPetCompatibleWithService, isPetComp
 import { calculateCashback, normalizeCashbackCode } from '../utils/cashback';
 import { createAndEmitNotification } from '../utils/notificationEvents';
 import { partnerProgramService } from '../services/partner-program.service';
+import {
+  BRAZIL_TIMEZONE,
+  getBrasiliaNow,
+  getBrasiliaToday,
+  isTodayInBrasilia,
+  isDatePastInBrasilia,
+  parseTimeToMinutes,
+  minutesToTime,
+  getDayKeysForDate,
+} from '../utils/date';
+import {
+  calculateDayAvailability,
+  resolveServiceDuration,
+} from '../services/availability.service';
 
 const createAppointmentSchema = z.object({
   petId: z.string(),
@@ -15,7 +29,9 @@ const createAppointmentSchema = z.object({
   professionalId: z.string().nullable().optional(),
   employeeId: z.string().nullable().optional(),
   date: z.string().datetime(), // e.g. "2026-10-10T14:00:00Z"
-  paymentMethod: z.string().optional().default('CREDIT_CARD'),
+  paymentMethod: z.string()
+    .trim()
+    .min(1, { message: 'Forma de pagamento é obrigatória.' }),
   needsChange: z.boolean().optional().default(false),
   changeFor: z.number().positive().optional().nullable(),
   cashbackCode: z.string().optional().nullable(),
@@ -45,6 +61,7 @@ export const appointmentsController = {
             professionalProfile: true,
           }
         },
+        review: true,
       },
       orderBy: { date: 'desc' },
     });
@@ -67,6 +84,12 @@ export const appointmentsController = {
         date: dateStr,
         time: timeStr,
         price: apt.service?.price || 0,
+        review: apt.review ? {
+          id: apt.review.id,
+          rating: apt.review.rating,
+          comment: apt.review.comment,
+          createdAt: apt.review.createdAt,
+        } : null,
       };
     });
 
@@ -98,8 +121,21 @@ export const appointmentsController = {
     return reply.send(appointments);
   },
 
-  async getAvailableSlots(request: FastifyRequest<{ Querystring: { date?: string; professionalId?: string; establishmentId?: string; serviceId?: string } }>, reply: FastifyReply) {
-    const { date, professionalId, establishmentId, serviceId } = request.query;
+  async getAvailableSlots(
+    request: FastifyRequest<{
+      Querystring: {
+        date?: string;
+        professionalId?: string;
+        establishmentId?: string;
+        serviceId?: string;
+        employeeId?: string;
+        simulatedNowMinutes?: string;
+        simulatedDateStr?: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) {
+    const { date, professionalId, establishmentId, serviceId, employeeId, simulatedNowMinutes, simulatedDateStr } = request.query;
 
     if (!date) {
       return reply.status(400).send({ error: 'Data é obrigatória (formato YYYY-MM-DD).' });
@@ -110,197 +146,21 @@ export const appointmentsController = {
       return reply.status(400).send({ error: 'Formato de data inválido. Use YYYY-MM-DD.' });
     }
 
-    const year = parseInt(dateParts[0], 10);
-    const month = parseInt(dateParts[1], 10) - 1;
-    const day = parseInt(dateParts[2], 10);
-    const targetDate = new Date(Date.UTC(year, month, day, 12, 0, 0));
-    const dayOfWeek = targetDate.getUTCDay();
-    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const ptDayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const dayKey = dayKeys[dayOfWeek];
-    const ptDayKey = ptDayKeys[dayOfWeek];
+    const user = request.user as any;
+    const tutorId = user?.sub || undefined;
 
-    let openTime = '09:00';
-    let closeTime = '18:00';
-    let hasBreak = false;
-    let breakStart = '12:00';
-    let breakEnd = '13:30';
-    let isOpen = true;
-    let stepMinutes = 60;
-    let minAdvanceHours = 2;
-
-    if (serviceId) {
-      const svc = await prisma.service.findUnique({ where: { id: serviceId } });
-      if (svc && svc.duration) {
-        stepMinutes = svc.duration;
-      }
-    }
-
-    if (professionalId) {
-      const prof = await prisma.user.findUnique({
-        where: { id: professionalId },
-        include: { professionalProfile: true },
-      });
-
-      if (!prof || prof.professionalProfile?.status !== 'ACTIVE') {
-        return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
-      }
-
-      const bookingSettings = prof.professionalProfile.bookingSettings as any;
-      if (bookingSettings) {
-        if (bookingSettings.acceptOnlineBooking === false || bookingSettings.allowOnlineBooking === false) {
-          return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Agendamentos online desabilitados.' });
-        }
-        if (bookingSettings.minAdvanceHours) {
-          minAdvanceHours = bookingSettings.minAdvanceHours;
-        } else if (bookingSettings.minAdvanceNoticeHours) {
-          minAdvanceHours = bookingSettings.minAdvanceNoticeHours;
-        }
-        if (Array.isArray(bookingSettings.unavailableDays) && bookingSettings.unavailableDays.includes(date)) {
-          return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
-        }
-        if (bookingSettings.vacationStart && bookingSettings.vacationEnd) {
-          if (date >= bookingSettings.vacationStart && date <= bookingSettings.vacationEnd) {
-            return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
-          }
-        }
-      }
-
-      const workingHours = prof.professionalProfile.workingHours as any;
-      if (workingHours) {
-        const dayConfig = workingHours[dayKey] || workingHours[ptDayKey];
-        if (dayConfig) {
-          isOpen = dayConfig.enabled !== undefined ? Boolean(dayConfig.enabled) : Boolean(dayConfig.isOpen);
-          if (dayConfig.open) openTime = dayConfig.open;
-          if (dayConfig.close) closeTime = dayConfig.close;
-          if (dayConfig.hasBreak) {
-            hasBreak = true;
-            breakStart = dayConfig.breakStart || '12:00';
-            breakEnd = dayConfig.breakEnd || '13:30';
-          }
-        }
-      }
-    } else if (establishmentId) {
-      const providerUser = await prisma.user.findUnique({
-        where: { id: establishmentId },
-        include: { establishmentProfile: true, professionalProfile: true },
-      });
-
-      const isEstActive = providerUser?.establishmentProfile?.status === 'ACTIVE';
-      const isProfActive = providerUser?.professionalProfile?.status === 'ACTIVE';
-
-      if (!providerUser || (!isEstActive && !isProfActive)) {
-        return reply.send({ date, slots: [], availableSlots: [], isClosed: true });
-      }
-
-      if (isProfActive && providerUser.professionalProfile) {
-        const bookingSettings = providerUser.professionalProfile.bookingSettings as any;
-        if (bookingSettings) {
-          if (bookingSettings.acceptOnlineBooking === false || bookingSettings.allowOnlineBooking === false) {
-            return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Agendamentos online indisponíveis para este profissional.' });
-          }
-          if (bookingSettings.defaultDurationMinutes) {
-            stepMinutes = bookingSettings.defaultDurationMinutes;
-          }
-          if (bookingSettings.minAdvanceNoticeHours) {
-            minAdvanceHours = bookingSettings.minAdvanceNoticeHours;
-          }
-        }
-      }
-
-      const workingHours = (providerUser.establishmentProfile?.workingHours || providerUser.professionalProfile?.workingHours) as any;
-      if (workingHours) {
-        const dayConfig = workingHours[dayKey] || workingHours[ptDayKey];
-        if (dayConfig) {
-          isOpen = dayConfig.enabled !== undefined ? Boolean(dayConfig.enabled) : Boolean(dayConfig.isOpen);
-          if (dayConfig.open) openTime = dayConfig.open;
-          if (dayConfig.close) closeTime = dayConfig.close;
-          if (dayConfig.hasBreak) {
-            hasBreak = true;
-            if (dayConfig.breakStart) breakStart = dayConfig.breakStart;
-            if (dayConfig.breakEnd) breakEnd = dayConfig.breakEnd;
-          }
-        }
-      }
-    }
-
-    if (!isOpen) {
-      return reply.send({ date, slots: [], availableSlots: [], isClosed: true, message: 'Fechado neste dia.' });
-    }
-
-    // Generate candidate slot times
-    const [openH, openM] = openTime.split(':').map(Number);
-    const [closeH, closeM] = closeTime.split(':').map(Number);
-    const openTotalMin = openH * 60 + openM;
-    const closeTotalMin = closeH * 60 + closeM;
-
-    const candidateSlots: string[] = [];
-    for (let m = openTotalMin; m + stepMinutes <= closeTotalMin; m += stepMinutes) {
-      const hh = String(Math.floor(m / 60)).padStart(2, '0');
-      const mm = String(m % 60).padStart(2, '0');
-      const slotStr = `${hh}:${mm}`;
-
-      if (hasBreak && breakStart && breakEnd) {
-        if (slotStr >= breakStart && slotStr < breakEnd) {
-          continue;
-        }
-      }
-
-      candidateSlots.push(slotStr);
-    }
-
-    // Query existing appointments on that date
-    const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0));
-    const dayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
-
-    const existingAppts = await prisma.appointment.findMany({
-      where: {
-        OR: [
-          ...(professionalId ? [{ professionalId }] : []),
-          ...(establishmentId ? [{ establishmentId }] : []),
-        ],
-        date: { gte: dayStart, lte: dayEnd },
-        status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
-      },
-      include: { service: true },
-    });
-
-    const now = new Date();
-    const isToday = now.toISOString().split('T')[0] === date;
-    const minTimeForToday = new Date(now.getTime() + minAdvanceHours * 60 * 60 * 1000);
-    const minTimeStr = `${String(minTimeForToday.getHours()).padStart(2, '0')}:${String(minTimeForToday.getMinutes()).padStart(2, '0')}`;
-
-    const availableSlots = candidateSlots.filter(slot => {
-      const [sh, sm] = slot.split(':').map(Number);
-      const slotStartMin = sh * 60 + sm;
-      const slotEndMin = slotStartMin + stepMinutes;
-
-      const overlapsExisting = existingAppts.some(apt => {
-        if (professionalId && apt.professionalId && apt.professionalId !== professionalId) {
-          return false;
-        }
-        const d = new Date(apt.date);
-        const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
-        const aptDuration = apt.service?.duration || 60;
-        const aptEndMin = aptStartMin + aptDuration;
-
-        return slotStartMin < aptEndMin && slotEndMin > aptStartMin;
-      });
-
-      if (overlapsExisting) return false;
-      if (isToday && slot < minTimeStr) return false;
-      return true;
-    });
-
-    return reply.send({
+    const result = await calculateDayAvailability({
       date,
-      isOpen,
-      openTime,
-      closeTime,
-      slots: availableSlots,
-      availableSlots: availableSlots,
-      isClosed: !isOpen,
+      establishmentId,
+      professionalId,
+      serviceId,
+      employeeId,
+      tutorId,
+      simulatedNowMinutes: simulatedNowMinutes ? parseInt(simulatedNowMinutes, 10) : undefined,
+      simulatedDateStr,
     });
+
+    return reply.send(result);
   },
 
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -329,22 +189,6 @@ export const appointmentsController = {
         data.professionalId = estUser.id;
       }
 
-      // Fetch service to get real duration & price
-      const service = await prisma.service.findUnique({
-        where: { id: data.serviceId },
-      });
-      if (!service || !service.active) {
-        return reply.status(404).send({ error: 'Serviço não encontrado ou inativo.' });
-      }
-      const serviceDuration = service.duration || 60; // in minutes
-
-      // Parse appointment start and calculate end time
-      const newStart = new Date(data.date);
-      if (isNaN(newStart.getTime())) {
-        return reply.status(400).send({ error: 'Data e horário do agendamento inválidos.' });
-      }
-      const newEnd = new Date(newStart.getTime() + serviceDuration * 60 * 1000);
-
       // Check if professional is ACTIVE and available
       let profUser: any = null;
       if (data.professionalId) {
@@ -359,6 +203,59 @@ export const appointmentsController = {
         const bookingSettings = profUser.professionalProfile.bookingSettings as any;
         if (bookingSettings?.acceptOnlineBooking === false || bookingSettings?.allowOnlineBooking === false) {
           return reply.status(403).send({ error: 'Este profissional não está aceitando agendamentos online no momento.' });
+        }
+      }
+
+      // Fetch service to get real duration & price
+      const service = await prisma.service.findUnique({
+        where: { id: data.serviceId },
+      });
+      if (!service || !service.active) {
+        return reply.status(404).send({ error: 'Serviço não encontrado ou inativo.' });
+      }
+
+      // Resolve service duration adhering strictly to the precedence rules
+      const durationRes = await resolveServiceDuration(data.serviceId, profUser || estUser, data.professionalId);
+      const serviceDuration = durationRes.duration;
+
+      // Parse appointment start and calculate end time
+      const newStart = new Date(data.date);
+      if (isNaN(newStart.getTime())) {
+        return reply.status(400).send({ error: 'Data e horário do agendamento inválidos.' });
+      }
+      const newEnd = new Date(newStart.getTime() + serviceDuration * 60 * 1000);
+
+      // Extract nominal Brasilia date and time
+      const aptDateStr = data.date.split('T')[0];
+      const startMinutes = newStart.getUTCHours() * 60 + newStart.getUTCMinutes();
+      const endMinutes = startMinutes + serviceDuration;
+      const startHH = String(newStart.getUTCHours()).padStart(2, '0');
+      const startMM = String(newStart.getUTCMinutes()).padStart(2, '0');
+      const startTimeStr = `${startHH}:${startMM}`;
+      const endTimeStr = minutesToTime(endMinutes);
+
+      // Rule 1: Cannot book past dates
+      if (isDatePastInBrasilia(aptDateStr)) {
+        return reply.status(400).send({ error: 'Não é possível agendar em datas passadas.' });
+      }
+
+      // Rule 2: Cannot book past hours on today's date
+      const nowBrasilia = getBrasiliaNow();
+      if (isTodayInBrasilia(aptDateStr)) {
+        if (startMinutes <= nowBrasilia.totalMinutes) {
+          return reply.status(400).send({ error: 'Não é possível agendar em horários que já passaram hoje.' });
+        }
+
+        // Rule 3: Check minimum advance notice
+        const bookingSettings = (profUser?.professionalProfile?.bookingSettings || estUser?.professionalProfile?.bookingSettings) as any;
+        const minAdvanceNoticeHours = Number(bookingSettings?.minAdvanceNoticeHours ?? bookingSettings?.minAdvanceHours ?? 0);
+        if (minAdvanceNoticeHours > 0) {
+          const minAllowedMinutes = nowBrasilia.totalMinutes + Math.round(minAdvanceNoticeHours * 60);
+          if (startMinutes < minAllowedMinutes) {
+            return reply.status(400).send({
+              error: `O prestador requer antecedência mínima de ${minAdvanceNoticeHours}h para novos agendamentos.`,
+            });
+          }
         }
       }
 
@@ -399,100 +296,163 @@ export const appointmentsController = {
       }
 
       // Check working hours and breaks
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const ptDayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-      const dayIdx = newStart.getUTCDay();
-
+      const { dayKey, ptDayKey } = getDayKeysForDate(aptDateStr);
       const workingHours = ((profUser?.professionalProfile?.workingHours || estUser.establishmentProfile?.workingHours || estUser.professionalProfile?.workingHours)) as any;
       if (workingHours) {
-        const config = workingHours[dayKeys[dayIdx]] || workingHours[ptDayKeys[dayIdx]];
+        const config = workingHours[dayKey] || workingHours[ptDayKey];
         if (config) {
-          const isOpen = config.enabled !== undefined ? Boolean(config.enabled) : Boolean(config.isOpen);
+          const isOpen = config.enabled !== undefined ? Boolean(config.enabled) : Boolean(config.isOpen ?? true);
           if (!isOpen) {
             return reply.status(409).send({ error: 'O prestador não atende neste dia da semana.' });
           }
-          const startHH = String(newStart.getUTCHours()).padStart(2, '0');
-          const startMM = String(newStart.getUTCMinutes()).padStart(2, '0');
-          const startTimeStr = `${startHH}:${startMM}`;
 
-          const endHH = String(newEnd.getUTCHours()).padStart(2, '0');
-          const endMM = String(newEnd.getUTCMinutes()).padStart(2, '0');
-          const endTimeStr = `${endHH}:${endMM}`;
-
-          if (config.open && startTimeStr < config.open) {
+          if (config.open && startMinutes < parseTimeToMinutes(config.open)) {
             return reply.status(409).send({ error: `Horário antes do início do expediente (${config.open}).` });
           }
-          if (config.close && endTimeStr > config.close) {
-            return reply.status(409).send({ error: `O serviço (${serviceDuration} min) ultrapassa o horário de encerramento (${config.close}).` });
+          if (config.close && endMinutes > parseTimeToMinutes(config.close)) {
+            return reply.status(409).send({
+              error: `O serviço (${serviceDuration} min) ultrapassa o horário de encerramento do expediente (${config.close}).`,
+            });
           }
           if (config.hasBreak && config.breakStart && config.breakEnd) {
-            if (startTimeStr < config.breakEnd && endTimeStr > config.breakStart) {
-              return reply.status(409).send({ error: 'Horário coincide com o intervalo de atendimento do prestador.' });
+            const breakStartMin = parseTimeToMinutes(config.breakStart);
+            const breakEndMin = parseTimeToMinutes(config.breakEnd);
+            if (startMinutes < breakEndMin && endMinutes > breakStartMin) {
+              return reply.status(409).send({
+                error: `Horário coincide com o intervalo de atendimento do prestador (${config.breakStart} às ${config.breakEnd}).`,
+              });
             }
-          }
-        }
-      }
-
-      // Check tutor's OWN conflicts on this day
-      // Tutor can have multiple appointments on different days, or different times on the same day.
-      // Tutor is ONLY blocked if they already have an overlapping appointment.
-      const dayStart = new Date(Date.UTC(newStart.getUTCFullYear(), newStart.getUTCMonth(), newStart.getUTCDate(), 0, 0, 0));
-      const dayEnd = new Date(Date.UTC(newStart.getUTCFullYear(), newStart.getUTCMonth(), newStart.getUTCDate(), 23, 59, 59, 999));
-
-      const tutorExisting = await prisma.appointment.findMany({
-        where: {
-          tutorId: user.sub,
-          date: { gte: dayStart, lte: dayEnd },
-          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] }
-        },
-        include: { service: true }
-      });
-
-      for (const apt of tutorExisting) {
-        const aptStart = new Date(apt.date);
-        const aptDuration = apt.service?.duration || 60;
-        const aptEnd = new Date(aptStart.getTime() + aptDuration * 60 * 1000);
-
-        // Overlap check: newStart < aptEnd && newEnd > aptStart
-        if (newStart < aptEnd && newEnd > aptStart) {
-          return reply.status(409).send({ error: 'Você já possui um agendamento nesse horário.' });
-        }
-      }
-
-      // Check provider (professional or establishment) conflicts
-      const providerExisting = await prisma.appointment.findMany({
-        where: {
-          OR: [
-            ...(data.professionalId ? [{ professionalId: data.professionalId }] : []),
-            { establishmentId: data.establishmentId },
-          ],
-          date: { gte: dayStart, lte: dayEnd },
-          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] }
-        },
-        include: { service: true }
-      });
-
-      for (const apt of providerExisting) {
-        const sameProfessional = data.professionalId && apt.professionalId === data.professionalId;
-        const sameEstablishment = !data.professionalId && apt.establishmentId === data.establishmentId;
-
-        if (sameProfessional || sameEstablishment) {
-          const aptStart = new Date(apt.date);
-          const aptDuration = apt.service?.duration || 60;
-          const aptEnd = new Date(aptStart.getTime() + aptDuration * 60 * 1000);
-
-          if (newStart < aptEnd && newEnd > aptStart) {
-            return reply.status(409).send({ error: 'Horário já ocupado por outro agendamento.' });
           }
         }
       }
 
       const servicePrice = service.price || 0;
       const subtotalAmount = servicePrice;
-
       const isCash = (data.paymentMethod || '').toLowerCase().includes('dinheiro') || (data.paymentMethod || '').toUpperCase() === 'CASH';
 
+      // Atomic transaction: conflict checks & creation under strict concurrency protection
       const appointment = await prisma.$transaction(async (tx) => {
+        // Deterministic resource locking via PostgreSQL advisory transaction locks
+        // Prevents race conditions and double-booking between concurrent requests
+        const lockKeys: string[] = [
+          `tutor_${user.sub}_${aptDateStr}`,
+          data.professionalId ? `prof_${data.professionalId}_${aptDateStr}` : null,
+          data.establishmentId ? `estab_${data.establishmentId}_${aptDateStr}` : null,
+          data.employeeId ? `emp_${data.employeeId}_${aptDateStr}` : null,
+        ].filter((k): k is string => Boolean(k));
+
+        // Sort keys deterministically to strictly prevent deadlocks
+        lockKeys.sort();
+
+        for (const key of lockKeys) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(('x' || substr(md5(${key}), 1, 16))::bit(64)::bigint)`;
+        }
+
+        const dayStart = new Date(`${aptDateStr}T00:00:00.000Z`);
+        const dayEnd = new Date(`${aptDateStr}T23:59:59.999Z`);
+
+        // Query all active appointments on this day that could conflict
+        const conflictingAppts = await tx.appointment.findMany({
+          where: {
+            OR: [
+              { tutorId: user.sub },
+              ...(data.professionalId ? [{ professionalId: data.professionalId }] : []),
+              { establishmentId: data.establishmentId },
+            ],
+            date: { gte: dayStart, lte: dayEnd },
+            status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS] },
+          },
+          include: { service: true, employee: true },
+        });
+
+        // 1. Tutor collision check
+        for (const apt of conflictingAppts.filter(a => a.tutorId === user.sub)) {
+          const d = new Date(apt.date);
+          const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+          const aptDur = apt.service?.duration || 60;
+          const aptEndMin = aptStartMin + aptDur;
+          if (startMinutes < aptEndMin && endMinutes > aptStartMin) {
+            throw new Error('CONFLICT: Você já possui outro agendamento nesse mesmo horário.');
+          }
+        }
+
+        // 2. Professional collision check
+        if (data.professionalId) {
+          for (const apt of conflictingAppts.filter(a => a.professionalId === data.professionalId)) {
+            const d = new Date(apt.date);
+            const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+            const aptDur = apt.service?.duration || 60;
+            const aptEndMin = aptStartMin + aptDur;
+            if (startMinutes < aptEndMin && endMinutes > aptStartMin) {
+              throw new Error('CONFLICT: Este horário acabou de ser ocupado com o profissional selecionado.');
+            }
+          }
+        }
+
+        // 3. Employee collision check
+        if (data.employeeId) {
+          for (const apt of conflictingAppts.filter(a => a.employeeId === data.employeeId)) {
+            const d = new Date(apt.date);
+            const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+            const aptDur = apt.service?.duration || 60;
+            const aptEndMin = aptStartMin + aptDur;
+            if (startMinutes < aptEndMin && endMinutes > aptStartMin) {
+              throw new Error('CONFLICT: Este funcionário já possui um atendimento agendado nesse horário.');
+            }
+          }
+        }
+
+        // 4. Establishment capacity check (when no specific professional or employee chosen)
+        if (!data.professionalId && !data.employeeId) {
+          const establishmentOverlaps = conflictingAppts.filter(a => {
+            if (a.establishmentId !== data.establishmentId) return false;
+            const d = new Date(a.date);
+            const aptStartMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+            const aptDur = a.service?.duration || 60;
+            const aptEndMin = aptStartMin + aptDur;
+            return startMinutes < aptEndMin && endMinutes > aptStartMin;
+          });
+
+          // Fetch eligible employees for this specific service
+          const svcWithEmployees = await tx.service.findUnique({
+            where: { id: data.serviceId },
+            include: { employees: { include: { employee: true } } },
+          });
+
+          let activeEmployees: any[] = [];
+          if (svcWithEmployees?.employees && svcWithEmployees.employees.length > 0) {
+            activeEmployees = svcWithEmployees.employees
+              .map(se => se.employee)
+              .filter(e => e.active);
+          }
+
+          if (activeEmployees.length === 0) {
+            activeEmployees = await tx.employee.findMany({
+              where: { establishmentId: data.establishmentId, active: true },
+            });
+          }
+
+          if (activeEmployees.length > 0) {
+            const busyEmpIds = new Set<string>();
+            let unassigned = 0;
+            for (const apt of establishmentOverlaps) {
+              if (apt.employeeId && activeEmployees.some(e => e.id === apt.employeeId)) {
+                busyEmpIds.add(apt.employeeId);
+              } else if (!apt.employeeId) {
+                unassigned++;
+              }
+            }
+            if ((busyEmpIds.size + unassigned) >= activeEmployees.length) {
+              throw new Error('CONFLICT: Todos os profissionais do estabelecimento já estão ocupados neste horário.');
+            }
+          } else {
+            if (establishmentOverlaps.length >= 1) {
+              throw new Error('CONFLICT: Este horário acabou de ser reservado por outro cliente.');
+            }
+          }
+        }
+
+        // Process Cashback / Voucher
         let appliedVoucherId: string | null = null;
         let appliedVoucherCode: string | null = null;
         let cashbackDiscount = 0;
@@ -538,7 +498,7 @@ export const appointmentsController = {
             employeeId: data.employeeId || null,
             date: newStart,
             status: AppointmentStatus.PENDING,
-            paymentMethod: data.paymentMethod || 'CREDIT_CARD',
+            paymentMethod: data.paymentMethod,
             paymentStatus: 'PENDING',
             totalAmount: subtotalAmount,
             discountAmount: cashbackDiscount,
@@ -580,12 +540,13 @@ export const appointmentsController = {
         return apt;
       });
 
-      // Generate standardized notifications (no pet/people names)
+      // Generate standardized notifications
       await createAndEmitNotification({
         userId: data.establishmentId,
         title: 'Novo agendamento de serviço',
         message: 'Você tem um novo agendamento de serviço.',
         type: 'APPOINTMENT',
+        appointmentId: appointment.id,
       });
 
       if (data.professionalId && data.professionalId !== data.establishmentId) {
@@ -594,6 +555,7 @@ export const appointmentsController = {
           title: 'Novo agendamento de serviço',
           message: 'Você tem um novo agendamento de serviço.',
           type: 'APPOINTMENT',
+          appointmentId: appointment.id,
         });
       }
 
@@ -603,12 +565,15 @@ export const appointmentsController = {
       });
 
       return reply.status(201).send(appointment);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ error: 'Dados inválidos', details: error.issues });
       }
+      if (error?.message?.startsWith('CONFLICT:')) {
+        return reply.status(409).send({ error: error.message.replace('CONFLICT:', '').trim() });
+      }
       request.log.error(error);
-      return reply.status(500).send({ error: 'Erro interno no servidor' });
+      return reply.status(500).send({ error: error?.message || 'Erro interno no servidor' });
     }
   },
 
@@ -628,9 +593,22 @@ export const appointmentsController = {
       return reply.status(403).send({ error: 'Acesso negado' });
     }
 
+    if (existing.status === AppointmentStatus.CANCELLED && data.status !== AppointmentStatus.CANCELLED) {
+      return reply.status(400).send({ error: 'Não é permitido reativar um agendamento cancelado.' });
+    }
+
+    if (existing.status === AppointmentStatus.COMPLETED && data.status !== AppointmentStatus.COMPLETED) {
+      return reply.status(400).send({ error: 'Não é permitido alterar o status de um agendamento já concluído.' });
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id },
-      data: { status: data.status },
+      data: {
+        status: data.status,
+        ...(data.status === AppointmentStatus.CANCELLED ? {
+          paymentStatus: existing.paymentStatus === 'PAID' ? 'REFUNDED' : 'CANCELLED',
+        } : {}),
+      },
       include: {
         pet: true,
         service: true,
@@ -688,6 +666,7 @@ export const appointmentsController = {
           title: notifTitle,
           message: notifMsg,
           type: 'APPOINTMENT',
+          appointmentId: appointment.id,
         });
         if (existing.professionalId && existing.professionalId !== existing.establishmentId) {
           await createAndEmitNotification({
@@ -695,6 +674,7 @@ export const appointmentsController = {
             title: notifTitle,
             message: notifMsg,
             type: 'APPOINTMENT',
+            appointmentId: appointment.id,
           });
         }
       } else {
@@ -704,6 +684,7 @@ export const appointmentsController = {
           title: notifTitle,
           message: notifMsg,
           type: 'APPOINTMENT',
+          appointmentId: appointment.id,
         });
       }
     } catch (notifErr) {
@@ -782,7 +763,6 @@ export const appointmentsController = {
           status: AppointmentStatus.COMPLETED,
           confirmedByTutor: true,
           confirmedByTutorAt: new Date(),
-          paymentStatus: 'PAID',
           cashbackCredited: true,
           cashbackAmountCredited: cashbackAmount,
         },
@@ -813,5 +793,88 @@ export const appointmentsController = {
       cashbackCredited: true,
       cashbackAmount: result.cashbackAmount,
     });
-  }
+  },
+
+  async registerPayment(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const user = request.user as any;
+    const { id } = request.params;
+
+    const paymentSchema = z.object({
+      paymentStatus: z.enum(['PAID', 'REFUNDED', 'PENDING']).default('PAID'),
+      paymentMethod: z.string().trim().optional(),
+      notes: z.string().trim().max(500).optional(),
+    });
+
+    const data = paymentSchema.parse(request.body || {});
+
+    const existing = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        service: true,
+        tutor: true,
+        establishment: true,
+        professional: true,
+      },
+    });
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Agendamento não encontrado.' });
+    }
+
+    const isAdmin = user.role === 'ADMIN';
+    const isEstablishmentOwner = existing.establishmentId === user.sub;
+    const isAssignedProf = existing.professionalId === user.sub;
+
+    if (!isAdmin && !isEstablishmentOwner && !isAssignedProf) {
+      return reply.status(403).send({ error: 'Acesso negado. Apenas o prestador responsável ou administrador pode registrar o pagamento.' });
+    }
+
+    if (existing.status === AppointmentStatus.CANCELLED && data.paymentStatus === 'PAID') {
+      return reply.status(400).send({ error: 'Não é possível registrar pagamento para um agendamento cancelado.' });
+    }
+
+    const updated = await prisma.appointment.update({
+      where: { id },
+      data: {
+        paymentStatus: data.paymentStatus,
+        ...(data.paymentMethod ? { paymentMethod: data.paymentMethod } : {}),
+      },
+      include: {
+        service: true,
+        pet: true,
+        tutor: true,
+      },
+    });
+
+    // If marked as PAID and operational status is COMPLETED, trigger partner payout if eligible
+    if (data.paymentStatus === 'PAID' && updated.status === AppointmentStatus.COMPLETED) {
+      try {
+        await partnerProgramService.processAppointmentPayout(updated.id);
+      } catch (payoutErr) {
+        request.log.warn({ err: payoutErr }, 'Error processing partner payout on payment registration');
+      }
+    }
+
+    // Emit notification to tutor about payment confirmation
+    if (data.paymentStatus === 'PAID') {
+      try {
+        const val = updated.finalAmount ?? updated.service?.price ?? 0;
+        await createAndEmitNotification({
+          userId: existing.tutorId,
+          title: 'Pagamento confirmado',
+          message: `O pagamento do serviço "${existing.service?.name || 'Agendamento'}" no valor de R$ ${val.toFixed(2)} foi confirmado.`,
+          type: 'APPOINTMENT',
+          appointmentId: updated.id,
+        });
+      } catch (notifErr) {
+        request.log.warn({ err: notifErr }, 'Error emitting payment notification');
+      }
+    }
+
+    return reply.send({
+      success: true,
+      message: data.paymentStatus === 'PAID' ? 'Pagamento registrado com sucesso.' : 'Status financeiro atualizado.',
+      appointment: updated,
+    });
+  },
 };

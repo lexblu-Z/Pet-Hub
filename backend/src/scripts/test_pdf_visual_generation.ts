@@ -126,18 +126,20 @@ async function main() {
   const outDir = path.resolve(process.cwd(), 'test_output_pdfs');
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
+  const dateRangeQuery = 'startDate=2026-08-01&endDate=2026-10-31';
+
   const exportsToTest = [
-    { name: 'admin_finance', url: `${API_URL}/admin/export?type=finance&format=pdf`, headers: adminHeaders },
-    { name: 'admin_appointments', url: `${API_URL}/admin/export?type=appointments&format=pdf`, headers: adminHeaders },
-    { name: 'admin_pets', url: `${API_URL}/admin/export?type=pets&format=pdf`, headers: adminHeaders },
-    { name: 'admin_moderation', url: `${API_URL}/admin/export?type=moderation&format=pdf`, headers: adminHeaders },
-    { name: 'estab_services', url: `${API_URL}/reports/establishment/export?type=services&format=pdf`, headers: estabHeaders },
-    { name: 'estab_financial', url: `${API_URL}/reports/establishment/export?type=financial&format=pdf`, headers: estabHeaders },
-    { name: 'estab_inventory', url: `${API_URL}/reports/establishment/export?type=inventory&format=pdf`, headers: estabHeaders },
-    { name: 'estab_customers', url: `${API_URL}/reports/establishment/export?type=customers&format=pdf`, headers: estabHeaders },
-    { name: 'prof_services', url: `${API_URL}/reports/professional/export?type=services&format=pdf`, headers: profHeaders },
-    { name: 'prof_financial', url: `${API_URL}/reports/professional/export?type=financial&format=pdf`, headers: profHeaders },
-    { name: 'prof_customers', url: `${API_URL}/reports/professional/export?type=customers&format=pdf`, headers: profHeaders },
+    { name: 'admin_finance', url: `${API_URL}/admin/export?type=finance&format=pdf&${dateRangeQuery}`, headers: adminHeaders },
+    { name: 'admin_appointments', url: `${API_URL}/admin/export?type=appointments&format=pdf&${dateRangeQuery}`, headers: adminHeaders },
+    { name: 'admin_pets', url: `${API_URL}/admin/export?type=pets&format=pdf&${dateRangeQuery}`, headers: adminHeaders },
+    { name: 'admin_moderation', url: `${API_URL}/admin/export?type=moderation&format=pdf&${dateRangeQuery}`, headers: adminHeaders },
+    { name: 'estab_services', url: `${API_URL}/reports/establishment/export?type=services&format=pdf&${dateRangeQuery}`, headers: estabHeaders },
+    { name: 'estab_financial', url: `${API_URL}/reports/establishment/export?type=financial&format=pdf&${dateRangeQuery}`, headers: estabHeaders },
+    { name: 'estab_inventory', url: `${API_URL}/reports/establishment/export?type=inventory&format=pdf&${dateRangeQuery}`, headers: estabHeaders },
+    { name: 'estab_customers', url: `${API_URL}/reports/establishment/export?type=customers&format=pdf&${dateRangeQuery}`, headers: estabHeaders },
+    { name: 'prof_services', url: `${API_URL}/reports/professional/export?type=services&format=pdf&${dateRangeQuery}`, headers: profHeaders },
+    { name: 'prof_financial', url: `${API_URL}/reports/professional/export?type=financial&format=pdf&${dateRangeQuery}`, headers: profHeaders },
+    { name: 'prof_customers', url: `${API_URL}/reports/professional/export?type=customers&format=pdf&${dateRangeQuery}`, headers: profHeaders },
   ];
 
   for (const item of exportsToTest) {

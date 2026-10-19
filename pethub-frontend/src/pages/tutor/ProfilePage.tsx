@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Lock, ShoppingBag, Mail, Phone, MapPin, Shield, CreditCard, LogOut, Settings, Bell, ChevronRight, Edit3, ArrowLeft, Save } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -10,15 +10,28 @@ import { getStableAvatar } from '@/components/ui/Card';
 import { formatPhone } from '@/utils/phone';
 import { formatCPF } from '@/utils/documentValidation';
 import { EasterEggUnlockModal } from '@/components/shared/EasterEggUnlockModal';
+import { TutorAddressManagement } from '@/components/tutor/TutorAddressManagement';
 import type { TutorProfile } from '@/types';
 
-export default function ProfilePage() {
+interface ProfilePageProps {
+  initialTab?: 'menu' | 'personal' | 'addresses';
+}
+
+export default function ProfilePage({ initialTab }: ProfilePageProps = {}) {
   const { currentUser, logout, setUser } = useAuthStore();
   const user = currentUser as TutorProfile;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   
-  const [isEditing, setIsEditing] = useState(false);
+  const tabQuery = searchParams.get('tab');
+  const [viewMode, setViewMode] = useState<'menu' | 'personal' | 'addresses'>(() => {
+    if (initialTab) return initialTab;
+    if (tabQuery === 'enderecos' || tabQuery === 'addresses' || tabQuery === 'endereco') return 'addresses';
+    if (tabQuery === 'dados-pessoais' || tabQuery === 'personal') return 'personal';
+    return 'menu';
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showEasterEggModal, setShowEasterEggModal] = useState(false);
@@ -98,7 +111,7 @@ export default function ProfilePage() {
         setUser({ ...(currentUser as any), ...res.data.user });
       }
       toast.success('Dados atualizados com sucesso!');
-      setIsEditing(false);
+      setViewMode('menu');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erro ao salvar alterações.');
     } finally {
@@ -128,8 +141,8 @@ export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
       <AnimatePresence mode="wait">
-        {!isEditing ? (
-          <motion.div key="view" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+        {viewMode === 'menu' && (
+          <motion.div key="menu" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
             {/* Header / Profile Card */}
             <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden mb-8 shadow-xl">
               <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
@@ -224,7 +237,15 @@ export default function ProfilePage() {
                     {section.items.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => { if (item.to) { navigate(item.to); } else if (item.id === 'personal') { setIsEditing(true); } }}
+                        onClick={() => {
+                          if (item.to) {
+                            navigate(item.to);
+                          } else if (item.id === 'personal') {
+                            setViewMode('personal');
+                          } else if (item.id === 'address') {
+                            setViewMode('addresses');
+                          }
+                        }}
                         className="w-full flex items-center gap-4 p-4 text-left hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors border-b border-neutral-100 dark:border-[#313335] last:border-0 group cursor-pointer"
                       >
                         <div className="w-10 h-10 bg-neutral-100 dark:bg-[#282A2C] rounded-xl flex items-center justify-center text-neutral-600 dark:text-[#C4C7C5] group-hover:bg-orange-50 dark:group-hover:bg-orange-950/40 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
@@ -285,10 +306,12 @@ export default function ProfilePage() {
               </motion.div>
             </div>
           </motion.div>
-        ) : (
-          <motion.div key="edit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+        )}
+
+        {viewMode === 'personal' && (
+          <motion.div key="personal" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <div className="flex items-center gap-4 mb-6">
-              <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-full transition-colors text-neutral-800 dark:text-[#E3E3E3] cursor-pointer">
+              <button onClick={() => setViewMode('menu')} className="p-2 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-full transition-colors text-neutral-800 dark:text-[#E3E3E3] cursor-pointer">
                 <ArrowLeft size={20} />
               </button>
               <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#E3E3E3]">Editar Dados Pessoais</h1>
@@ -363,7 +386,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="pt-4 border-t border-neutral-100 dark:border-[#313335] flex gap-3">
-                <Button variant="ghost" fullWidth onClick={() => setIsEditing(false)}>
+                <Button variant="ghost" fullWidth onClick={() => setViewMode('menu')}>
                   Cancelar
                 </Button>
                 <Button fullWidth leftIcon={<Save size={18} />} onClick={handleSave} isLoading={isSaving}>
@@ -371,6 +394,12 @@ export default function ProfilePage() {
                 </Button>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {viewMode === 'addresses' && (
+          <motion.div key="addresses" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <TutorAddressManagement onBack={() => setViewMode('menu')} />
           </motion.div>
         )}
       </AnimatePresence>

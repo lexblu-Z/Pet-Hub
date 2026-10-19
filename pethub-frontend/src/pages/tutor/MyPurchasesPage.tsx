@@ -4,7 +4,7 @@ import {
   Store, Truck, MapPin, DollarSign, AlertTriangle, X, Ban, Star, Flag, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { api } from '@/services/api';
 import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/store/toastStore';
@@ -12,6 +12,7 @@ import { PaymentLogo } from '@/components/shared/PaymentLogo';
 import { ItemLogo } from '@/components/shared/ServiceLogo';
 import { ReportModal } from '@/components/shared/ReportModal';
 import { ReviewModal } from '@/components/shared/ReviewModal';
+import { ProductImage } from '@/components/shared/ProductImage';
 
 interface OrderItem {
   id: string;
@@ -84,11 +85,27 @@ const TUTOR_CANCELLATION_REASONS = [
 
 export default function MyPurchasesPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const toast = useToast();
   
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const targetOrderId = React.useMemo(() => {
+    return searchParams.get('orderId') || (location.state as any)?.orderId || null;
+  }, [searchParams, location.state]);
+  const handledOrderIdRef = React.useRef<string | null>(null);
+
+  const handleCloseOrderModal = () => {
+    setSelectedOrder(null);
+    if (searchParams.has('orderId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('orderId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
   
   // Tutor cancellation modal state
   const [cancelModalOrder, setCancelModalOrder] = useState<Order | null>(null);
@@ -104,6 +121,18 @@ export default function MyPurchasesPage() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Auto-open target order from notification
+  useEffect(() => {
+    if (!targetOrderId || handledOrderIdRef.current === targetOrderId) return;
+    if (orders.length === 0) return;
+
+    const ord = orders.find((o) => o.id === targetOrderId);
+    if (ord) {
+      handledOrderIdRef.current = targetOrderId;
+      setSelectedOrder(ord);
+    }
+  }, [targetOrderId, orders]);
 
   const fetchOrders = async () => {
     try {
@@ -278,13 +307,12 @@ export default function MyPurchasesPage() {
                   {order.items.map((item: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-[#282A2C] overflow-hidden shrink-0 border border-neutral-200/50 dark:border-[#313335]">
-                        {item.product?.photo || item.photo ? (
-                          <img src={item.product?.photo || item.photo} alt={item.productName || item.product?.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-300 dark:text-neutral-600">
-                            <ShoppingBag size={16} />
-                          </div>
-                        )}
+                        <ProductImage
+                          product={item.product}
+                          src={item.product?.photo || item.photo}
+                          alt={item.productName || item.product?.name}
+                          iconSize={16}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{item.productName || item.product?.name || 'Produto'}</h3>
@@ -402,7 +430,7 @@ export default function MyPurchasesPage() {
                     Pedido #{selectedOrder.orderNumber || selectedOrder.id.slice(0, 8).toUpperCase()}
                   </p>
                 </div>
-                <button onClick={() => setSelectedOrder(null)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-full cursor-pointer text-neutral-400 dark:text-[#8E918F]">
+                <button onClick={handleCloseOrderModal} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-[#282A2C] rounded-full cursor-pointer text-neutral-400 dark:text-[#8E918F]">
                   <X size={20} />
                 </button>
               </div>
@@ -481,13 +509,12 @@ export default function MyPurchasesPage() {
                   <div key={idx} className="bg-white dark:bg-[#1E1F20] border border-neutral-100 dark:border-[#313335] rounded-2xl p-3 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-12 h-12 rounded-xl bg-neutral-50 dark:bg-[#282A2C] overflow-hidden shrink-0 border border-neutral-200/50 dark:border-[#313335]">
-                        {item.product?.photo || item.photo ? (
-                          <img src={item.product?.photo || item.photo} alt={item.productName || item.product?.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                            <ShoppingBag size={18} />
-                          </div>
-                        )}
+                        <ProductImage
+                          product={item.product}
+                          src={item.product?.photo || item.photo}
+                          alt={item.productName || item.product?.name}
+                          iconSize={18}
+                        />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">

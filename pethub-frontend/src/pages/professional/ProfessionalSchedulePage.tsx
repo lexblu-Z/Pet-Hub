@@ -21,7 +21,7 @@ import {
   X,
   Flag
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Button, Badge, Input, Avatar } from '@/components/ui';
 import { api } from '@/services/api';
 import { useToast } from '@/store/toastStore';
@@ -105,6 +105,23 @@ export default function ProfessionalSchedulePage() {
   const [showFullSchedule, setShowFullSchedule] = useState(false);
   const [reportModalData, setReportModalData] = useState<{ tutorId: string; tutorName: string; appointmentId: string } | null>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const handledAptIdRef = useRef<string | null>(null);
+
+  const targetAptId = useMemo(() => {
+    return searchParams.get('appointmentId') || (location.state as any)?.appointmentId || null;
+  }, [searchParams, location.state]);
+
+  const handleCloseModal = () => {
+    setSelectedApt(null);
+    if (searchParams.has('appointmentId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('appointmentId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
   const dateInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
@@ -168,12 +185,28 @@ export default function ProfessionalSchedulePage() {
     }
   };
 
+  const [availabilityData, setAvailabilityData] = useState<any>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  const fetchDayAvailability = async (dateToFetch: string) => {
+    setLoadingAvailability(true);
+    try {
+      const res = await api.get('/appointments/available-slots', { params: { date: dateToFetch } });
+      setAvailabilityData(res.data);
+    } catch (err) {
+      console.warn('Não foi possível carregar disponibilidade do dia:', err);
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
+
   useEffect(() => {
     fetchAvailability();
   }, []);
 
   useEffect(() => {
     fetchDayAppointments(selectedDate, statusFilter);
+    fetchDayAvailability(selectedDate);
   }, [selectedDate, statusFilter]);
 
   useEffect(() => {
@@ -181,6 +214,71 @@ export default function ProfessionalSchedulePage() {
       fetchWeekSummary(currentWeekDays[0].iso, currentWeekDays[6].iso);
     }
   }, [currentWeekDays]);
+
+  // 5. Suporte a abertura direta e destaque de agendamento via Notificação (?appointmentId=... ou location.state)
+  useEffect(() => {
+    if (!targetAptId || handledAptIdRef.current === targetAptId) return;
+
+    let isMounted = true;
+
+    async function loadTargetAppointment() {
+      try {
+        const res = await api.get('/professional/appointments', {
+          params: { id: targetAptId }
+        });
+        if (!isMounted) return;
+
+        const list = Array.isArray(res.data) ? res.data : [];
+        if (list.length > 0) {
+          const apt: Appointment = list[0];
+          handledAptIdRef.current = targetAptId;
+
+          // Se o agendamento for de outra data, navega para a data correspondente
+          if (apt.date && apt.date !== selectedDate) {
+            setSelectedDate(apt.date);
+          } else {
+            // Se já for a mesma data, assegura presença imediata na lista
+            setAppointments(prev => {
+              if (prev.some(a => a.id === apt.id)) return prev;
+              return [apt, ...prev];
+            });
+          }
+
+          // Se houver filtro de status ativo incompatível, redefine para TODOS
+          if (statusFilter !== 'ALL' && statusFilter !== apt.status) {
+            setStatusFilter('ALL');
+          }
+
+          // Abre imediatamente a ficha/modal com os dados completos
+          setSelectedApt(apt);
+        } else {
+          toast.error('Agendamento não encontrado ou não atribuído a este profissional.');
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        toast.error('Não foi possível carregar os dados do agendamento.');
+      }
+    }
+
+    loadTargetAppointment();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetAptId, selectedDate, statusFilter]);
+
+  // Rolar suavemente até o card do agendamento correspondente
+  useEffect(() => {
+    if (selectedApt?.id) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`apt-${selectedApt.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedApt?.id]);
 
   // Navegações de data
   const handlePrevDay = () => {
@@ -532,6 +630,93 @@ export default function ProfessionalSchedulePage() {
         )}
       </div>
 
+      {/* BLOCO 2.1: Grade Inteligente de Disponibilidade do Dia */}
+      {daySchedule && (
+        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] p-4 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-orange-500 shrink-0" />
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-[#E3E3E3]">
+                Disponibilidade e Grade de Horários ({formatBrasiliaDate(selectedDate)})
+              </h3>
+              {isToday && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  Tempo Real
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 text-xs font-semibold flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5]">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                {availabilityData?.availableSlots?.length ?? 0} horários livres
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-neutral-600 dark:text-[#C4C7C5]">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+                {filtered.filter(a => a.status !== 'CANCELLED').length} agendados
+              </span>
+              {isToday && (
+                <span className="inline-flex items-center gap-1.5 text-neutral-400 dark:text-[#8E918F]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+                  Passados bloqueados
+                </span>
+              )}
+            </div>
+          </div>
+
+          {loadingAvailability ? (
+            <div className="p-4 text-center text-xs text-neutral-400 animate-pulse">
+              Calculando disponibilidade inteligente...
+            </div>
+          ) : availabilityData?.allSlots && availabilityData.allSlots.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 pt-1">
+              {availabilityData.allSlots.map((slot: any) => {
+                let badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800';
+                let label = 'Livre';
+                if (!slot.available) {
+                  if (slot.reason === 'PAST') {
+                    badgeClass = 'bg-neutral-100 text-neutral-400 border-neutral-200 dark:bg-[#282A2C] dark:text-[#8E918F] dark:border-[#313335] opacity-60';
+                    label = 'Passado';
+                  } else if (slot.reason === 'BREAK') {
+                    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800';
+                    label = 'Intervalo';
+                  } else if (slot.reason === 'EXCEEDS_CLOSING') {
+                    badgeClass = 'bg-neutral-100 text-neutral-400 border-neutral-200 dark:bg-[#282A2C] dark:text-[#8E918F] dark:border-[#313335] opacity-50';
+                    label = 'Fechado';
+                  } else {
+                    badgeClass = 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800';
+                    label = slot.occupiedBy?.petName ? `${slot.occupiedBy.petName}` : 'Ocupado';
+                  }
+                }
+
+                return (
+                  <div
+                    key={slot.time}
+                    className={`p-2 rounded-xl border text-center transition-all flex flex-col justify-between gap-1 ${badgeClass}`}
+                    title={slot.occupiedBy ? `Ocupado por ${slot.occupiedBy.petName || 'Pet'} (${slot.occupiedBy.serviceName || 'Serviço'})` : undefined}
+                  >
+                    <span className="font-bold text-xs tracking-tight">{slot.time}</span>
+                    <span className="text-[10px] font-semibold truncate px-1 py-0.5 rounded">
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500 dark:text-[#8E918F]">
+              {availabilityData?.message || 'Sem horários disponíveis para exibição.'}
+            </p>
+          )}
+
+          {isToday && (
+            <p className="text-[11px] text-neutral-500 dark:text-[#8E918F] pt-1">
+              * Horários anteriores ao momento atual no fuso de Brasília são automaticamente bloqueados para novos agendamentos de clientes, preservando o histórico de atendimentos realizados.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* BLOCO 3: Barra de Filtros e Busca */}
       <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-4 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 max-w-md">
@@ -636,7 +821,12 @@ export default function ProfessionalSchedulePage() {
             return (
               <div
                 key={apt.id}
-                className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-200/80 dark:border-[#313335] shadow-xs overflow-hidden hover:border-orange-300 dark:hover:border-orange-500/40 transition-all"
+                id={`apt-${apt.id}`}
+                className={`bg-white dark:bg-[#1E1F20] rounded-2xl border shadow-xs overflow-hidden transition-all ${
+                  targetAptId === apt.id || selectedApt?.id === apt.id
+                    ? 'border-orange-500 ring-2 ring-orange-500/25 shadow-md'
+                    : 'border-neutral-200/80 dark:border-[#313335] hover:border-orange-300 dark:hover:border-orange-500/40'
+                }`}
               >
                 <div className="p-5">
                   <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
@@ -789,7 +979,7 @@ export default function ProfessionalSchedulePage() {
       {selectedApt && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && setSelectedApt(null)}
+          onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
           <div className="bg-white dark:bg-[#1E1F20] rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-neutral-200 dark:border-[#313335] animate-in fade-in zoom-in-95 duration-150">
             {/* Cabeçalho do Modal */}
@@ -799,7 +989,10 @@ export default function ProfessionalSchedulePage() {
                 <p className="text-xs text-neutral-400 dark:text-[#8E918F] mt-0.5">ID: {selectedApt.id.slice(0, 8)}</p>
               </div>
               <button
-                onClick={() => setSelectedApt(null)}
+                type="button"
+                onClick={handleCloseModal}
+                aria-label="Fechar"
+                data-testid="close-appointment-modal"
                 className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-neutral-100 dark:hover:bg-[#282A2C] text-neutral-500 dark:text-[#8E918F] transition-colors cursor-pointer"
               >
                 <X size={18} />
@@ -970,7 +1163,7 @@ export default function ProfessionalSchedulePage() {
                   <span>Denunciar Tutor</span>
                 </button>
                 <button
-                  onClick={() => setSelectedApt(null)}
+                  onClick={handleCloseModal}
                   className="w-full py-2.5 rounded-xl border border-neutral-200 dark:border-[#313335] text-xs font-bold text-neutral-600 dark:text-[#C4C7C5] hover:bg-neutral-50 dark:hover:bg-[#282A2C] transition-colors cursor-pointer"
                 >
                   Fechar Visualização

@@ -80,11 +80,19 @@ export const adminAppointmentsController = {
         orderBy: { date: 'asc' },
       });
 
-      // Group appointments by hour or return structured timeline
-      const formatted = appointments.map((app) => ({
-        ...app,
-        code: `#AGD-${app.id.slice(0, 6).toUpperCase()}`,
-      }));
+      // Format appointments with standardized time and dateStr
+      const formatted = appointments.map((app) => {
+        const dateObj = new Date(app.date);
+        const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+        const dateStr = app.date.toISOString().split('T')[0];
+        return {
+          ...app,
+          dateStr,
+          time: timeStr,
+          dateISO: app.date.toISOString(),
+          code: `#AGD-${app.id.slice(0, 6).toUpperCase()}`,
+        };
+      });
 
       // Count by status
       const statusCounts = {
@@ -148,8 +156,15 @@ export const adminAppointmentsController = {
         return reply.status(404).send({ error: `Nenhum agendamento encontrado com o código "${query.code}".` });
       }
 
+      const dateObj = new Date(appointment.date);
+      const timeStr = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')}`;
+      const dateStr = appointment.date.toISOString().split('T')[0];
+
       return reply.send({
         ...appointment,
+        dateStr,
+        time: timeStr,
+        dateISO: appointment.date.toISOString(),
         code: `#AGD-${appointment.id.slice(0, 6).toUpperCase()}`,
       });
     } catch (error: any) {

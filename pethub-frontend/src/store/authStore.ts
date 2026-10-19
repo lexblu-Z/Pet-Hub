@@ -11,6 +11,7 @@ interface AuthStore {
   currentRole: UserRole | null;
   isAuthenticated: boolean;
   token: string | null;
+  isAuthReady: boolean;
   login: (token: string, user: CurrentUser, role: UserRole) => void;
   logout: () => void;
   setUser: (user: CurrentUser) => void;
@@ -24,6 +25,7 @@ export const useAuthStore = create<AuthStore>()(
       currentRole: null,
       isAuthenticated: false,
       token: null,
+      isAuthReady: false,
 
       login: (token: string, user: CurrentUser, role: UserRole) => {
         set({
@@ -31,6 +33,7 @@ export const useAuthStore = create<AuthStore>()(
           currentUser: user,
           currentRole: role,
           isAuthenticated: true,
+          isAuthReady: true,
         });
         if ((user as any)?.preferences?.theme) {
           useThemeStore.getState().setTheme((user as any).preferences.theme, true);
@@ -43,7 +46,13 @@ export const useAuthStore = create<AuthStore>()(
           currentUser: null,
           currentRole: null,
           isAuthenticated: false,
+          isAuthReady: true,
         });
+        try {
+          localStorage.removeItem('pethub-auth');
+        } catch {
+          // ignore
+        }
       },
 
       setUser: (user: CurrentUser) => {
@@ -52,7 +61,17 @@ export const useAuthStore = create<AuthStore>()(
 
       checkAuth: async () => {
         const { token } = get();
-        if (!token) return;
+        if (!token) {
+          // Nenhum token armazenado: estado limpo garantido
+          set({
+            token: null,
+            currentUser: null,
+            currentRole: null,
+            isAuthenticated: false,
+            isAuthReady: true,
+          });
+          return;
+        }
 
         try {
           const response = await api.get('/auth/me');
@@ -62,13 +81,20 @@ export const useAuthStore = create<AuthStore>()(
             PROFESSIONAL: 'profissional',
             ADMIN: 'admin',
           };
-          const mappedRole = roleMap[response.data.role] || (response.data.role?.toLowerCase() as UserRole) || get().currentRole;
+          const rawRole = response.data?.role;
+          const mappedRole = (rawRole ? roleMap[rawRole] || rawRole.toLowerCase() : null) as UserRole | null;
+
+          if (!mappedRole) {
+            throw new Error('Função de usuário não reconhecida.');
+          }
+
           set({
             currentUser: { ...get().currentUser, ...response.data },
             currentRole: mappedRole,
             isAuthenticated: true,
+            isAuthReady: true,
           });
-          if (response.data.preferences?.theme) {
+          if (response.data?.preferences?.theme) {
             useThemeStore.getState().setTheme(response.data.preferences.theme, true);
           }
         } catch (error) {
@@ -81,9 +107,17 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         token: state.token,
         currentRole: state.currentRole,
-        isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
+        // Nunca persistir isAuthenticated como true sem token e role válidos
+        isAuthenticated: Boolean(state.token && state.currentRole),
       }),
+      onRehydrateStorage: () => (state) => {
+        // Se após reidratação não houver token ou role, garantir logout imediato
+        if (!state?.token || !state?.currentRole) {
+          state?.logout();
+        }
+      },
     }
   )
 );
+

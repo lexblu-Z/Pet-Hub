@@ -46,6 +46,13 @@ interface DashboardData {
   averageRating: number | null;
   todaySchedule: ScheduleItem[];
   upcomingSchedule?: ScheduleItem[];
+  topServices?: {
+    id: string;
+    name: string;
+    count: number;
+    revenue: number;
+    category?: string | null;
+  }[];
 }
 
 const statusConfig: Record<string, { label: string; badge: 'warning' | 'info' | 'brand' | 'success' | 'error' }> = {
@@ -297,6 +304,64 @@ export default function ProfessionalDashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Top 3 Serviços mais agendados */}
+      <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Serviços mais agendados</h2>
+          <Link to="/profissional/agenda" className="text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline">
+            Ver agenda
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="h-28 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
+            Carregando ranking de serviços...
+          </div>
+        ) : !data?.topServices || data.topServices.length === 0 ? (
+          <div className="h-28 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+            <Calendar size={24} className="text-neutral-300 dark:text-[#8E918F] mb-1.5" />
+            <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum serviço realizado ainda</p>
+            <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Seus agendamentos confirmados e concluídos comporão este ranking.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {data.topServices.slice(0, 3).map((srv, idx) => (
+              <div 
+                key={srv.id || idx} 
+                className={`flex items-center gap-3 p-3 rounded-2xl transition-colors border ${
+                  idx === 0 
+                    ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-900/40' 
+                    : idx === 1 
+                    ? 'bg-neutral-50/80 dark:bg-[#282A2C]/60 border-neutral-200/70 dark:border-[#313335]' 
+                    : 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-900/30'
+                }`}
+              >
+                <div className="w-6 flex items-center justify-center shrink-0">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                    idx === 0
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                      : idx === 1
+                      ? 'bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
+                      : 'bg-amber-200/60 text-amber-900 dark:bg-amber-950/60 dark:text-amber-400'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{srv.name}</p>
+                  <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">{srv.count} {srv.count === 1 ? 'agendamento' : 'agendamentos'}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs block">
+                    R$ {srv.revenue.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Seção de Atendimentos / Próximos Agendamentos com dados REAIS */}

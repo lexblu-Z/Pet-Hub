@@ -27,6 +27,7 @@ import { Button, Badge, Avatar } from '@/components/ui';
 import { Link } from 'react-router-dom';
 import { useThemeStore } from '@/store/themeStore';
 import { PartnerProgramCard } from '@/components/establishment/PartnerProgramCard';
+import { ProductImage } from '@/components/shared/ProductImage';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -77,6 +78,15 @@ interface DashboardData {
     photo: string | null;
     quantity: number;
     revenue: number;
+  }[];
+  topServices?: {
+    id: string;
+    name: string;
+    count: number;
+    completedCount?: number;
+    revenue: number;
+    pendingRevenue?: number;
+    category?: string | null;
   }[];
   revenueChart: {
     date: string;
@@ -473,79 +483,163 @@ export default function EstablishmentDashboard() {
           )}
         </div>
 
-        {/* Top Sold Products Ranking */}
-        <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Produtos Mais Vendidos</h2>
-            <Link to="/estabelecimento/produtos" className="text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline">
-              Ver todos
-            </Link>
+        {/* Right Column: Top 3 Products & Top 3 Services */}
+        <div className="space-y-6">
+          {/* Top Sold Products Ranking */}
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Produtos Mais Vendidos</h2>
+              <Link to="/estabelecimento/produtos" className="text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline">
+                Ver todos
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="h-44 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
+                Carregando ranking...
+              </div>
+            ) : !data?.topProducts || data.topProducts.length === 0 ? (
+              <div className="h-44 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+                <Package size={28} className="text-neutral-300 dark:text-[#8E918F] mb-1.5" />
+                <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum produto vendido ainda</p>
+                <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">As vendas de produtos comporão o ranking desta seção.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {data.topProducts.slice(0, 3).map((prod, idx) => {
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`flex items-center gap-3 p-2.5 rounded-2xl transition-colors border ${
+                        idx === 0 
+                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-900/40' 
+                          : idx === 1 
+                          ? 'bg-neutral-50/80 dark:bg-[#282A2C]/60 border-neutral-200/70 dark:border-[#313335]' 
+                          : idx === 2 
+                          ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-900/30' 
+                          : 'bg-white dark:bg-[#1E1F20] border-transparent hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
+                      }`}
+                    >
+                      <div className="w-7 flex items-center justify-center shrink-0">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                          idx === 0
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                            : idx === 1
+                            ? 'bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
+                            : idx === 2
+                            ? 'bg-amber-200/60 text-amber-900 dark:bg-amber-950/60 dark:text-amber-400'
+                            : 'text-neutral-400 dark:text-[#8E918F]'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                      </div>
+
+                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
+                        <ProductImage
+                          src={prod.photo}
+                          alt={prod.name}
+                          iconSize={18}
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{prod.name}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">{prod.quantity} {prod.quantity === 1 ? 'unidade vendida' : 'unidades vendidas'}</p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs block">
+                          R$ {prod.revenue.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-medium">total faturado</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="h-48 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
-              Carregando ranking...
+          {/* Top Booked Services Ranking */}
+          <div className="bg-white dark:bg-[#1E1F20] rounded-2xl border border-neutral-100 dark:border-[#313335] p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-base">Serviços mais agendados</h2>
+              <Link to="/estabelecimento/servicos" className="text-xs text-orange-600 dark:text-orange-400 font-bold hover:underline">
+                Ver todos
+              </Link>
             </div>
-          ) : !data?.topProducts || data.topProducts.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
-              <Package size={32} className="text-neutral-300 dark:text-[#8E918F] mb-2" />
-              <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum produto vendido ainda</p>
-              <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">As vendas realizadas comporão o ranking de produtos desta seção.</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {data.topProducts.map((prod, idx) => {
-                return (
-                  <div 
-                    key={idx} 
-                    className={`flex items-center gap-3 p-2.5 rounded-2xl transition-colors border ${
-                      idx === 0 
-                        ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-900/40' 
-                        : idx === 1 
-                        ? 'bg-neutral-50/80 dark:bg-[#282A2C]/60 border-neutral-200/70 dark:border-[#313335]' 
-                        : idx === 2 
-                        ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-900/30' 
-                        : 'bg-white dark:bg-[#1E1F20] border-transparent hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
-                    }`}
-                  >
-                    <div className="w-7 flex items-center justify-center shrink-0">
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                        idx === 0
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                          : idx === 1
-                          ? 'bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
-                          : idx === 2
-                          ? 'bg-amber-200/60 text-amber-900 dark:bg-amber-950/60 dark:text-amber-400'
-                          : 'text-neutral-400 dark:text-[#8E918F]'
-                      }`}>
-                        {idx + 1}
-                      </span>
-                    </div>
 
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#282A2C] flex items-center justify-center overflow-hidden shrink-0 border border-neutral-200/60 dark:border-[#313335] shadow-2xs">
-                      {prod.photo ? (
-                        <img src={prod.photo} alt={prod.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package size={18} className="text-neutral-400 dark:text-[#8E918F]" />
-                      )}
-                    </div>
+            {loading ? (
+              <div className="h-44 flex items-center justify-center text-neutral-400 dark:text-[#8E918F] text-xs">
+                Carregando ranking...
+              </div>
+            ) : !data?.topServices || data.topServices.length === 0 ? (
+              <div className="h-44 flex flex-col items-center justify-center text-center p-4 bg-neutral-50/50 dark:bg-[#282A2C]/40 rounded-xl border border-dashed border-neutral-200 dark:border-[#313335]">
+                <Calendar size={28} className="text-neutral-300 dark:text-[#8E918F] mb-1.5" />
+                <p className="font-bold text-neutral-700 dark:text-[#C4C7C5] text-xs">Nenhum serviço agendado ainda</p>
+                <p className="text-[11px] text-neutral-400 dark:text-[#8E918F] mt-0.5">Os agendamentos confirmados comporão o ranking de serviços desta seção.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {data.topServices.slice(0, 3).map((srv, idx) => {
+                  return (
+                    <div 
+                      key={srv.id || idx} 
+                      className={`flex items-center gap-3 p-2.5 rounded-2xl transition-colors border ${
+                        idx === 0 
+                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/70 dark:border-amber-900/40' 
+                          : idx === 1 
+                          ? 'bg-neutral-50/80 dark:bg-[#282A2C]/60 border-neutral-200/70 dark:border-[#313335]' 
+                          : idx === 2 
+                          ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-900/30' 
+                          : 'bg-white dark:bg-[#1E1F20] border-transparent hover:bg-neutral-50 dark:hover:bg-[#282A2C]'
+                      }`}
+                    >
+                      <div className="w-7 flex items-center justify-center shrink-0">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                          idx === 0
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                            : idx === 1
+                            ? 'bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200'
+                            : idx === 2
+                            ? 'bg-amber-200/60 text-amber-900 dark:bg-amber-950/60 dark:text-amber-400'
+                            : 'text-neutral-400 dark:text-[#8E918F]'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{prod.name}</p>
-                      <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">{prod.quantity} {prod.quantity === 1 ? 'unidade vendida' : 'unidades vendidas'}</p>
-                    </div>
+                      <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center overflow-hidden shrink-0 border border-orange-100 dark:border-orange-900/40 shadow-2xs font-bold">
+                        <Calendar size={18} />
+                      </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs block">
-                        R$ {prod.revenue.toFixed(2).replace('.', ',')}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-medium">total faturado</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs truncate">{srv.name}</p>
+                        <p className="text-[11px] text-neutral-500 dark:text-[#8E918F]">
+                          {srv.count} {srv.count === 1 ? 'agendamento' : 'agendamentos'}
+                          {srv.completedCount !== undefined && srv.completedCount < srv.count && (
+                            <span className="text-[10px] text-neutral-400"> ({srv.completedCount} realizados)</span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-bold text-neutral-900 dark:text-[#E3E3E3] text-xs block">
+                          R$ {srv.revenue.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-medium block">total faturado</span>
+                        {srv.pendingRevenue && srv.pendingRevenue > 0 ? (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium block mt-0.5">
+                            + R$ {srv.pendingRevenue.toFixed(2).replace('.', ',')} previsto
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

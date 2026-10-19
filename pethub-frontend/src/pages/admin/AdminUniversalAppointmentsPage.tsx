@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -19,11 +20,12 @@ import {
 import { api } from '@/services/api';
 import { Avatar } from '@/components/ui/Card';
 import { SpeciesIcon } from '@/components/shared/SpeciesIcon';
+import { getBrasiliaToday, formatBrasiliaDate, formatAppointmentTime } from '@/utils/date';
 
 export default function AdminUniversalAppointmentsPage() {
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [selectedDate, setSelectedDate] = useState<string>(() => getBrasiliaToday());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchCode, setSearchCode] = useState<string>('');
@@ -31,6 +33,38 @@ export default function AdminUniversalAppointmentsPage() {
   const [counts, setCounts] = useState<any>({ ALL: 0, PENDING: 0, CONFIRMED: 0, COMPLETED: 0, CANCELLED: 0 });
   const [detailModalItem, setDetailModalItem] = useState<any>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  const targetAptId = React.useMemo(() => {
+    return searchParams.get('appointmentId') || (location.state as any)?.appointmentId || null;
+  }, [searchParams, location.state]);
+  const handledAptIdRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!targetAptId || handledAptIdRef.current === targetAptId) return;
+    handledAptIdRef.current = targetAptId;
+
+    api.get(`/admin/appointments/search?code=${encodeURIComponent(targetAptId)}`)
+      .then((res) => {
+        if (res.data) {
+          setDetailModalItem(res.data);
+          if (res.data.dateStr) {
+            setSelectedDate(res.data.dateStr);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load target appointment for admin', err);
+      });
+  }, [targetAptId]);
+
+  const handleCloseDetailModal = () => {
+    setDetailModalItem(null);
+    if (searchParams.has('appointmentId')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('appointmentId');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -241,7 +275,7 @@ export default function AdminUniversalAppointmentsPage() {
               Nenhum agendamento encontrado
             </p>
             <p className="text-xs text-neutral-400">
-              Não existem registros para {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR')} com o status selecionado.
+              Não existem registros para {formatBrasiliaDate(selectedDate)} com o status selecionado.
             </p>
           </div>
         ) : (
@@ -255,7 +289,7 @@ export default function AdminUniversalAppointmentsPage() {
                   {/* Time Badge */}
                   <div className="w-16 h-14 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex flex-col items-center justify-center font-bold shrink-0 border border-orange-500/20">
                     <span className="text-sm leading-tight">
-                      {new Date(app.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {formatAppointmentTime(app)}
                     </span>
                     <span className="text-[10px] text-neutral-400">
                       {app.service?.duration ? `${app.service.duration}m` : '30m'}
@@ -340,7 +374,7 @@ export default function AdminUniversalAppointmentsPage() {
                 <p className="text-xs text-neutral-400">Identificador único da plataforma</p>
               </div>
               <button
-                onClick={() => setDetailModalItem(null)}
+                onClick={handleCloseDetailModal}
                 className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-lg cursor-pointer"
               >
                 <X size={18} />
@@ -365,8 +399,7 @@ export default function AdminUniversalAppointmentsPage() {
                 <div className="p-3 bg-neutral-50 dark:bg-[#131314] rounded-xl border border-neutral-100 dark:border-[#313335]">
                   <span className="text-neutral-400 block text-[10px] uppercase">Data / Horário</span>
                   <span className="font-semibold text-neutral-900 dark:text-white text-xs">
-                    {new Date(detailModalItem.date).toLocaleDateString('pt-BR')} às{' '}
-                    {new Date(detailModalItem.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {formatBrasiliaDate(detailModalItem.dateStr || detailModalItem.date)} às {formatAppointmentTime(detailModalItem)}
                   </span>
                 </div>
 
@@ -471,7 +504,7 @@ export default function AdminUniversalAppointmentsPage() {
 
             <div className="p-4 bg-neutral-50 dark:bg-[#131314] border-t border-neutral-200 dark:border-[#313335] flex justify-end">
               <button
-                onClick={() => setDetailModalItem(null)}
+                onClick={handleCloseDetailModal}
                 className="px-4 py-2 bg-neutral-900 dark:bg-neutral-800 text-white rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Fechar

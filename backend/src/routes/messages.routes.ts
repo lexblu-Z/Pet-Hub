@@ -13,6 +13,7 @@ export const messagesRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
 
   // Message endpoints
   fastify.get('/conversations', messagesController.getConversations);
+  fastify.post('/conversations', messagesController.createConversation);
   fastify.get('/conversations/:id', messagesController.getConversation);
   fastify.post('/', messagesController.sendMessage);
   fastify.get('/unread-count', messagesController.getUnreadCount);
